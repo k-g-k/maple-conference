@@ -16,7 +16,13 @@
 // rural seats and understates the city ones, and the caption says so.
 
 import { Fragment, useEffect, useRef, useState } from "react";
-import { ArrowUpRight, ChevronLeft, ChevronRight, Scale } from "lucide-react";
+import {
+  ArrowUpRight,
+  ChevronLeft,
+  ChevronRight,
+  Scale,
+  Star,
+} from "lucide-react";
 import {
   PHONE_FREE_LINEAGE as L,
   type Provision,
@@ -30,7 +36,7 @@ import {
   HOUSE_WAYS_AND_MEANS,
   type CommitteeMember,
 } from "../../data/bill-lineage/committees";
-import { MEMBER_BY_SEAT } from "../../data/bill-lineage/members";
+import { MINE, MEMBER_BY_SEAT } from "../../data/bill-lineage/members";
 import { EDUCATION_HEARING, hearingUrl } from "../../data/bill-lineage/hearing";
 import {
   HOUSE_EARLY_STAGES,
@@ -321,17 +327,33 @@ export function Conferees({
                 onClick={() => onPin(m.key)}
                 className="flex items-center gap-[10px] text-left cursor-pointer"
               >
-                <img
-                  src={m.portrait}
-                  alt=""
-                  className={`shrink-0 w-[36px] h-[36px] rounded-full object-cover bg-sunken border-[3px] transition-[box-shadow] ${
-                    m.party === "R" ? "border-negative" : "border-official"
-                  } ${
-                    showing.includes(m.key)
-                      ? "ring-2 ring-ink ring-offset-2 ring-offset-ground"
-                      : ""
-                  }`}
-                />
+                <span className="relative shrink-0">
+                  <img
+                    src={m.portrait}
+                    alt=""
+                    className={`block w-[36px] h-[36px] rounded-full object-cover bg-sunken border-[3px] transition-[box-shadow] ${
+                      m.party === "R" ? "border-negative" : "border-official"
+                    } ${
+                      showing.includes(m.key)
+                        ? "ring-2 ring-ink ring-offset-2 ring-offset-ground"
+                        : ""
+                    }`}
+                  />
+                  {/* On the portrait rather than beside the name: the face is
+                      what a reader scans down this column, and the star has to
+                      be on the thing being scanned. */}
+                  {MINE[m.key] && (
+                    <span
+                      title={MINE[m.key]}
+                      className="absolute -bottom-[2px] -right-[2px] w-[16px] h-[16px] rounded-full bg-ground flex items-center justify-center"
+                    >
+                      <Star
+                        aria-label={MINE[m.key]}
+                        className="w-[11px] h-[11px] text-caution fill-caution"
+                      />
+                    </span>
+                  )}
+                </span>
                 <span className="min-w-0">
                   <span className="block leading-[1.3] whitespace-nowrap">
                     <span className="font-body font-semibold text-sm text-ink">

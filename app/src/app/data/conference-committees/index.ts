@@ -609,3 +609,41 @@ export const RECORD_FOR_SLUG: Record<string, string> = {
 /** The scorecard record behind an explorer slug, where there is one. */
 export const recordForSlug = (slug: string) =>
   ACTIVE.find((c) => c.id === RECORD_FOR_SLUG[slug]);
+
+/**
+ * A committee's name, capitalised.
+ *
+ * Only touches a word that starts lowercase, so "PETS Act" and "BRIGHT Act"
+ * keep their capitals rather than becoming "Pets Act" and "Bright Act".
+ */
+const capitalise = (short: string) =>
+  short.replace(/\b[a-z]/g, (ch) => ch.toUpperCase());
+
+/**
+ * A shorter name than the explorer's, where one reads better.
+ *
+ * Kept here rather than edited into the explorer data, which is the source of
+ * truth for the comparison and should stay as it was ported.
+ */
+const NAME: Record<string, string> = {
+  "workplace-violence": "Healthcare Worker Violence",
+};
+
+/**
+ * The one name the index, the rail and the heading all use.
+ *
+ * Here rather than in the page, because a reader who picks a committee off the
+ * index and lands on its page should find the name they pressed.
+ */
+export const displayName = (slug: string, short: string) =>
+  NAME[slug] ?? capitalise(short);
+
+/**
+ * Committees the lists show but do not open.
+ *
+ * Listed, because leaving one out would say the conference does not exist. Not
+ * a link, because the page behind it is not ready to be read. Shared by the
+ * index and the detail page's rail, so the two cannot disagree about what
+ * opens.
+ */
+export const NOT_LINKED = new Set(["economic-development"]);

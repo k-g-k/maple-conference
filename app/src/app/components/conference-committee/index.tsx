@@ -19,10 +19,13 @@ import {
   ChevronDown,
   ChevronRight,
   Plus,
+  Star,
   X,
 } from "lucide-react";
 import {
   BILL_TITLES,
+  NOT_LINKED,
+  displayName,
   recordForSlug,
   slugFor,
 } from "../../data/conference-committees";
@@ -47,6 +50,7 @@ import type { CommitteeMember } from "../../data/bill-lineage/committees";
 import {
   MEMBER_BY_NAME,
   MEMBER_BY_SEAT,
+  MINE,
   profileUrl,
 } from "../../data/bill-lineage/members";
 import { holdPlace, holdPress } from "../ballot";
@@ -55,15 +59,20 @@ import { Conferees, VoteMap } from "../bill-example/lineage-section";
 import { LINEAGE_TEXTS } from "../../data/bill-lineage/texts";
 import { MapleFab } from "../tax-rebate-62f/maple-fab";
 import {
-  TestimonyFeed,
-  type StanceFilter,
-  type TypeFilter,
-} from "../tax-rebate-62f/testimony";
+  SubmissionFeed,
+  type PositionFilter,
+  type AccountTypeFilter,
+} from "./testimony";
 import {
   DEMO_ACCOUNTS,
   DEMO_SEATS,
   DEMO_TESTIMONY,
 } from "../../data/conference-committees/testimony";
+import type { ConferencePosition } from "../../data/conference-committees/positions";
+import {
+  CONFERENCE_POSITIONS,
+  POSITIONS,
+} from "../../data/conference-committees/positions";
 import {
   MAP_OUTLINE,
   MAP_SQUASH,
@@ -76,29 +85,6 @@ import { LobbyingDisclosures } from "./lobbying";
 // already calls the twelve committees down the left a rail, and two rails
 // would be one word doing two jobs.
 import { Rail as Panel } from "../bill-example/rail";
-
-/**
- * A committee's name, capitalised.
- *
- * Only touches a word that starts lowercase, so "PETS Act" and "BRIGHT Act"
- * keep their capitals rather than becoming "Pets Act" and "Bright Act".
- */
-const capitalise = (short: string) =>
-  short.replace(/\b[a-z]/g, (ch) => ch.toUpperCase());
-
-/**
- * A shorter name than the explorer's, where one reads better.
- *
- * Kept here rather than edited into the explorer data, which is the source of
- * truth for the comparison and should stay as it was ported.
- */
-const NAME: Record<string, string> = {
-  "workplace-violence": "Healthcare Worker Violence",
-};
-
-/** The one name the rail and the heading both use, so they cannot drift. */
-const displayName = (slug: string, short: string) =>
-  NAME[slug] ?? capitalise(short);
 
 /**
  * What the General Court calls this conference.
@@ -721,11 +707,9 @@ function PeopleAndMaps({
           the maps is padding on the House column, never on a map cell. */}
       <div
         className={`grid gap-y-[32px] gap-x-[20px] sm:pl-[14px] min-[880px]:grid-cols-[max-content_minmax(0,1fr)_minmax(0,1fr)] ${
-          // Most of the gap belongs to the heading. Without one, what is
-          // left is a break under whatever the page put above it rather than
-          // the space a heading needs around it.
-          // Nothing of its own without a heading: the block around it now
-          // carries the space, and two of them read as a hole.
+          // The gap belongs to whatever sits above: the heading, or the
+          // reader's own line where there is one. With neither, the block
+          // around this already carries the space and a second gap is a hole.
           heading ? "mt-[28px]" : ""
         }`}
       >
@@ -737,9 +721,10 @@ function PeopleAndMaps({
           {/* The hearings close the column, so the space under them is what
               separates this section from the next rather than two rows of the
               same block. */}
-          <div className="mt-[24px] mb-[36px]">
+          <div className="mt-[24px]">
             <Hearings meetings={meetings} />
           </div>
+          <div className="mb-[36px]" />
         </div>
         {map("senate")}
         {map("house")}
@@ -753,6 +738,9 @@ const SHOW_MEMBERS: boolean = false;
 
 /** Parked: the clause naming what the two chambers differ on. */
 const SHOW_CLAIM: boolean = false;
+
+/** Parked: the switch between reading public input inline and in the panel. */
+const SHOW_TESTIMONY_SWITCH: boolean = false;
 
 /**
  * Parked: the committee card in the card layout.
@@ -856,43 +844,6 @@ function Six({
 }
 
 /**
- * The four things a reader can ask a conference to do.
- *
- * Not the ballot question's support, oppose or no position. A conference is not
- * deciding whether to pass a bill; it is deciding which of two texts survives,
- * so the positions worth offering are the ones a conferee could act on.
- */
-const CONFERENCE_STANCES = [
-  {
-    // First, and the one the form opens on: it is the position that asks the
-    // conference to do the thing it exists to do, and the least loaded of the
-    // four to arrive already chosen.
-    k: "pass",
-    l: "Please pass something",
-    on: "bg-positive-soft border-positive text-positive-ink",
-  },
-  {
-    k: "house",
-    l: "Pass the House version",
-    // The chamber's own colour, the one the House wears everywhere else on
-    // this page, softened to a fill.
-    on: "bg-user-soft border-user text-user-ink",
-  },
-  {
-    k: "senate",
-    l: "Pass the Senate version",
-    on: "bg-official-soft border-official text-official-ink",
-  },
-  {
-    k: "none",
-    l: "Don't pass anything",
-    // Asking for nothing and asking for anything are the two positions that
-    // are for or against an outcome, so they take the page's for and against.
-    on: "bg-negative-soft border-negative text-negative-ink",
-  },
-] as const;
-
-/**
  * Filing on a conference.
  *
  * The ballot pages' composer, with the two things a conference changes: the
@@ -901,9 +852,13 @@ const CONFERENCE_STANCES = [
  * which is the one thing this page can do that a bill page cannot, because the
  * conferees are six named people. The guidance block that used to sit on top
  * is gone: three lines of rules before the reader has done anything.
+ *
+ * The four come from the conference data rather than from a list in here, so the
+ * form, the feed's filter, the chip on a submission and the map are all reading
+ * the same four.
  */
 function ConferenceCompose({ onCancel }: { onCancel: () => void }) {
-  const [stance, setStance] = useState<string | null>("pass");
+  const [position, setPosition] = useState<ConferencePosition>("pass");
   const [digest, setDigest] = useState(true);
 
   return (
@@ -916,13 +871,13 @@ function ConferenceCompose({ onCancel }: { onCancel: () => void }) {
             sentences, not one-word stances, and on a panel's width they wrapped
             into a block a reader had to pick apart. */}
         <div className="flex flex-col gap-[8px] mb-[20px]">
-          {CONFERENCE_STANCES.map((o) => {
-            const on = stance === o.k;
+          {CONFERENCE_POSITIONS.map((o) => {
+            const on = position === o.k;
             return (
               <button
                 key={o.k}
                 type="button"
-                onClick={() => setStance(o.k)}
+                onClick={() => setPosition(o.k)}
                 aria-pressed={on}
                 className={`w-full text-left rounded-control border px-[14px] py-[10px] font-body font-semibold text-sm cursor-pointer transition-colors ${
                   on
@@ -930,6 +885,9 @@ function ConferenceCompose({ onCancel }: { onCancel: () => void }) {
                     : "bg-surface border-line-strong text-ink-muted hover:bg-wash"
                 }`}
               >
+                {/* The sentence alone. No thumb: the form has room to state each
+                    position in full, and the mark is for the filter row, where
+                    a row of sentences would not fit. */}
                 {o.l}
               </button>
             );
@@ -996,9 +954,14 @@ const TOUR_MS = 7000;
  * and the places on it are dots rather than filled districts. Eight people, and
  * a filled map would paint a district the colour of one submission and invite a
  * reader to take an empty district as a district that disagrees. A dot can only
- * say "somebody here filed", which is all the data carries. Colour follows what
- * they said: green where the submissions lean toward the bill, red where they
- * lean against, and the map's own faint ink where they took no position.
+ * say "somebody here filed", which is all the data carries.
+ *
+ * Colour follows the one axis the four positions share. Three of them ask the
+ * conference to pass something and the fourth asks it to pass nothing, so a
+ * county can lean toward a bill or toward none: green for a bill, red for none,
+ * the map's own faint ink where the two are even. Which of the two texts a
+ * county prefers is deliberately not here. House and Senate are a choice, not a
+ * scale, and a dot cannot hold three colours and still be read as one place.
  */
 function PublicMap({ onOpenRail }: { onOpenRail?: () => void }) {
   const [picked, setPicked] = useState<string | null>(null);
@@ -1009,10 +972,14 @@ function PublicMap({ onOpenRail }: { onOpenRail?: () => void }) {
   const [step, setStep] = useState(0);
 
   const filers = useMemo(() => {
-    const body = new Map(DEMO_TESTIMONY.map((t) => [t.userId, t.body]));
+    // The account's position, taken from what it filed. A position belongs to a
+    // submission rather than to an account, and where an account filed twice
+    // both filings carry the same one, so there is a single answer per filer.
+    const filed = new Map(DEMO_TESTIMONY.map((t) => [t.userId, t]));
     return DEMO_ACCOUNTS.flatMap((u) => {
       const seat = DEMO_SEATS[u.id];
-      if (!seat) return [];
+      const mine = filed.get(u.id);
+      if (!seat || !mine) return [];
       return [
         {
           id: u.id,
@@ -1021,8 +988,8 @@ function PublicMap({ onOpenRail }: { onOpenRail?: () => void }) {
           // "Individual account, Hampden County" is a kind of account and a
           // place. The place is what the map is about.
           place: u.descriptor.split(",").pop()?.trim() ?? "",
-          stance: u.stance,
-          excerpt: body.get(u.id) ?? "",
+          position: mine.position,
+          excerpt: mine.body,
         },
       ];
     });
@@ -1031,17 +998,19 @@ function PublicMap({ onOpenRail }: { onOpenRail?: () => void }) {
   const at = (seat: string) => filers.filter((f) => f.seat === seat);
 
   // One marker per place, at the middle of the district the account is
-  // assigned to. A place leans the way its submissions do, and where they are
-  // evenly split or take no position it keeps the map's own faint ink rather
-  // than a colour that would take a side.
+  // assigned to. A place leans whichever way more of its filers are asking:
+  // toward a bill, or toward none. Where those two are even it keeps the map's
+  // own faint ink rather than a colour that would take a side.
   const places = useMemo(
     () =>
       [...new Set(filers.map((f) => f.seat))].flatMap((seat) => {
         const point = seatPoint(seat);
         if (!point) return [];
         const here = filers.filter((f) => f.seat === seat);
-        const up = here.filter((f) => f.stance === "supports").length;
-        const down = here.filter((f) => f.stance === "opposes").length;
+        const up = here.filter(
+          (f) => POSITIONS[f.position].ask === "bill",
+        ).length;
+        const down = here.length - up;
         return [
           {
             seat,
@@ -1261,22 +1230,34 @@ function PublicMap({ onOpenRail }: { onOpenRail?: () => void }) {
 function Scan({
   c,
   card = false,
+  onCompose,
 }: {
   c: CommitteeDetail;
   /** The card view presses on the question itself and opens onto the two
    *  answers. The stacked one presses on the topic and opens onto the
    *  question with the answers under it, so its column scans as subjects. */
   card?: boolean;
+  /** Offered where one of the six is the reader's own legislator. */
+  onCompose?: () => void;
 }) {
   const settled = c.settled ?? [];
   const open = c.open ?? [];
+  // Whichever of the six the reader is represented by, if either.
+  const mine = sixOf(c).find((m) => MINE[m.key]);
   if (!settled.length && !open.length) return null;
   return (
     <div className="@container">
       {/* items-start, so the agreed card ends where its list ends. A grid
           stretches its children to the row's height by default, which left it
           running the full length of the questions beside it. */}
-      <div className="grid gap-x-[48px] gap-y-[32px] items-start @[720px]:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+      <div
+        // Tabbed keeps the narrower gutter it had: its questions are full
+        // sentences, so the settled column is already tight and a wider gap
+        // wraps every line of it.
+        className={`relative grid ${
+          card ? "gap-x-[48px]" : "gap-x-[80px]"
+        } gap-y-[32px] items-start @[720px]:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]`}
+      >
         {/* Tabbed view keeps what the surface gave it on three sides and
             drops it on the left, so the chevrons line up with the heading
             above them rather than standing in from it. */}
@@ -1352,10 +1333,45 @@ function Scan({
               );
             })}
           </ScanColumn>
+          {/* The one line here that is about the reader rather than about the
+              bills, so it closes the column of what is still undecided: these
+              are the questions, and one of the people answering them is
+              theirs. */}
+          {mine && (
+            <p className="flex flex-wrap items-baseline gap-x-[8px] gap-y-[4px] font-body text-base text-ink leading-[1.5] mt-[48px]">
+              <Star
+                aria-hidden
+                className="self-center w-[14px] h-[14px] shrink-0 text-caution fill-caution"
+              />
+              <span>
+                {MINE[mine.key]} is on this committee,{" "}
+                <span className="font-semibold">{mine.name}</span>.
+              </span>
+              {onCompose && (
+                <button
+                  onClick={onCompose}
+                  className="font-body font-semibold text-base text-brand-ink hover:text-brand cursor-pointer underline decoration-dotted underline-offset-[4px]"
+                >
+                  Share your input
+                </button>
+              )}
+            </p>
+          )}
         </div>
 
-        {/* Same inset as the questions beside it, and the same ground. */}
-        <div className={card ? "p-[18px]" : ""}>
+        {/* Same inset as the questions beside it, and the same ground. Pulled
+            up in the tabbed view so the label sits level with the section
+            heading rather than a list-length below it. The scrolling view
+            cannot do this in flow, because there the heading sits in an opaque
+            band, so it floats its label instead. */}
+        <div
+          // The same net offset in both views. Tabbed carries 18px of padding
+          // inside the column, so it needs 18 more of pull to land where the
+          // scrolling view lands without it.
+          className={
+            card ? "p-[18px] @[720px]:-mt-[52px]" : "@[720px]:-mt-[34px]"
+          }
+        >
           <ScanColumn head="Where bill texts match" count={settled.length}>
             {settled.map((x) => (
               <Row
@@ -1385,11 +1401,22 @@ function ScanColumn({
   head,
   count,
   gap = "gap-[2px]",
+  floatHead = false,
   children,
 }: {
   head?: string;
   count: number;
   gap?: string;
+  /**
+   * Take the label out of the column's flow once there are two columns, and
+   * hang it level with the section heading instead.
+   *
+   * In the scrolling view the heading sits in an opaque band, so a label level
+   * with it in normal flow is painted over. Out of flow and above that band,
+   * it can sit where it belongs. The column starts at its first row, since the
+   * label is no longer holding a place in it.
+   */
+  floatHead?: boolean;
   children: React.ReactNode;
 }) {
   return (
@@ -1397,12 +1424,25 @@ function ScanColumn({
       {head && (
         // The SENATE and HOUSE labels in the committee card, exactly: the same
         // small caps, so a column label reads the same wherever it appears.
-        <p className="flex items-baseline gap-[8px] font-body font-semibold text-2xs uppercase tracking-[0.08em] text-ink-muted">
+        <p
+          className={`flex items-baseline gap-[8px] font-body font-semibold text-2xs uppercase tracking-[0.08em] text-ink-muted ${
+            floatHead
+              ? // Above the grid, not at its top: the grid starts where the
+                // first row starts, so top-0 put the label on top of it. The
+                // heading sits about 44px higher, which is where this goes.
+                "@[720px]:absolute @[720px]:-top-[44px] @[720px]:right-0 @[720px]:z-10"
+              : ""
+          }`}
+        >
           {head}
           <span className="tabular-nums text-ink-faint">{count}</span>
         </p>
       )}
-      <ul className={`${head ? "mt-[20px]" : ""} flex flex-col ${gap}`}>
+      <ul
+        className={`flex flex-col ${gap} ${
+          head ? (floatHead ? "mt-[20px] @[720px]:mt-0" : "mt-[20px]") : ""
+        }`}
+      >
         {children}
       </ul>
     </div>
@@ -1443,14 +1483,6 @@ function Row({
     </li>
   );
 }
-
-/**
- * Committees the list shows but does not open.
- *
- * Listed, because leaving one out would say the conference does not exist.
- * Not a link, because the page behind it is not ready to be read.
- */
-const NOT_LINKED = new Set(["economic-development"]);
 
 /**
  * Every conference, down the left.
@@ -1811,18 +1843,28 @@ function ConferenceText({
 function Boxed({
   on,
   flushBottom,
+  plain,
   children,
 }: {
   on: boolean;
   /** Drop the padding underneath, for a section that ends the page. */
   flushBottom?: boolean;
+  /**
+   * Keep the box and lose the line. For a section whose own content is
+   * already framed, where a second border is a box inside a box.
+   */
+  plain?: boolean;
   children: React.ReactNode;
 }) {
   return on ? (
+    // Outlined, not filled: each section is its own block on a page that is
+    // otherwise one long column. The side padding matches the bleed a pinned
+    // heading takes, so the heading's band runs to the inside of the line
+    // rather than over it.
     <div
-      className={
-        flushBottom ? "pt-[20px] sm:pt-[24px]" : "py-[20px] sm:py-[24px]"
-      }
+      className={`border rounded-card px-[20px] sm:px-[32px] ${
+        plain ? "border-transparent" : "border-line"
+      } ${flushBottom ? "pt-[20px] sm:pt-[24px]" : "py-[20px] sm:py-[24px]"}`}
     >
       {children}
     </div>
@@ -2126,8 +2168,8 @@ function Detail({ c }: { c: CommitteeDetail }) {
   // rather than keyed: there is one feed mounted, so there is one set of
   // filters to report on, and a second copy would describe a list that is not
   // on screen.
-  const [stance, setStance] = useState<StanceFilter>("all");
-  const [accountType, setAccountType] = useState<TypeFilter>("all");
+  const [position, setPosition] = useState<PositionFilter>("all");
+  const [accountType, setAccountType] = useState<AccountTypeFilter>("all");
   const [railCount, setRailCount] = useState(DEMO_TESTIMONY.length);
   const [railFiltered, setRailFiltered] = useState(false);
   const [railReset, setRailReset] = useState(0);
@@ -2180,7 +2222,7 @@ function Detail({ c }: { c: CommitteeDetail }) {
     shellRef.current?.removeAttribute("data-resizing");
 
   const clearRailFilters = () => {
-    setStance("all");
+    setPosition("all");
     setAccountType("all");
     setRailReset((n) => n + 1);
   };
@@ -2242,47 +2284,39 @@ function Detail({ c }: { c: CommitteeDetail }) {
   }, [tabs, tab]);
   /** Scroll lays every section out; tabbed shows the one that is open. */
   const show = (id: string) => mode === "scroll" || tab === id;
-  // Picking a tab takes the page to the section's resting place: the card
-  // scrolls away and the header and the bar come to rest at the top. Without
+  // Picking a tab takes the page to the section's resting place: the header and
+  // the card scroll away and the bar comes to rest at the top. Without
   // it a reader who has scrolled down lands mid-page on the new section, and
   // one who has not sees the bar sitting under a card that did not move.
   const mainRef = useRef<HTMLElement>(null);
-  // The pinned header's height. Measured rather than written down: the title
-  // wraps to two lines on about half the twelve and the byline on more.
-  const headRef = useRef<HTMLDivElement>(null);
-  const [headH, setHeadH] = useState(0);
-  useEffect(() => {
-    const el = headRef.current;
-    if (!el) return;
-    // Floored, not rounded: rounding up leaves a hairline of page between
-    // the header and the bar resting under it.
-    const read = () => setHeadH(Math.floor(el.getBoundingClientRect().height));
-    const ro = new ResizeObserver(read);
-    ro.observe(el);
-    read();
-    return () => ro.disconnect();
-  }, []);
   const BAR_H = 47;
-  /** How much of the top of the window is spoken for right now. */
+  /**
+   * How much of the top of the window is spoken for right now.
+   *
+   * The nav and the bar, in both layouts. The header used to be a third term
+   * here, measured with an observer because the title wraps to two lines on
+   * about half the twelve. It went when the header stopped pinning: the sum no
+   * longer depends on anything that can change height, so nothing downstream
+   * has to be told when it does.
+   */
   const pinned = () => {
     const navH =
       parseFloat(
         getComputedStyle(document.documentElement).getPropertyValue("--nav-h"),
       ) || 0;
-    return navH + (layout === "stacked" ? headH : 0) + BAR_H;
+    return navH + BAR_H;
   };
   /**
    * The same sum as a CSS length, for anything that has to rest against the
    * underside of it or size itself against what is left of the window. The one
    * expression both uses share, so an offset and a height cannot drift apart:
-   * `pinned()` in numbers and this in CSS are the same three terms.
+   * `pinned()` in numbers and this in CSS are the same two terms.
    */
-  const pinnedH = `calc(var(--nav-h) + ${(layout === "stacked" ? headH : 0) + BAR_H}px)`;
+  const pinnedH = `calc(var(--nav-h) + ${BAR_H}px)`;
   /**
-   * Where a section heading comes to rest: under the nav, the pinned header
-   * and the bar, which is the same sum `pinned()` uses to land a jump. One
-   * value rather than three copies, because the three had already drifted
-   * from it: they left `headH` out and pinned behind the header instead.
+   * Where a section heading comes to rest: under the nav and the bar, which is
+   * the same sum `pinned()` uses to land a jump. One value rather than three
+   * copies, because the three had already drifted from it once.
    */
   const stickyTop = mode === "scroll" ? pinnedH : undefined;
   /**
@@ -2427,23 +2461,27 @@ function Detail({ c }: { c: CommitteeDetail }) {
         </button>
       </div>
 
-      {/* Prototype controls, not part of the page. Two switches, one above the
-          other: where the perspectives are read, and how the page is laid
-          out. */}
+      {/* Prototype controls, not part of the page. Only the layout switch is
+          offered for now; the testimony one is parked below. */}
       <div className="fixed bottom-[20px] left-[20px] z-50 flex flex-col items-start gap-[8px]">
-        <Pills
-          options={["sidebar", "inline"] as const}
-          value={testimony}
-          onChange={(v) => {
-            setTestimony(v);
-            // A dragged width is an inline style on the shell and beats the
-            // class ternaries, so the shell has to be told whether the panel is
-            // still standing under the mode being switched to.
-            applyRailWidth(
-              panelStanding(layout, v) ? railWidthRef.current[layout] : null,
-            );
-          }}
-        />
+        {/* Parked: where public input is read. The page runs inline, with the
+            panel opening only to write, and the sidebar mode is still here
+            behind the switch when it is wanted back. */}
+        {SHOW_TESTIMONY_SWITCH && (
+          <Pills
+            options={["sidebar", "inline"] as const}
+            value={testimony}
+            onChange={(v) => {
+              setTestimony(v);
+              // A dragged width is an inline style on the shell and beats the
+              // class ternaries, so the shell has to be told whether the panel
+              // is still standing under the mode being switched to.
+              applyRailWidth(
+                panelStanding(layout, v) ? railWidthRef.current[layout] : null,
+              );
+            }}
+          />
+        )}
         <Pills
           options={["card", "stacked"] as const}
           // Named for what each one does rather than what it looks like, which
@@ -2514,22 +2552,17 @@ function Detail({ c }: { c: CommitteeDetail }) {
         <div className="min-w-0 flex-1">
           <RailStrip current={c.slug} />
 
-          {/* Stacked pins the hero and the tab bar together. They have to be
-              one sticky box: two of them would need the second to know the
-              first's height, and the title wraps to two lines on half the
-              twelve. The negative margins let the band's own background run
-              to the edge of the reading column. */}
-          <div
-            // The header alone pins, under the back bar. What follows it
-            // scrolls up underneath.
-            ref={headRef}
-            // Stacked pins the header; the card lets it go with the card.
-            // The bleed lets the pinned band's own ground run to the edge of
-            // the reading column, so content scrolls under it cleanly.
-            className={`z-20 -mx-[20px] sm:-mx-[32px] px-[20px] sm:px-[32px] bg-ground/95 backdrop-blur ${
-              layout === "stacked" ? "sticky top-[var(--nav-h)]" : ""
-            }`}
-          >
+          {/* The title and its byline scroll away, in both layouts. Nothing
+              pins here: the tab bar is the only thing that comes to rest under
+              the nav, so the sum every pinned offset on this page is built from
+              never has to know how the title wrapped.
+
+              The bleed and the ground are what the band keeps from when it did
+              pin, and they are why the two layouts read the same at the top of
+              the page. The negative margins let the band's own background run
+              to the edge of the reading column; the padding gives that width
+              back, so the column inside is the one it would have had. */}
+          <div className="z-20 -mx-[20px] sm:-mx-[32px] px-[20px] sm:px-[32px] bg-ground/95 backdrop-blur">
             {/* 26px, so the title's cap sits level with the top of the rail's
                 first pill: a 40px face at 1.2 leaves about 10px above the cap
                 inside its own line box. */}
@@ -2551,9 +2584,9 @@ function Detail({ c }: { c: CommitteeDetail }) {
             </div>
           </div>
 
-          {/* Between the pinned header and the bar, pinned to neither: it
-              scrolls up under the header, and the bar follows it up until it
-              comes to rest against the header's underside. */}
+          {/* Between the header and the bar, pinned like neither: the header
+              and this card go up the window together, and the bar follows them
+              until it comes to rest under the nav. */}
           {layout === "card" && (
             <div className="@container pb-[16px]">
               <div
@@ -2561,9 +2594,6 @@ function Detail({ c }: { c: CommitteeDetail }) {
                 // Outlined rather than filled: the people and the two maps are
                 // one block on a page whose sections are otherwise unbounded,
                 // and a border says where it ends without adding a surface.
-                // Even padding inside the line, and a small gap outside it.
-                // The space that came off is the space between the byline and
-                // the border, not the room the block gives its own content.
                 className="mt-[8px] border border-line rounded-card px-[20px] pt-[20px] pb-[8px] scroll-mt-[120px]"
               >
                 {SHOW_CARD ? (
@@ -2587,17 +2617,13 @@ function Detail({ c }: { c: CommitteeDetail }) {
             </div>
           )}
 
-          {/* Rests under the nav, plus the header's own height where the
-              header is pinned. The card layout drops the Committee tab, since
-              its card sits above this bar rather than in a section you jump
-              to. */}
+          {/* Rests under the nav, in both layouts: it is the first thing the
+              page pins, so it has nothing above it but the site bar. The card
+              layout drops the Committee tab, since its card sits above this bar
+              rather than in a section you jump to. */}
           <Contents
             sections={tabs}
-            offset={
-              layout === "stacked"
-                ? `calc(var(--nav-h) + ${headH}px)`
-                : "var(--nav-h)"
-            }
+            offset="var(--nav-h)"
             jumpTo={jumpTo}
             picked={mode === "tabbed" ? tab : undefined}
             onPick={mode === "tabbed" ? pickTab : undefined}
@@ -2626,7 +2652,15 @@ function Detail({ c }: { c: CommitteeDetail }) {
                 )}
 
                 {show("committee") && (
-                  <div id="committee" className="scroll-mt-[120px]">
+                  // This section sits outside <main>, so it misses the gap
+                  // that separates the sections inside it. It carries the
+                  // same gap itself.
+                  <div
+                    id="committee"
+                    // The 24px under the bar plus this makes the same 48px the
+                    // sections inside main leave between themselves.
+                    className="scroll-mt-[120px] mt-[24px] mb-[24px]"
+                  >
                     <Boxed on={layout === "stacked"}>
                       <PeopleAndMaps
                         six={sixOf(c)}
@@ -2651,10 +2685,10 @@ function Detail({ c }: { c: CommitteeDetail }) {
             // had come to rest, dragging it up behind the bar. The section
             // carries that 80px itself on the committees whose text is not
             // bundled, where the well keeps its own height instead.
-            className={`${show("text") ? "pb-0" : "pb-[80px]"} flex flex-col gap-[44px] sm:gap-[64px] ${
+            className={`${show("text") ? "pb-0" : "pb-[80px]"} flex flex-col gap-[48px] ${
               // Stacked's sections carry their own 20px of top padding, so this
               // adds nothing on top of it.
-              mode === "tabbed" ? "pt-[28px]" : "pt-0"
+              mode === "tabbed" ? "pt-[28px]" : "pt-[24px]"
             }`}
           >
             {/* The same chapter the bill page's lineage uses for "How did it
@@ -2667,10 +2701,14 @@ function Detail({ c }: { c: CommitteeDetail }) {
                   id="decided"
                   question="What needs to be resolved?"
                   titleClass={SUB_HEAD}
-                  stickyHeading={stickyTop}
+                  // This heading does not pin. Its section has no chrome of
+                  // its own to hide, and an opaque pinned band here would
+                  // paint over the settled list's label, which belongs level
+                  // with the heading. Lobbying and Public Input still pin,
+                  // because their controls pin under them.
                   flush
                 >
-                  <Scan c={c} card={layout === "card"} />
+                  <Scan c={c} card={layout === "card"} onCompose={compose} />
                 </Chapter>
               </Boxed>
             )}
@@ -2776,7 +2814,7 @@ function Detail({ c }: { c: CommitteeDetail }) {
             )}
 
             {show("input") && (
-              <Boxed on={layout === "stacked"}>
+              <Boxed on={layout === "stacked"} plain>
                 <Chapter
                   id="input"
                   question="Public Input"
@@ -2786,30 +2824,29 @@ function Detail({ c }: { c: CommitteeDetail }) {
                   headingRef={inputBand.ref}
                   flush
                 >
-                  {/* The ballot pages' feed, on placeholder accounts of its
-                      own. One definition of a submission card, so the two
-                      cannot drift; the roster comes in as data because these
-                      submissions belong to a conference rather than to a
-                      ballot question.
+                  {/* The conference pages' own feed, filtering and chipping on
+                      the same four positions the composer offers. It began as
+                      the ballot pages' feed and is now a fork of it: sharing
+                      one would mean one set of positions covering a ballot
+                      question and a conference, and a reader who asked for the
+                      Senate text would have come back as "Supports".
 
-                      No add button: the composer it opens is written for a
-                      ballot question, and a conference takes no testimony of
-                      its own, so inviting a filing here would promise
-                      something this page cannot do. */}
+                      No invitation to file inside it. A conference takes no
+                      testimony of its own, so the page's own form is the only
+                      place that offers one. */}
                   {/* The filter row carries its own 16px of air above it,
                       for a feed that begins a section on its own. Here a
                       heading is already doing that, so the row's share comes
                       back off. */}
                   {inlineTestimony ? (
                     <div className="-mt-[16px]">
-                      <TestimonyFeed
+                      <SubmissionFeed
                         items={DEMO_TESTIMONY}
                         accounts={DEMO_ACCOUNTS}
+                        subject={displayName(c.slug, c.short)}
                         pageSize={5}
                         includeTypeFilter
                         includeFollowingFilter
-                        hideAddButton
-                        asCards
                         // The filters stay reachable while the list runs past
                         // them, in both views: they come to rest under whatever
                         // the view has pinned above them.
@@ -2833,7 +2870,7 @@ function Detail({ c }: { c: CommitteeDetail }) {
 
             {show("text") && (
               // Nothing under this section: the well ends the page.
-              <Boxed on={layout === "stacked"} flushBottom>
+              <Boxed on={layout === "stacked"} flushBottom plain>
                 <ConferenceText
                   c={c}
                   titleClass={SUB_HEAD}
@@ -2937,18 +2974,17 @@ function Detail({ c }: { c: CommitteeDetail }) {
                 {/* Unpaged here, unlike the section on the page: the panel is a
                     column of its own height, so the list scrolls rather than
                     being dealt out five at a time. */}
-                <TestimonyFeed
+                <SubmissionFeed
                   items={DEMO_TESTIMONY}
                   accounts={DEMO_ACCOUNTS}
-                  filter={stance}
-                  onFilterChange={setStance}
+                  subject={displayName(c.slug, c.short)}
+                  filter={position}
+                  onFilterChange={setPosition}
                   typeFilter={accountType}
                   onTypeFilterChange={setAccountType}
-                  hideAddButton
                   stickyTop="var(--pinned-h)"
                   includeFollowingFilter
                   includeTypeFilter
-                  asCards
                   onCountChange={setRailCount}
                   onFilteredChange={setRailFiltered}
                   resetSignal={railReset}

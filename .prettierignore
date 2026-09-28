@@ -1,0 +1,4 @@
+# One line per seat, two hundred of them, kept as a table you can read down
+# rather than a page of wrapped objects. Prettier would reflow every line and
+# bury a one-word change in a thousand-line diff.
+app/src/app/data/bill-lineage/members.ts

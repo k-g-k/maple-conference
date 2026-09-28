@@ -266,3 +266,15 @@ export const MEMBER_BY_NAME: Record<string, SeatMember> = Object.fromEntries(
 /** The General Court's profile page for a member code. */
 export const profileUrl = (code: string) =>
   `https://malegislature.gov/Legislators/Profile/${encodeURIComponent(code)}`;
+
+/**
+ * The reader's own legislators, by seat.
+ *
+ * Two seats, held here rather than derived, because this prototype has no
+ * account and no address to derive them from. When it has one, this becomes a
+ * lookup and nothing that reads it has to change.
+ */
+export const MINE: Record<string, string> = {
+  "Norfolk-14": "Your representative",
+  "S:Creem": "Your senator",
+};

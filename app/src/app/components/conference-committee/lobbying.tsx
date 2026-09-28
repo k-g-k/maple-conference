@@ -51,15 +51,14 @@ function Position({ position }: { position: string }) {
  * columns crowding into what is left, which on a wide table left the two bill
  * headings pushed together in the middle with a gap either side of them.
  *
- * The organisation gets the largest share at every width, because it holds the
- * longest strings on the page and it is the name a reader is looking for. A
- * position chip and a year are short and fixed in length, so their minimums
- * are small: held any wider, they take width from the names while standing
- * half empty themselves, which is what squeezed the organisations into three
- * lines with the panel open.
+ * The two name columns take most of it, because they hold the only strings
+ * that can be long. A position chip and a year are short and of fixed length,
+ * so the other three ask for as little as they can: held any wider they take
+ * width from the names while standing half empty themselves, which is what
+ * broke every name over three lines with the panel open.
  */
 const COLS =
-  "sm:grid-cols-[minmax(0,1fr)_minmax(0,1.9fr)_minmax(84px,0.5fr)_minmax(84px,0.5fr)_minmax(60px,0.4fr)]";
+  "sm:grid-cols-[minmax(0,1.3fr)_minmax(0,2.2fr)_minmax(72px,0.35fr)_minmax(72px,0.35fr)_minmax(46px,0.25fr)]";
 
 /** Which column the table is ordered by. */
 type SortKey = "lobbyist" | "org" | "senate" | "house" | "filed";
@@ -213,10 +212,10 @@ function OnBehalfOf({ org }: { org: OrgLobbying }) {
       </span>
     );
   return (
-    <span className="font-body text-sm text-ink">
+    <span className="font-body font-semibold text-sm text-ink">
       {/* On a phone the columns become a stack, where "for" is what tells the
           second line apart from the first. */}
-      <span className="sm:hidden text-ink-faint">for </span>
+      <span className="sm:hidden font-normal text-ink-faint">for </span>
       {org.name}
     </span>
   );
@@ -300,7 +299,7 @@ function Row({
       // The rule runs the full width of the table rather than stopping at the
       // words, and the padding that holds the cells off it is on the row. The
       // last row has the footer's own rule under it already.
-      className={`grid grid-cols-1 ${COLS} gap-x-[16px] gap-y-[3px] sm:items-baseline px-[18px] py-[12px] border-b border-line-ghost last:border-b-0 first:rounded-t-card last:rounded-b-card hover:bg-[rgba(0,0,0,0.01)] transition-colors`}
+      className={`grid grid-cols-1 ${COLS} gap-x-[16px] gap-y-[3px] sm:items-baseline px-[18px] py-[12px] border-b border-line-ghost last:border-b-0 hover:bg-[rgba(0,0,0,0.01)] transition-colors`}
     >
       {/* The lobbyist leads, because they are who filed, but the
           organisation behind them is the name a reader is looking for, so it
@@ -436,7 +435,7 @@ export function LobbyingDisclosures({
               <div>
                 <div
                   style={headerTop ? { top: headerTop } : undefined}
-                  className={`hidden sm:grid ${COLS} gap-x-[16px] px-[18px] pb-[8px] bg-ground ${
+                  className={`hidden sm:grid ${COLS} gap-x-[16px] px-[18px] pb-[8px] bg-ground border-b border-line ${
                     headerTop ? "sticky z-[6] pt-[10px]" : ""
                   }`}
                 >
@@ -475,7 +474,7 @@ export function LobbyingDisclosures({
                     </Head>
                   </span>
                 </div>
-                <div className="bg-surface rounded-card border border-line">
+                <div>
                   {paged.map((org) => (
                     <Row
                       key={`${org.ownFiling}-${org.name}`}

@@ -14,8 +14,15 @@ import { ConferenceCommittees } from "./components/conference-committees";
 import { ConferenceCommittee } from "./components/conference-committee";
 import BillExample from "./components/bill-example";
 
-/** Where "/" and anything unknown land. */
-const HOME = "/conferenceCommittees";
+/**
+ * Where "/" and anything unknown land.
+ *
+ * A committee rather than the index: this is a prototype and the page worth
+ * seeing first is the one with the most on it, including the only bundled bill
+ * text and the only real lobbying register. The index is one press away in the
+ * list down the left.
+ */
+const HOME = "/conferenceCommittees/phone-free-schools";
 
 export default function App() {
   return (

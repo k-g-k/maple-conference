@@ -1,0 +1,81 @@
+// Account and position presentation for the conference pages' public input.
+//
+// The ballot pages have their own copy of the first two of these, typed against
+// that question's account model. This one is typed against the conference's, and
+// the chip is the conference's four positions rather than support, oppose and no
+// position, so the two are not the same component with a wider type.
+
+import { Megaphone, Scale, Lectern, UserRound } from "lucide-react";
+import type { ConferenceAccount } from "../../data/conference-committees/testimony";
+import type { ConferencePosition } from "../../data/conference-committees/positions";
+import { POSITIONS } from "../../data/conference-committees/positions";
+
+/**
+ * Initials in a disc. No uploaded images: nothing filed here is real, and a
+ * logo would have to belong to somebody.
+ */
+export function AccountAvatar({
+  account,
+  size = 40,
+}: {
+  account: ConferenceAccount;
+  size?: number;
+}) {
+  return (
+    <div
+      style={{ width: size, height: size }}
+      className="rounded-full bg-brand-soft border border-brand-edge flex items-center justify-center shrink-0"
+    >
+      <span
+        style={{ fontSize: size >= 40 ? 12 : 10 }}
+        className="font-body font-semibold text-brand-ink tracking-[0.02em]"
+      >
+        {account.initials}
+      </span>
+    </div>
+  );
+}
+
+const ACCOUNT_TYPE_ICON: Record<
+  ConferenceAccount["userType"],
+  { Icon: typeof Megaphone; label: string }
+> = {
+  organization: { Icon: Megaphone, label: "Organization" },
+  legislator: { Icon: Scale, label: "Legislator" },
+  government: { Icon: Lectern, label: "Executive office" },
+  individual: { Icon: UserRound, label: "Individual" },
+};
+
+export function AccountTypeIcon({
+  type,
+  size = 15,
+}: {
+  type: ConferenceAccount["userType"];
+  size?: number;
+}) {
+  const { Icon, label } = ACCOUNT_TYPE_ICON[type];
+  return (
+    <span title={label} aria-label={label} className="shrink-0 leading-none">
+      <Icon style={{ width: size, height: size }} />
+    </span>
+  );
+}
+
+/**
+ * What a submission asked the conference for.
+ *
+ * Words and colour, no thumb. The thumbs belong to the filter row, where they
+ * are the mark you press; here the chip is already colour coded and already
+ * sitting beside the name of whoever filed, so the label is all it needs, and a
+ * thumb beside a person's name is louder than what they wrote.
+ */
+export function PositionChip({ position }: { position: ConferencePosition }) {
+  const p = POSITIONS[position];
+  return (
+    <span
+      className={`${p.on} border px-[8px] py-[1px] rounded-pill font-body font-semibold text-2xs`}
+    >
+      {p.short}
+    </span>
+  );
+}
