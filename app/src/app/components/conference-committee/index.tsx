@@ -55,7 +55,11 @@ import {
 } from "../../data/bill-lineage/members";
 import { holdPlace, holdPress } from "../ballot";
 import { Chapter, Span, Disclosure, StickyBand } from "../bill-example/spine";
-import { Conferees, VoteMap } from "../bill-example/lineage-section";
+import {
+  Conferees,
+  VoteMap,
+  surname as shortName,
+} from "../bill-example/lineage-section";
 import { LINEAGE_TEXTS } from "../../data/bill-lineage/texts";
 import { MapleFab } from "../tax-rebate-62f/maple-fab";
 import {
@@ -1243,7 +1247,9 @@ function Scan({
   const settled = c.settled ?? [];
   const open = c.open ?? [];
   // Whichever of the six the reader is represented by, if either.
-  const mine = sixOf(c).find((m) => MINE[m.key]);
+  // Both of them, not the first: a conference can hold the reader's
+  // representative and their senator at once, and public records does.
+  const mine = sixOf(c).filter((m) => MINE[m.key]);
   if (!settled.length && !open.length) return null;
   return (
     <div className="@container">
@@ -1337,23 +1343,49 @@ function Scan({
               bills, so it closes the column of what is still undecided: these
               are the questions, and one of the people answering them is
               theirs. */}
-          {mine && (
-            <p className="flex flex-wrap items-baseline gap-x-[8px] gap-y-[4px] font-body text-base text-ink leading-[1.5] mt-[48px]">
+          {mine.length > 0 && (
+            // Prose, not a row of boxes. As flex items the star wrapped onto a
+            // line of its own and the control onto a third; inline, the star
+            // sits with the first words and the control follows the sentence
+            // and wraps only when it has to.
+            <p className="font-body text-base text-ink leading-[1.6] mt-[48px]">
               <Star
                 aria-hidden
-                className="self-center w-[14px] h-[14px] shrink-0 text-caution fill-caution"
+                className="inline align-[-2px] mr-[8px] w-[14px] h-[14px] text-caution fill-caution"
               />
               <span>
-                {MINE[mine.key]} is on this committee,{" "}
-                <span className="font-semibold">{mine.name}</span>.
+                {mine.length > 1 ? (
+                  <>
+                    Both of your legislators are on this committee,{" "}
+                    <span className="font-semibold">
+                      {shortName(mine[0].name)}
+                    </span>{" "}
+                    and{" "}
+                    <span className="font-semibold">
+                      {shortName(mine[1].name)}
+                    </span>
+                    .
+                  </>
+                ) : (
+                  <>
+                    {MINE[mine[0].key]} is on this committee,{" "}
+                    <span className="font-semibold">
+                      {surname(mine[0].name)}
+                    </span>
+                    .
+                  </>
+                )}
               </span>
               {onCompose && (
-                <button
-                  onClick={onCompose}
-                  className="font-body font-semibold text-base text-brand-ink hover:text-brand cursor-pointer underline decoration-dotted underline-offset-[4px]"
-                >
-                  Share your input
-                </button>
+                <>
+                  {" "}
+                  <button
+                    onClick={onCompose}
+                    className="font-body font-semibold text-base text-brand-ink hover:text-brand cursor-pointer underline decoration-dotted underline-offset-[4px]"
+                  >
+                    Share your input
+                  </button>
+                </>
               )}
             </p>
           )}
@@ -1455,7 +1487,7 @@ function Row({
   title,
   children,
 }: {
-  glyph: React.ReactNode;
+  glyph?: React.ReactNode;
   title: string;
   children: React.ReactNode;
 }) {
@@ -1466,20 +1498,35 @@ function Row({
         type="button"
         onClick={(e) => holdPress(e, () => setOpen((v) => !v))}
         aria-expanded={open}
-        className="group w-full text-left flex items-start gap-[12px] py-[5px] cursor-pointer"
+        className="group w-full text-left flex items-start gap-[6px] py-[5px] cursor-pointer"
       >
-        <span className="shrink-0 w-[18px] flex justify-center">{glyph}</span>
+        {/* Control, then mark, then words. The chevron leads, so this column
+            opens the same way the questions beside it do, and the check sits
+            with the words it qualifies. Optional, for a list without one. */}
+        <span className="shrink-0 flex items-start gap-[10px]">
+          <ChevronRight
+            aria-hidden
+            // Lighter than the rest of the row: it is the affordance, not
+            // the content, and it only has to be found when looked for.
+            className={`mt-[2px] w-[15px] h-[15px] text-line-strong group-hover:text-ink-faint transition-transform ${
+              open ? "rotate-90" : ""
+            }`}
+          />
+          {glyph && (
+            <span className="w-[18px] flex justify-center">{glyph}</span>
+          )}
+        </span>
         <span className="flex-1 font-body text-sm text-ink leading-[1.5]">
           {title}
         </span>
-        <ChevronDown
-          aria-hidden
-          className={`shrink-0 mt-[3px] w-[15px] h-[15px] text-ink-faint group-hover:text-ink-muted transition-transform ${
-            open ? "rotate-180" : ""
-          }`}
-        />
       </button>
-      {open && <div className="pl-[30px] pb-[12px]">{children}</div>}
+      {/* Indented to the words: the mark and the chevron together, plus the
+          gap after them. */}
+      {open && (
+        <div className={`${glyph ? "pl-[49px]" : "pl-[21px]"} pb-[12px]`}>
+          {children}
+        </div>
+      )}
     </li>
   );
 }
@@ -2561,8 +2608,14 @@ function Detail({ c }: { c: CommitteeDetail }) {
             // page's content box, which is the window less its scrollbar,
             // while 100vw counts the scrollbar in and lands a few pixels
             // right of where the column sits today.
+            // Slide before shrinking. The panel takes width from the right, so
+            // the column first gives up the margin centring had left it on the
+            // left, moving bodily into that whitespace, and only narrows once
+            // that margin is spent. Clamped at 0 so it never leaves the page's
+            // own gutter, and still dropped outright past the share where the
+            // panel is wide enough that holding the left edge is pointless.
             "--page-left":
-              "max(0px, min(calc((100% - var(--page-cap, 1180px)) / 2), var(--rail-share)))",
+              "max(0px, min(calc((100% - var(--page-cap, 1180px)) / 2 - var(--taken-w, 0px)), var(--rail-share)))",
           } as CSSProperties
         }
         className={`${PAGE_COLUMN} [--page-cap:1180px] lg:[--page-cap:1320px] min-[1480px]:[--page-cap:1764px] flex gap-[24px] lg:gap-[56px] lg:mx-0 lg:ml-[var(--page-left)] lg:mr-[var(--taken-w)] lg:[--page-w:calc(100vw-var(--taken-w))] transition-[margin] duration-300 ease-out motion-reduce:transition-none [[data-resizing]_&]:transition-none`}

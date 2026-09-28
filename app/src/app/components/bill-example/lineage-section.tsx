@@ -130,7 +130,7 @@ interface SeatCard {
  */
 const SUFFIX = /^(jr|sr|ii|iii|iv)\.?$/i;
 
-const surname = (name: string) => {
+export const surname = (name: string) => {
   const parts = name.replace(/,/g, "").split(" ").filter(Boolean);
   let last = parts[parts.length - 1];
   let suffix = "";
