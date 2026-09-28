@@ -12,7 +12,7 @@
 
 import { useMemo, useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, useSearchParams, Link } from "react-router-dom";
 import {
   ArrowUpRight,
   Check,
@@ -2118,9 +2118,22 @@ type TestimonyMode = "sidebar" | "inline";
 function Detail({ c }: { c: CommitteeDetail }) {
   const rec = recordForSlug(c.slug);
   const meetings = MEETINGS[c.slug] ?? [];
-  // Four views, from two switches. Neither is remembered: a reload is the
-  // way back to the pair being treated as the default.
-  const [layout, setLayout] = useState<Layout>("card");
+  /**
+   * Which of the two reads this is, and a way to link to either.
+   *
+   * `?view=scroll` and `?view=tabbed` name them by what they do rather than by
+   * what the code calls them, so a link can be sent to someone and land them
+   * in the right one. Anything else, or nothing, is the tabbed read.
+   */
+  const [params, setParams] = useSearchParams();
+  const layout: Layout = params.get("view") === "scroll" ? "stacked" : "card";
+  const setLayout = (v: Layout) => {
+    const next = new URLSearchParams(params);
+    next.set("view", v === "stacked" ? "scroll" : "tabbed");
+    // Replaced, not pushed: the switch is how the page is being read rather
+    // than somewhere the reader went, so Back should leave the page.
+    setParams(next, { replace: true });
+  };
   // One choice for the page rather than one per layout: it is the same question
   // in both, where the perspectives are read, and it sits beside the layout
   // switch as one control. The panel's own state stays keyed by layout under
@@ -2243,13 +2256,20 @@ function Detail({ c }: { c: CommitteeDetail }) {
     // from a strip on the edge or from a button pinned to the corner.
     const line = pinned();
     let el: HTMLElement | null = null;
+    let first: HTMLElement | null = null;
     for (const x of CONTENTS) {
       const found = document.getElementById(x.id);
-      if (found && found.getBoundingClientRect().top <= line + 1) el = found;
+      if (!found) continue;
+      // The first one on the page, for a reader who has not scrolled yet.
+      // Without it there was no anchor at the top of the page, which is
+      // exactly where the header rewraps as the column narrows and takes
+      // everything below it down the screen.
+      first ??= found;
+      if (found.getBoundingClientRect().top <= line + 1) el = found;
     }
     // The panel's own transition is 300ms, so the correction runs a little
     // past it and catches the last frame.
-    holdPlace(el, run, 380);
+    holdPlace(el ?? first, run, 380);
   };
 
   const openRailClean = () =>

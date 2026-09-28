@@ -51,14 +51,14 @@ function Position({ position }: { position: string }) {
  * columns crowding into what is left, which on a wide table left the two bill
  * headings pushed together in the middle with a gap either side of them.
  *
- * The two name columns take most of it, because they hold the only strings
- * that can be long. A position chip and a year are short and of fixed length,
- * so the other three ask for as little as they can: held any wider they take
- * width from the names while standing half empty themselves, which is what
- * broke every name over three lines with the panel open.
+ * Half the width to the two names, half to the three facts. The names hold the
+ * only strings that can run long, so they split their half unevenly, the
+ * organisation taking more than the lobbyist. The three on the right are a
+ * chip, a chip and a year, all short and of fixed length, so they share their
+ * half evenly and keep small minimums for the narrow end.
  */
 const COLS =
-  "sm:grid-cols-[minmax(0,1.3fr)_minmax(0,2.2fr)_minmax(72px,0.35fr)_minmax(72px,0.35fr)_minmax(46px,0.25fr)]";
+  "sm:grid-cols-[minmax(0,1.1fr)_minmax(0,1.4fr)_minmax(72px,0.9fr)_minmax(72px,0.9fr)_minmax(56px,0.7fr)]";
 
 /** Which column the table is ordered by. */
 type SortKey = "lobbyist" | "org" | "senate" | "house" | "filed";
@@ -133,9 +133,17 @@ function Head({
       type="button"
       onClick={() => onSort(sortKey)}
       aria-label={`Sort by ${String(children)}`}
-      className={`group inline-flex items-center gap-[5px] cursor-pointer text-left hover:text-ink transition-colors ${type} ${
+      className={`group inline-flex items-center gap-[5px] cursor-pointer hover:text-ink transition-colors ${type} ${
         on ? "text-ink" : ""
-      } ${align === "right" ? "justify-self-end" : ""}`}
+      } ${
+        // The caret keeps its width when it is hidden, so on the right-hand
+        // column it would sit between the label and the edge the label is
+        // supposed to meet. Reversed, the label ends flush and the caret
+        // grows to its left.
+        align === "right"
+          ? "flex-row-reverse justify-self-end text-right"
+          : "text-left"
+      }`}
     >
       {children}
       <ChevronUp

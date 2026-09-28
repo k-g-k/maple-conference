@@ -99,7 +99,7 @@ export function MapleFab({
           </p>
           <textarea
             rows={3}
-            placeholder="e.g. If the state runs a surplus next year, would I actually get a refund under this?"
+            placeholder="e.g. What happens if these six cannot agree before the session ends?"
             className="w-full resize-none border border-line-strong rounded-control p-[10px] font-body text-sm text-ink placeholder:text-ink-muted focus:outline-none focus:border-brand"
           />
           <button className="mt-[10px] w-full bg-brand text-ink-inverse font-body font-semibold text-sm px-[12px] py-[8px] rounded-control cursor-pointer">
