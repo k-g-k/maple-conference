@@ -1141,7 +1141,7 @@ function PublicMap({ onOpenRail }: { onOpenRail?: () => void }) {
                     r={5 + m.count * 3}
                     // Long enough that the dimming reads as the map turning
                     // its attention rather than as a flicker.
-                    className={`${m.fill} transition-opacity duration-500 ${
+                    className={`${m.fill} transition-opacity duration-400 ${
                       selected && !active ? "opacity-25" : "opacity-90"
                     }`}
                   />
@@ -1149,7 +1149,7 @@ function PublicMap({ onOpenRail }: { onOpenRail?: () => void }) {
                     x={m.point.x}
                     y={m.point.y - 12 - m.count * 3}
                     textAnchor="middle"
-                    className={`font-body fill-ink-muted text-[19px] transition-opacity duration-500 ${
+                    className={`font-body fill-ink-muted text-[19px] transition-opacity duration-400 ${
                       selected && !active ? "opacity-35" : ""
                     }`}
                   >
@@ -2314,9 +2314,9 @@ function Detail({ c }: { c: CommitteeDetail }) {
       first ??= found;
       if (found.getBoundingClientRect().top <= line + 1) el = found;
     }
-    // The panel's own transition is 300ms, so the correction runs a little
+    // The panel's own transition is 400ms, so the correction runs a little
     // past it and catches the last frame.
-    holdPlace(el ?? first, run, 380);
+    holdPlace(el ?? first, run, 480);
   };
 
   const openRailClean = () =>
@@ -2510,7 +2510,7 @@ function Detail({ c }: { c: CommitteeDetail }) {
       {/* The bill page's pair, unchanged: ask MAPLE, and write testimony.
           Bottom right, where the layout switch is bottom left. The row's
           --fab-r keeps both clear of the panel instead of under it. */}
-      <div className="fixed bottom-[24px] right-[var(--fab-r,24px)] z-50 flex items-center gap-[12px] transition-[right] duration-300 ease-out motion-reduce:transition-none [[data-resizing]_&]:transition-none">
+      <div className="fixed bottom-[24px] right-[var(--fab-r,24px)] z-50 flex items-center gap-[12px] transition-[right] duration-400 ease-out motion-reduce:transition-none [[data-resizing]_&]:transition-none">
         <MapleFab inline open={askOpen} onOpenChange={setAskOpen} />
         <button
           onClick={compose}
@@ -2618,7 +2618,7 @@ function Detail({ c }: { c: CommitteeDetail }) {
               "max(0px, min(calc((100% - var(--page-cap, 1180px)) / 2 - var(--taken-w, 0px)), var(--rail-share)))",
           } as CSSProperties
         }
-        className={`${PAGE_COLUMN} [--page-cap:1180px] lg:[--page-cap:1320px] min-[1480px]:[--page-cap:1764px] flex gap-[24px] lg:gap-[56px] lg:mx-0 lg:ml-[var(--page-left)] lg:mr-[var(--taken-w)] lg:[--page-w:calc(100vw-var(--taken-w))] transition-[margin] duration-300 ease-out motion-reduce:transition-none [[data-resizing]_&]:transition-none`}
+        className={`${PAGE_COLUMN} [--page-cap:1180px] lg:[--page-cap:1320px] min-[1480px]:[--page-cap:1764px] flex gap-[24px] lg:gap-[56px] lg:mx-0 lg:ml-[var(--page-left)] lg:mr-[var(--taken-w)] lg:[--page-w:calc(100vw-var(--taken-w))] transition-[margin] duration-400 ease-out motion-reduce:transition-none [[data-resizing]_&]:transition-none`}
       >
         <Rail current={c.slug} label={false} />
 

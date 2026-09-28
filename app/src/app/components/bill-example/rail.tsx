@@ -130,7 +130,7 @@ export function Rail({
         // at the edge of the screen: a button, most visibly. Open, the
         // overflow has to stay visible, because notes and menus inside the
         // panel rise out of it.
-        className={`hidden lg:flex fixed right-0 top-[calc(var(--nav-h)+1px)] bottom-0 z-40 w-[var(--rail-w)] flex-col ${current.surface ?? "bg-ground"} border-l border-line transition-transform duration-300 ease-out motion-reduce:transition-none ${
+        className={`hidden lg:flex fixed right-0 top-[calc(var(--nav-h)+1px)] bottom-0 z-40 w-[var(--rail-w)] flex-col ${current.surface ?? "bg-ground"} border-l border-line transition-transform duration-400 ease-out motion-reduce:transition-none ${
           open ? "translate-x-0" : "translate-x-full overflow-hidden"
         }`}
       >
