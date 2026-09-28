@@ -1,0 +1,71 @@
+
+  <!DOCTYPE html>
+  <html lang="en">
+    <head>
+      
+      <meta charset="UTF-8" />
+      <!-- Phones lay the page out at 875px rather than reflowing to their real
+           width. width alone should make Safari pick a scale that fits 875 on
+           screen; it does not reliably, and the page sits at 1:1 with its right
+           side off screen. initial-scale is that scale, but it is a ratio to the
+           device, so the script below computes it. Without JS the tag stands on
+           its own and the page is merely zoomed out, not broken. Keep 875 in
+           sync with the width passed to <ScaleFloor>, which does the same job
+           for desktop browsers, where this tag is ignored. -->
+      <meta name="viewport" content="width=875" />
+      <script>
+        (function () {
+          var LAYOUT = 875;
+          var meta = document.querySelector('meta[name="viewport"]');
+          function fit() {
+            // Pages that do their own responsive work opt out and get the real
+            // device width; the fixed-layout pages keep the scale-to-fit.
+            if (document.documentElement.dataset.viewport === "device") {
+              meta.setAttribute(
+                "content",
+                "width=device-width, initial-scale=1"
+              );
+              return;
+            }
+            var w = (window.screen && window.screen.width) || LAYOUT;
+            // Wider than the layout: nothing to scale, hand the screen back its
+            // own width so the page renders natively.
+            meta.setAttribute(
+              "content",
+              w >= LAYOUT
+                ? "width=device-width, initial-scale=1"
+                : "width=" + LAYOUT + ", initial-scale=" + w / LAYOUT
+            );
+          }
+          fit();
+          // Exposed so a page can re-run it after opting in or out.
+          window.__mapleFitViewport = fit;
+          // screen.width swaps on rotation, so the scale has to be recomputed.
+          window.addEventListener("orientationchange", function () {
+            setTimeout(fit, 100);
+          });
+        })();
+      </script>
+      <title>MAPLE Ballot Question — Design Prototype</title>
+      <meta name="description" content="A design prototype exploring how a Massachusetts ballot question could be presented on MAPLE. Content is illustrative only — not real ballot-measure data." />
+      <meta property="og:type" content="website" />
+      <meta property="og:title" content="MAPLE Ballot Question — Design Prototype" />
+      <meta property="og:description" content="A design prototype exploring how a Massachusetts ballot question could be presented on MAPLE. Content is illustrative only — not real ballot-measure data." />
+      <meta property="og:url" content="https://ballot-study.vercel.app/" />
+      <meta name="twitter:card" content="summary" />
+      <meta name="twitter:title" content="MAPLE Ballot Question — Design Prototype" />
+      <meta name="twitter:description" content="A design prototype exploring how a Massachusetts ballot question could be presented on MAPLE. Content is illustrative only — not real ballot-measure data." />
+      <meta name="robots" content="noindex, nofollow, noarchive, nosnippet, noimageindex" />
+      <meta name="googlebot" content="noindex, nofollow, noarchive, nosnippet, noimageindex" />
+      <style>html, body { height: 100%; margin: 0; } #root { height: 100%; }</style>
+      
+    </head>
+
+    <body>
+      
+      <div id="root"></div>
+      <script type="module" src="/src/main.tsx"></script>
+      
+    </body>
+  </html>
+  

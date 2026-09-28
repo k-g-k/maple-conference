@@ -1,0 +1,3 @@
+# Design prototype — not for public indexing or crawling.
+User-agent: *
+Disallow: /

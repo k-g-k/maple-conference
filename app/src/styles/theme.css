@@ -1,0 +1,300 @@
+/* Design tokens.
+ *
+ * Everything the pages paint with is declared here and nowhere else. These are
+ * real Tailwind v4 theme keys, not a mirror: `--color-ink-muted` generates
+ * `text-ink-muted`, `--radius-card` generates `rounded-card`. Components should
+ * reach for those utilities rather than arbitrary values, so changing the palette
+ * stays a one-file job.
+ *
+ * The palette is the Claude Design System (warm paper, near-black rather than
+ * black, hairline translucent borders carrying the weight shadows usually would)
+ * with two deliberate departures:
+ *
+ *   1. MAPLE navy takes the brand and link roles the DS gives Claude blue. Blue
+ *      is kept only for the focus ring, where navy would read as a link.
+ *   2. AI synthesis is violet, a hue the DS does not define. Claude coral was the
+ *      obvious candidate, being Claude's own mark, but it is an action colour in
+ *      the DS and synthesis is content, so it would have competed with the
+ *      buttons. The plum below is tuned to the DS's key rather than borrowed
+ *      from a generic palette; see the note on the token.
+ */
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  --font-size: 16px;
+  /* The fixed chrome above the page. Declared once because two places need to
+     agree on it: the nav that draws it, and anything sizing itself against the
+     space left over. */
+  --nav-h: 60px;
+  /* Headings sit at 500 per the DS; 600 is emphasis, and 700 leaves the page
+     except in figures. */
+  --font-weight-medium: 500;
+  --font-weight-normal: 400;
+}
+
+/* `static` rather than a bare @theme: Tailwind drops theme variables no utility
+   references, which would strand the ones read from JS and inline styles
+   (KIND_DOT paints a left bar with style.borderColor). Emitting all of them
+   costs a few dozen lines of CSS and makes every token reachable from both
+   sides. */
+@theme static {
+  /* ---------- Type ---------- */
+  /* Lexend carries display and headings, Nunito body and UI: the professional
+     and homegrown halves of the visual language. */
+  --font-display: "Lexend", ui-sans-serif, system-ui, sans-serif;
+  --font-body: "Nunito", ui-sans-serif, system-ui, sans-serif;
+
+  --text-2xs: 11px;
+  --text-2xs--line-height: 1.5;
+  --text-xs: 12px;
+  --text-xs--line-height: 1.5;
+  --text-sm: 13px;
+  --text-sm--line-height: 1.5;
+  --text-base: 14px;
+  --text-base--line-height: 1.5;
+  --text-lg: 16px;
+  --text-lg--line-height: 1.5;
+  --text-xl: 20px;
+  --text-xl--line-height: 1.4;
+  --text-2xl: 28px;
+  --text-2xl--line-height: 1.4;
+  --text-3xl: 36px;
+  --text-3xl--line-height: 1.25;
+  --text-4xl: 56px;
+  --text-4xl--line-height: 1.15;
+
+  /* Letter-spacing only tightens at display sizes. */
+  --tracking-display: -0.02em;
+  --tracking-heading: -0.01em;
+
+  /* ---------- Surfaces ----------
+     A neutral page grey: equal red, green and blue, so it reads as grey
+     rather than as the warm greige this prototype started from or the warm
+     #eae7e7 the live site uses. Sunken is one step below it, on the same
+     neutral. */
+  --color-ground: #f7f7f7;
+  --color-surface: #ffffff;
+  --color-sunken: #e2e2e2;
+
+  --color-inverse: #141413;
+
+  /* ---------- Ink ---------- */
+  --color-ink: #141413;
+  --color-ink-muted: #73726c;
+  --color-ink-faint: #b5b4ae;
+  --color-ink-inverse: #ffffff;
+
+  /* ---------- Lines ----------
+     Translucent rather than solid so they sit correctly on both the ground and
+     a white card without needing two values. The tint is MAPLE's slate
+     (`$maple-border-default`, rgba(15, 23, 42, .15)) rather than a warm black,
+     so rules on the grey read cool like the rest of the live site. */
+  --color-line: rgba(15, 23, 42, 0.15);
+  --color-line-strong: rgba(15, 23, 42, 0.3);
+  --color-line-ghost: rgba(15, 23, 42, 0.06);
+
+  /* ---------- Brand ----------
+     A slate blue rather than MAPLE's #12266f. The old navy was the only
+     saturated thing in a palette of warm paper and warm greys, and at 44
+     degrees from the AI purple it read as its relative. This drops saturation
+     from 0.72 to 0.52 and moves to hue 214, which puts 57 degrees between the
+     two and lets the blue sit on cream instead of fighting it. Same weight,
+     same 10.8:1 against the ground. */
+  --color-brand: #1f3b61;
+
+  /* Links. MAPLE's own `$maple-brand-primary`, the navy the header bar wears,
+     so a link and the bar agree. Hover settles back to the page's brand
+     slate rather than brightening, which keeps a followed link from reading
+     as a source chip. */
+  --color-link: #1a3185;
+  --color-brand-hover: #152842;
+  --color-brand-soft: #eaeff5;
+  --color-brand-edge: #c4cfde;
+  --color-brand-ink: #284e80;
+
+  /* Hover red, the one the components actually use. The old token said
+     #c61e32 while every component said #c71e32; this settles it. */
+  --color-alert: #c71e32;
+
+  /* Hover and press are a translucent wash, never a fill swap. Same slate as
+     the lines, so a hovered row and its border agree. */
+  --color-wash: rgba(15, 23, 42, 0.05);
+  --color-wash-strong: rgba(15, 23, 42, 0.08);
+
+  --color-focus: rgba(70, 130, 213, 0.5);
+
+  /* ---------- Provenance ----------
+     The four source kinds every citable fact carries. Mark is the bar or dot,
+     soft is the fill, ink is text on soft. */
+  --color-official: #4682d5;
+  --color-official-soft: #d6e4f6;
+  --color-official-ink: #2a6fd5;
+
+  --color-outside: #76c353;
+  --color-outside-soft: #e0f2d5;
+  --color-outside-ink: #2e7d32;
+
+  --color-user: #ecb72e;
+  --color-user-soft: #faeec5;
+  --color-user-ink: #8a5a00;
+
+  --color-ai: #a855f7;
+  --color-ai-soft: #f5f3ff;
+  --color-ai-ink: #6b21a8;
+
+  /* The light-border role. A chip or a tinted box is outlined in a far paler
+     tone than the bar that marks a passage: at #a855f7 the outline competes
+     with its own text, at #d8b4fe it just describes the edge. The first token
+     pass collapsed these two jobs onto one value, which made every chip heavier
+     than it was drawn to be. `brand-edge` is the same idea for navy. */
+  --color-official-edge: #93c5fd;
+  --color-outside-edge: #86efac;
+  --color-user-edge: #fdba74;
+  --color-ai-edge: #d8b4fe;
+
+  /* Text links tinted by their source darken on hover rather than swapping
+     colour, so each ink needs a deeper partner. */
+  --color-outside-deep: #1f5c24;
+  --color-user-deep: #6b4600;
+  --color-ai-deep: #4c1d95;
+
+  /* ---------- Valence ----------
+     Whether a thing is good or bad for someone, which is a different axis from
+     where it came from even where the hues rhyme. A stakeholder bearing a cost
+     and an outside source are not the same kind of green or red.
+
+     Opposition reads as caution rather than negative wherever it sits beside
+     support: amber and green separate far better than red and green do for the
+     common form of colour blindness. */
+  --color-positive: #76c353;
+  --color-positive-soft: #e0f2d5;
+  --color-positive-ink: #2e7d32;
+
+  --color-negative: #b53333;
+  --color-negative-soft: #f7dcdc;
+  --color-negative-ink: #b53333;
+
+  /* Roll-call votes, which are their own pair and nothing else's. Kept apart
+     from the party colours so a red cell is never ambiguous between "a
+     Republican" and "a No". */
+  --color-yea: #2f6b46;
+  /* Amber, not red. The brick this started as sat a few degrees from the
+     Republican red, and at the map's 45% fill the two became the same dusty
+     rose: a reader could not tell a No vote from a Republican seat. Amber is
+     the one warm hue nothing else on these pages claims, and it still reads as
+     the opposite of the green. */
+  --color-nay: #b4651a;
+
+  --color-caution: #ecb72e;
+  --color-caution-soft: #faeec5;
+  --color-caution-ink: #8a5a00;
+
+  /* ---------- Radius ---------- */
+  --radius-chip: 4px;
+  --radius-control: 8px;
+  --radius-panel: 12px;
+  --radius-card: 16px;
+  --radius-pill: 9999px;
+
+  /* ---------- Elevation ----------
+     Borders do most of the separating. Only genuinely floating things get a
+     shadow, and nothing exceeds 12px of blur. */
+  --shadow-raised: 0 1px 2px rgba(20, 20, 19, 0.05);
+  --shadow-popover:
+    0 8px 24px rgba(20, 20, 19, 0.1), 0 1px 3px rgba(20, 20, 19, 0.06);
+  --shadow-panel:
+    0 12px 32px rgba(20, 20, 19, 0.12), 0 2px 6px rgba(20, 20, 19, 0.06);
+}
+
+@layer base {
+  * {
+    @apply border-line outline-focus;
+  }
+
+  /* Used by concept-h and content-schemata for their scroll-locked columns.
+     globals.css carries a near-identical .scrollbar-hide for the tab strip. */
+  .hide-scrollbar {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* The opposite, for the bill viewer: a scrollbar that stays put rather than
+     the overlay kind macOS fades out when the pointer stops. A document that
+     runs past the bottom of the sheet should say so while it is being read,
+     not only while it is being scrolled. `scrollbar-gutter` reserves the track
+     whether or not there is anything to scroll, so the text does not reflow
+     when a short document is swapped for a long one. */
+  .scrollbar-always {
+    scrollbar-gutter: stable;
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-line-strong) transparent;
+  }
+  .scrollbar-always::-webkit-scrollbar {
+    width: 10px;
+  }
+  .scrollbar-always::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .scrollbar-always::-webkit-scrollbar-thumb {
+    background: var(--color-line-strong);
+    border-radius: 999px;
+    border: 3px solid transparent;
+    background-clip: content-box;
+  }
+
+  body {
+    @apply bg-ground text-ink font-body;
+  }
+
+  html {
+    font-size: var(--font-size);
+  }
+
+  /* Element defaults. These live in @layer base so any Tailwind utility on the
+     element wins over them. */
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-display);
+    font-weight: var(--font-weight-medium);
+  }
+
+  h1 {
+    font-size: var(--text-2xl);
+    line-height: var(--text-2xl--line-height);
+    letter-spacing: var(--tracking-heading);
+  }
+
+  h2 {
+    font-size: var(--text-xl);
+    line-height: var(--text-xl--line-height);
+  }
+
+  h3 {
+    font-size: var(--text-lg);
+    line-height: var(--text-lg--line-height);
+  }
+
+  h4 {
+    font-size: var(--text-base);
+    line-height: var(--text-base--line-height);
+  }
+
+  label,
+  button {
+    font-size: var(--text-base);
+    font-weight: var(--font-weight-medium);
+    line-height: var(--text-base--line-height);
+  }
+
+  input {
+    font-size: var(--text-base);
+    font-weight: var(--font-weight-normal);
+    line-height: var(--text-base--line-height);
+  }
+}

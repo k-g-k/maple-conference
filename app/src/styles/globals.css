@@ -1,0 +1,16 @@
+/* iOS inflates text in a scaled or wide layout while leaving icons and fixed
+   boxes alone, which pulls a scaled page apart. Tailwind's preflight already
+   sets -webkit-text-size-adjust: 100%, and iOS boosts through it; none is the
+   value that actually holds. See ScaleFloor, which sets it again inline. */
+html {
+  -webkit-text-size-adjust: none;
+  text-size-adjust: none;
+}
+
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
