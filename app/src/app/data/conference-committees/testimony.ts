@@ -194,6 +194,28 @@ export const DEMO_ACCOUNTS: ConferenceAccount[] = [
 ];
 
 /**
+ * The prototype's own reader, so the review step can show them what they are
+ * about to become.
+ *
+ * Not one of the placeholders above, and not a person: this is whoever is
+ * looking at the prototype, and it exists because a preview of a submission
+ * needs a name and a pair of initials to draw. The initials are the ones the
+ * site bar already wears, so the account in the corner and the card on the
+ * review step are recognisably the same account.
+ *
+ * Kept out of DEMO_ACCOUNTS, which is the roster the feed and the map read from.
+ * This account belongs in the feed only once the reader has posted, and the page
+ * adds it then.
+ */
+export const VIEWER: ConferenceAccount = {
+  id: "cc-viewer",
+  name: "Gina K.",
+  userType: "individual",
+  descriptor: "Individual account, Suffolk County",
+  initials: "GK",
+};
+
+/**
  * Eighteen submissions, newest first: one from each account, and a second from
  * three of them at the length people actually write at.
  *
@@ -236,6 +258,27 @@ export const DEMO_TESTIMONY: ConferenceSubmission[] = [
     position: "pass",
     date: "September 14, 2026",
     body: "A legislator account files the same way everyone else does. The account type sits beside the name, so a reader can tell at a glance who is speaking.",
+  },
+  {
+    id: "cc-t-terry-agree",
+    userId: "cc-ind-terry",
+    position: "pass",
+    date: "September 11, 2026",
+    body: "Neither text is the one I would write. What I want is the version that comes out of the room with the parts both chambers can live with, and without the one provision that is going to sink it.",
+  },
+  {
+    id: "cc-t-association-agree",
+    userId: "cc-org-association",
+    position: "pass",
+    date: "September 10, 2026",
+    body: "An organization asking for the middle rather than for its own side. Filings like this usually name the provisions they can accept either way, which is the most useful thing a conference can be told. Placeholder copy, so nothing here is anyone's position.",
+  },
+  {
+    id: "cc-t-city-agree",
+    userId: "cc-gov-city",
+    position: "pass",
+    date: "September 9, 2026",
+    body: "A municipal office would have to carry out whichever text is agreed, so what it asks for is a single set of rules rather than one chamber's version of them.",
   },
   {
     id: "cc-t-priya",

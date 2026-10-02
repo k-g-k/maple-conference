@@ -10,14 +10,14 @@
 // and the public map. A second copy of it anywhere would be a second set of
 // positions, and the two would drift.
 
-export type ConferencePosition = "pass" | "house" | "senate" | "none";
+export type ConferencePosition = "pass" | "senate" | "house" | "none";
 
 /**
  * The one axis all four share: three of them ask the conference to produce a
  * bill and the fourth asks it to produce none.
  *
- * This is the same split the thumbs make, and it is the only comparison the four
- * positions can carry between them. Which of the two texts somebody prefers is
+ * This is the same split the thumbs make, and it is the only comparison the
+ * four positions can carry between them. Which of the two texts somebody prefers is
  * not a scale, so nothing should try to average it.
  */
 export type ConferenceAsk = "bill" | "nothing";
@@ -36,7 +36,7 @@ export interface ConferencePositionOption {
   /**
    * Which way this position is pushing. The map reads it, and so does the thumb
    * on the filter pill: the mark belongs to the direction rather than to the
-   * position, which is why three of the four share one. The thumbs themselves
+   * position, which is why four of the five share one. The thumbs themselves
    * live with the pill that draws them, in the feed's `ASK_THUMB`.
    */
   ask: ConferenceAsk;
@@ -81,15 +81,17 @@ export const POSITIONS: Record<ConferencePosition, ConferencePositionOption> = {
 /**
  * In the order they are offered.
  *
- * "Please pass something" leads, and the composer opens on it: it is the
- * position that asks the conference to do the thing it exists to do, and the
- * least loaded of the four to arrive already chosen. The two chambers follow in
- * the order the page names them everywhere else, and asking for nothing sits
- * last because it is the one that ends the process.
+ * Wanting a result leads, and the composer opens on it: it is the least loaded
+ * of the four to arrive already chosen, and it is what most people filing on a
+ * conference actually want. Then the two texts, then the refusal, which sits
+ * last because it is the only one that ends the process.
+ *
+ * Written in the first person: a filing is somebody saying what they want, not
+ * a label being applied to them.
  */
 export const CONFERENCE_POSITIONS: ConferencePositionOption[] = [
   POSITIONS.pass,
-  POSITIONS.house,
   POSITIONS.senate,
+  POSITIONS.house,
   POSITIONS.none,
 ];

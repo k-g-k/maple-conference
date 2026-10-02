@@ -39,6 +39,11 @@
    costs a few dozen lines of CSS and makes every token reachable from both
    sides. */
 @theme static {
+  /* A no answer, put on the thing that needs one rather than on the control
+     that was pressed: one ring out of the field's edge and gone. The red
+     border stays after it; this is the moment that says where to look. */
+  --animate-ask: ask 620ms ease-out;
+
   /* ---------- Type ---------- */
   /* Lexend carries display and headings, Nunito body and UI: the professional
      and homegrown halves of the visual language. */
@@ -90,9 +95,9 @@
      a white card without needing two values. The tint is MAPLE's slate
      (`$maple-border-default`, rgba(15, 23, 42, .15)) rather than a warm black,
      so rules on the grey read cool like the rest of the live site. */
-  --color-line: rgba(15, 23, 42, 0.15);
-  --color-line-strong: rgba(15, 23, 42, 0.3);
-  --color-line-ghost: rgba(15, 23, 42, 0.06);
+  --color-line: rgba(0, 0, 0, 0.16);
+  --color-line-strong: rgba(0, 0, 0, 0.26);
+  --color-line-ghost: rgba(0, 0, 0, 0.05);
 
   /* ---------- Brand ----------
      A slate blue rather than MAPLE's #12266f. The old navy was the only
@@ -119,8 +124,8 @@
 
   /* Hover and press are a translucent wash, never a fill swap. Same slate as
      the lines, so a hovered row and its border agree. */
-  --color-wash: rgba(15, 23, 42, 0.05);
-  --color-wash-strong: rgba(15, 23, 42, 0.08);
+  --color-wash: rgba(0, 0, 0, 0.05);
+  --color-wash-strong: rgba(0, 0, 0, 0.09);
 
   --color-focus: rgba(70, 130, 213, 0.5);
 
@@ -296,5 +301,26 @@
     font-size: var(--text-base);
     font-weight: var(--font-weight-normal);
     line-height: var(--text-base--line-height);
+  }
+}
+
+/* A tooltip arriving. It is placed at the pointer the moment it is shown, so
+   it cannot transition in from anywhere: the fade is what keeps it from
+   appearing as a hard cut. */
+@keyframes tip-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 0.9;
+  }
+}
+
+@keyframes ask {
+  0% {
+    box-shadow: 0 0 0 0 rgba(181, 51, 51, 0.35);
+  }
+  100% {
+    box-shadow: 0 0 0 7px rgba(181, 51, 51, 0);
   }
 }

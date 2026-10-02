@@ -421,7 +421,7 @@ function TypeFilterMenu({
 }
 
 // The stance filter as a dropdown, for widths where the four-segment control
-// no longer fits. Same shape and behaviour as TypeFilterMenu so the two read as
+// no longer fits. Same shape and behavior as TypeFilterMenu so the two read as
 // a pair when both are collapsed.
 function StanceFilterMenu({
   value,
@@ -485,13 +485,13 @@ function StanceFilterMenu({
 }
 
 // The stance as a large mark for the modal header, borrowing the chip's own
-// colours so the two agree at a glance.
-// Outline in the chip's text colour, filled with the chip's border colour: a
+// colors so the two agree at a glance.
+// Outline in the chip's text color, filled with the chip's border color: a
 // lighter tone of the same hue, so the shape stays readable at badge size.
 // The stance as a mark for the modal header. The icon and the ring take the
-// same colour, so the mark reads as one thing rather than a badge on a circle.
+// same color, so the mark reads as one thing rather than a badge on a circle.
 // Oppose is orange here rather than the chip's red: against the endorse green,
-// orange separates far better for the common red-green colour blindness. The
+// orange separates far better for the common red-green color blindness. The
 // chips keep their own reds, since there the word carries the meaning.
 const STANCE_MARK: Record<
   TestimonyStance,
@@ -530,7 +530,7 @@ function TestimonyModal({
             const { Icon, hex } = STANCE_MARK[t.stance];
             return (
               <div
-                // Inline width: Tailwind reads a bare border-[…] as a colour,
+                // Inline width: Tailwind reads a bare border-[…] as a color,
                 // so an arbitrary pixel width compiles to nothing.
                 style={{ borderColor: hex, color: hex, borderWidth: 3 }}
                 className="w-[40px] h-[40px] shrink-0 rounded-full border-solid bg-surface flex items-center justify-center"
@@ -554,7 +554,7 @@ function TestimonyModal({
       }
       footer={
         // Deliberately empty: the bar is here so its slots have somewhere to
-        // go, and so the scroll behaviour beneath it can be judged.
+        // go, and so the scroll behavior beneath it can be judged.
         <div className="h-[36px]" />
       }
       maxWidth="880px"
@@ -692,7 +692,7 @@ export function ComposeFields({
               key={id}
               onClick={() => onStanceChange(id)}
               aria-pressed={on}
-              // Selected, it wears the same colours the chip on a posted
+              // Selected, it wears the same colors the chip on a posted
               // testimony will, so the choice previews its own result.
               className={`inline-flex items-center gap-[8px] rounded-control border px-[14px] py-[8px] font-body font-semibold text-sm cursor-pointer transition-colors ${
                 on
@@ -874,7 +874,7 @@ export function PositionPicker({
     );
   }
 
-  // Nothing chosen: three labelled options, each one a direct pick.
+  // Nothing chosen: three labeled options, each one a direct pick.
   if (!current) {
     return (
       // Held at the selected chip's height, so picking one does not change the

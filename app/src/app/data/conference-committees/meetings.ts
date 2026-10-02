@@ -2,9 +2,9 @@
 //
 // A conference deliberates in private, but it has to notice its meetings like
 // any other committee, and those notices are the only public trace of a
-// committee that is otherwise silent between appointment and report. Ten of the
-// twelve sitting committees have noticed at least one; the higher education and
-// economic development conferences have noticed none.
+// committee that is otherwise silent between appointment and report. Eleven of
+// the twelve sitting committees have noticed at least one; the higher education
+// conference has noticed none, and is the only one.
 //
 // From the General Court's own event list for 1 May to 1 December 2026, with
 // each event's date, time and room read from /api/Hearings/{eventId} rather

@@ -37,6 +37,20 @@ export function SiteNav({
   sticky?: boolean;
 }) {
   const [open, setOpen] = useState(false);
+  // The one ladder these pages climb, written down where the bar that sits
+  // in the middle of it can be read:
+  //
+  //   0-9   inside a card: a sticky column head, a rim drawn over a face
+  //   10    a heading pinned inside its own section
+  //   20    a bar pinned to the top of a section
+  //   30-40 a rail or a drawer at the edge of the window
+  //   40    this bar
+  //   50    the floating buttons, above everything except the next two
+  //   60-70 something the reader just opened: a drawer, a modal, a menu
+  //   80    a tooltip, which is never the thing underneath it
+  //
+  // Maps and faces carry no z at all. They are content, and anything that
+  // needs to sit over them says so.
   return (
     <>
       {/* Fixed rather than sticky. A sticky bar is still in the flow, so it is
@@ -100,7 +114,10 @@ export function SiteNav({
             onClick={() => setOpen((o) => !o)}
             aria-expanded={open}
             aria-label={open ? "Close menu" : "Open menu"}
-            className="ml-auto lg:hidden inline-flex items-center justify-center w-[40px] h-[40px] -mr-[8px] rounded-control hover:bg-white/[0.12] cursor-pointer"
+            // Only this pushes right when the account control is not there to
+            // do it. With both claiming the space, the account circle stopped
+            // in the middle of the bar instead of sitting next to the menu.
+            className="ml-auto sm:ml-0 lg:hidden inline-flex items-center justify-center w-[40px] h-[40px] -mr-[8px] rounded-control hover:bg-white/[0.12] cursor-pointer"
           >
             {open ? (
               <X className="w-[20px] h-[20px]" />

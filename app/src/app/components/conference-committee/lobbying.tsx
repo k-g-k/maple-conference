@@ -11,13 +11,13 @@ import {
 
 /**
  * Twenty rows a page, which is more than any committee currently has, so the
- * table shows everything and the pager only appears if a bill ever gathers
- * more. The count in the footer is then the whole of it rather than a page of
- * it.
+ * table pages at ten, which is short enough that the foot of the list is in
+ * view with its head, and the count in the footer says how many there are in
+ * all rather than how many are on this page.
  */
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 10;
 
-/** Where a position gets a colour, and where it does not. */
+/** Where a position gets a color, and where it does not. */
 const POSITION_TONE: Record<string, string> = {
   Support: "bg-positive-soft text-positive-ink",
   Oppose: "bg-negative-soft text-negative-ink",
@@ -203,7 +203,7 @@ function Lobbyists({ org }: { org: OrgLobbying }) {
       {org.lobbyists.length} lobbyists
       <span
         role="tooltip"
-        className="pointer-events-none absolute left-0 bottom-full mb-[8px] hidden group-hover/fn:block group-focus/fn:block w-[260px] max-w-[80vw] bg-surface border border-line-strong rounded-control shadow-popover p-[12px] z-40 font-body font-normal text-sm text-ink leading-[1.55] text-left"
+        className="pointer-events-none absolute left-0 bottom-full mb-[8px] hidden group-hover/fn:block group-focus/fn:block w-[260px] max-w-[80vw] bg-surface border border-line-strong rounded-control shadow-popover p-[12px] z-[80] font-body font-normal text-sm text-ink leading-[1.55] text-left"
       >
         {org.lobbyists.join(", ")}
       </span>
@@ -244,7 +244,7 @@ function BillCell({
         side.positions.map((p) => <Position key={p} position={p} />)
       ) : (
         // Silence is not neutrality. An organisation that never filed on this
-        // bill gets said so, not a grey chip that reads as a recorded position.
+        // bill gets said so, not a gray chip that reads as a recorded position.
         <span className="font-body text-xs text-ink-faint italic">
           No filing
         </span>
@@ -307,7 +307,10 @@ function Row({
       // The rule runs the full width of the table rather than stopping at the
       // words, and the padding that holds the cells off it is on the row. The
       // last row has the footer's own rule under it already.
-      className={`grid grid-cols-1 ${COLS} gap-x-[16px] gap-y-[3px] sm:items-baseline px-[18px] py-[12px] border-b border-line-ghost last:border-b-0 hover:bg-[rgba(0,0,0,0.01)] transition-colors`}
+      //
+      // Vertical only. The card around the section holds the gutter, so an
+      // inset here would start the columns in from the heading above them.
+      className={`grid grid-cols-1 ${COLS} gap-x-[16px] gap-y-[3px] sm:items-baseline py-[12px] border-b border-line-ghost last:border-b-0 hover:bg-[rgba(0,0,0,0.01)] transition-colors`}
     >
       {/* The lobbyist leads, because they are who filed, but the
           organisation behind them is the name a reader is looking for, so it
@@ -341,6 +344,7 @@ export function LobbyingDisclosures({
   hideQuestion,
   flush,
   stickyHeading,
+  narrowPin,
   bandHeading,
   headingRef,
   headerTop,
@@ -350,6 +354,7 @@ export function LobbyingDisclosures({
   hideQuestion?: boolean;
   flush?: boolean;
   stickyHeading?: string;
+  narrowPin?: boolean;
   bandHeading?: boolean;
   headingRef?: Ref<HTMLDivElement>;
   /** Where the column heads come to rest, for a page that pins them. Left
@@ -418,6 +423,7 @@ export function LobbyingDisclosures({
       hideQuestion={hideQuestion}
       flush={flush}
       stickyHeading={stickyHeading}
+      narrowPin={narrowPin}
       bandHeading={bandHeading}
       headingRef={headingRef}
     >
@@ -443,7 +449,10 @@ export function LobbyingDisclosures({
               <div>
                 <div
                   style={headerTop ? { top: headerTop } : undefined}
-                  className={`hidden sm:grid ${COLS} gap-x-[16px] px-[18px] pb-[8px] bg-ground border-b border-line ${
+                  // The same `--band` the pinned heading above it reads, so
+                  // the head follows the surface it sits on: white inside a
+                  // white card, the page's own ground where there is no card.
+                  className={`hidden sm:grid ${COLS} gap-x-[16px] pb-[8px] bg-[var(--band,var(--color-ground))] border-b border-line ${
                     headerTop ? "sticky z-[6] pt-[10px]" : ""
                   }`}
                 >
@@ -497,7 +506,7 @@ export function LobbyingDisclosures({
                   at on the left, how to see the rest on the right. The count
                   stays when there is only one page, because it is a fact
                   about the table rather than a control. */}
-              <div className="flex items-center justify-between gap-[16px] flex-wrap px-[18px] pt-[12px]">
+              <div className="flex items-center justify-between gap-[16px] flex-wrap pt-[12px]">
                 <p className="font-body text-xs text-ink-muted">
                   {rows.length} organization{rows.length === 1 ? "" : "s"},{" "}
                   {filings} filing{filings === 1 ? "" : "s"}

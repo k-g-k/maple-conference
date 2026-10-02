@@ -45,7 +45,7 @@ import {
 } from "../../data/bill-lineage/house-branch";
 import { Chapter, Span, Disclosure } from "./spine";
 
-// Purple is the AI provenance colour on these pages, so a chamber cannot wear
+// Purple is the AI provenance color on these pages, so a chamber cannot wear
 // it. The conference takes the brand navy: blue, like the Senate's, but darker,
 // so the two are not mistaken for each other.
 export const CHAMBER_INK: Record<string, string> = {
@@ -80,7 +80,7 @@ const KIND: Record<string, string> = {
  * under every portrait would be noise.
  */
 /**
- * The centre of a cell, in the map's own coordinates.
+ * The center of a cell, in the map's own coordinates.
  *
  * Averaging the corners would pull toward whichever edge has the most of them,
  * and Voronoi cells are lopsided that way, so this is the area centroid: the
@@ -165,7 +165,7 @@ export const surname = (name: string) => {
  *
  * Longest result is "1st Asst. Min. Leader", down from thirty-two characters.
  */
-const shortTitle = (role: string) => {
+export const shortTitle = (role: string) => {
   const r = role
     .replace(/^(House|Senate) /, "")
     .replace(/^Speaker of the House$/, "Speaker")
@@ -264,7 +264,7 @@ function StageCard({
       className={`w-[168px] h-full text-left rounded-card border px-[14px] py-[12px] transition-colors cursor-pointer ${
         // The active card is the one on paper; the rest sit back into the page.
         // That is the whole of what the strip has to say at a glance, so it is
-        // the only thing the colour does.
+        // the only thing the color does.
         on ? "border-brand bg-surface" : "border-line bg-wash hover:bg-surface"
       }`}
     >
@@ -299,6 +299,7 @@ export function Conferees({
   onHover,
   onPin,
   people = CONFEREES,
+  fade = false,
 }: {
   ch: "S" | "H";
   /** Every seat being read, so this list can answer the map. */
@@ -307,71 +308,107 @@ export function Conferees({
   onPin: (key: string) => void;
   /** Whose conference. Defaults to the one this bill went to. */
   people?: CommitteeMember[];
+  /**
+   * Answer the pointer by sending the others back rather than by ringing the
+   * one being read.
+   *
+   * The ink ring is how this list has always marked the seat lit on the map,
+   * and it is the right mark where the list is one block among many. Where the
+   * list and the maps are the whole of a section, dimming reads better: it is
+   * the same gesture the committees index uses, and it leaves the ring free to
+   * mean something a reader chose rather than something they are pointing at.
+   */
+  fade?: boolean;
 }) {
   return (
     <div className="shrink-0">
-      <p className="font-body font-semibold text-2xs uppercase tracking-[0.08em] text-ink-muted mb-[10px]">
+      {/* Back with its own six: a chamber heading standing at full strength
+          over three dimmed faces says the chamber is the answer. */}
+      <p
+        className={`font-body font-semibold text-2xs uppercase tracking-[0.08em] mb-[10px] [transition:color_120ms_ease] ${
+          fade &&
+          showing.length > 0 &&
+          !showing.some((k) => k.startsWith("S:") === (ch === "S"))
+            ? "text-ink-faint"
+            : "text-ink-muted"
+        }`}
+      >
         {ch === "S" ? "Senate" : "House"}
       </p>
       <ul className="flex flex-col gap-[10px]">
         {people
           .filter((m) => m.key.startsWith("S:") === (ch === "S"))
-          .map((m) => (
-            <li key={m.code}>
-              <button
-                type="button"
-                onPointerEnter={() => onHover(m.key)}
-                onPointerLeave={() => onHover(null)}
-                onFocus={() => onHover(m.key)}
-                onBlur={() => onHover(null)}
-                onClick={() => onPin(m.key)}
-                className="flex items-center gap-[10px] text-left cursor-pointer"
-              >
-                <span className="relative shrink-0">
-                  <img
-                    src={m.portrait}
-                    alt=""
-                    className={`block w-[36px] h-[36px] rounded-full object-cover bg-sunken border-[3px] transition-[box-shadow] ${
-                      m.party === "R" ? "border-negative" : "border-official"
-                    } ${
-                      showing.includes(m.key)
-                        ? "ring-2 ring-ink ring-offset-2 ring-offset-ground"
-                        : ""
-                    }`}
-                  />
-                  {/* On the portrait rather than beside the name: the face is
+          .map((m) => {
+            const back = fade && showing.length > 0 && !showing.includes(m.key);
+            return (
+              <li key={m.code}>
+                <button
+                  type="button"
+                  onPointerEnter={() => onHover(m.key)}
+                  onPointerLeave={() => onHover(null)}
+                  onFocus={() => onHover(m.key)}
+                  onBlur={() => onHover(null)}
+                  onClick={() => onPin(m.key)}
+                  className="flex items-center gap-[10px] text-left cursor-pointer"
+                >
+                  <span className="relative shrink-0">
+                    <img
+                      src={m.portrait}
+                      alt=""
+                      className={`block w-[36px] h-[36px] rounded-full object-cover bg-sunken border-[3px] transition-[box-shadow,opacity] ${
+                        m.party === "R" ? "border-negative" : "border-official"
+                      } ${
+                        !fade && showing.includes(m.key)
+                          ? "ring-2 ring-ink ring-offset-2 ring-offset-ground"
+                          : ""
+                      } ${back ? "opacity-35" : ""}`}
+                    />
+                    {/* On the portrait rather than beside the name: the face is
                       what a reader scans down this column, and the star has to
                       be on the thing being scanned. */}
-                  {MINE[m.key] && (
-                    <span
-                      title={MINE[m.key]}
-                      className="absolute -bottom-[2px] -right-[2px] w-[16px] h-[16px] rounded-full bg-ground flex items-center justify-center"
-                    >
-                      <Star
-                        aria-label={MINE[m.key]}
-                        className="w-[11px] h-[11px] text-caution fill-caution"
-                      />
-                    </span>
-                  )}
-                </span>
-                <span className="min-w-0">
-                  <span className="block leading-[1.3] whitespace-nowrap">
-                    <span className="font-body font-semibold text-sm text-ink">
-                      {surname(m.name)}
-                    </span>
-                    {m.role && (
-                      <span className="ml-[6px] font-body text-xs text-caution-ink">
-                        {office(m.role).toLowerCase()}
+                    {MINE[m.key] && (
+                      <span
+                        title={MINE[m.key]}
+                        className="absolute -bottom-[2px] -right-[2px] w-[16px] h-[16px] rounded-full bg-ground flex items-center justify-center"
+                      >
+                        <Star
+                          aria-label={MINE[m.key]}
+                          className="w-[11px] h-[11px] text-caution fill-caution"
+                        />
                       </span>
                     )}
                   </span>
-                  <span className="block font-body text-xs text-ink-muted leading-[1.4]">
-                    {m.district}
+                  <span className="min-w-0">
+                    <span className="block leading-[1.3] whitespace-nowrap">
+                      <span
+                        className={`font-body font-semibold text-sm ${
+                          back ? "text-ink-faint" : "text-ink"
+                        }`}
+                      >
+                        {surname(m.name)}
+                      </span>
+                      {m.role && (
+                        <span
+                          className={`ml-[6px] font-body text-xs ${
+                            back ? "text-ink-faint" : "text-caution-ink"
+                          }`}
+                        >
+                          {office(m.role).toLowerCase()}
+                        </span>
+                      )}
+                    </span>
+                    <span
+                      className={`block font-body text-xs leading-[1.4] ${
+                        back ? "text-ink-faint" : "text-ink-muted"
+                      }`}
+                    >
+                      {m.district}
+                    </span>
                   </span>
-                </span>
-              </button>
-            </li>
-          ))}
+                </button>
+              </li>
+            );
+          })}
       </ul>
     </div>
   );
@@ -477,9 +514,9 @@ function Stages({
  *   Blue and red mean party, and nothing else.
  *   Green and brick mean how someone voted.
  *
- * The two never appear on one map: a roll call colours by vote, anything else
- * colours by party. They stay separate palettes anyway, so a reader moving
- * between steps is never asked to work out which meaning a colour is carrying.
+ * The two never appear on one map: a roll call colors by vote, anything else
+ * colors by party. They stay separate palettes anyway, so a reader moving
+ * between steps is never asked to work out which meaning a color is carrying.
  */
 /** The same two palettes as values, for the fill and its edge. */
 const PARTY_COLOR: Record<string, string> = {
@@ -498,8 +535,8 @@ const VOTE_COLOR: Record<string, string> = {
  *
  * Two things a cell can be showing, and the stage decides which:
  *
- *   A roll call colours every seat by how that member voted.
- *   Anything else colours only the people the stage is about, by party, and
+ *   A roll call colors every seat by how that member voted.
+ *   Anything else colors only the people the stage is about, by party, and
  *   leaves the rest of the chamber blank. That is what makes the conference
  *   step legible: three cells lit in a chamber of a hundred and sixty says how
  *   few people are in the room better than any sentence.
@@ -519,6 +556,11 @@ export function VoteMap({
   people,
   className,
   dim = true,
+  veil = false,
+  veilAt = 0.6,
+  paired = false,
+  full,
+  only = false,
   label,
   fit = false,
 }: {
@@ -558,6 +600,54 @@ export function VoteMap({
    */
   dim?: boolean;
   /**
+   * While a seat is being read, lay a white veil over the whole map and draw
+   * that seat again above it.
+   *
+   * Opacity on the cells alone cannot do this: the one being read has to stay
+   * at full strength while everything around it, the gray districts and the
+   * coastline included, goes back behind the same sheet of white. So the veil
+   * is one rectangle and the answer is painted on top of it.
+   */
+  veil?: boolean;
+  /**
+   * While something is selected, draw nothing else.
+   *
+   * Stronger than `dim`, which leaves the rest of the lit seats at partial
+   * strength. Here they go back to being unlit: the heading still counts the
+   * whole set, but the picture shows only what is being read, which is what a
+   * chosen committee wants from a map carrying fifty people.
+   */
+  only?: boolean;
+  /**
+   * How much white the veil carries, where one is down.
+   *
+   * Lower means the map keeps more of itself. Worth turning down while nothing
+   * is being read, so a card at rest still looks like a map rather than like a
+   * map waiting to be switched on.
+   */
+  veilAt?: number;
+  /**
+   * Treat the two maps as one picture rather than as a pair being compared.
+   *
+   * Normally the map holding no answer steps back: its heading lightens and
+   * its coastline falls to a ghost line, so the one with the answer in it says
+   * "a map is here" loudest. Where the two are a single picture of a single
+   * committee, that reads as half the picture going missing. Paired, the
+   * headings stay level with each other and the coastline goes to the ghost
+   * line on both maps at once while the veil is up.
+   */
+  paired?: boolean;
+  /**
+   * Cells whose own fill ignores `dim`, without being painted over the veil.
+   *
+   * A district marked with an outline while something else is held: the
+   * outline is drawn at full strength under the veil, and a fill at the dimmed
+   * strength under the same veil came out paler than its own edge. This lifts
+   * the fill to match it, and leaves it behind the veil, so the cell reads as
+   * pointed at rather than as chosen.
+   */
+  full?: string[];
+  /**
    * What the lit seats are, where naming them says more than naming the
    * chamber. The count stays either way.
    */
@@ -584,12 +674,31 @@ export function VoteMap({
   // it: on the conference step both maps are drawn and a Senate key means
   // nothing to the House.
   const sel = new Set(selected);
+  /**
+   * Whether the veil is down.
+   *
+   * Only while a seat is being read. A map with nothing under the pointer is
+   * not waiting to be switched on, it is just a map, and washing it out at
+   * rest took the strength off every page that draws one.
+   */
+  const under = veil && sel.size > 0;
+  /**
+   * Whether the seat being read is in the other chamber's map.
+   *
+   * Both maps are drawn and only one of them can hold the answer, so the other
+   * is not showing anything: its heading goes back with it, and its edges go
+   * lighter still, because a full grid of district lines on a map with nothing
+   * in it competes with the map that has the answer.
+   */
+  const aside = under && !paired && !selected.some((k) => k in cells);
+  /** The coastline's own answer: one map's under the veil, or both. */
+  const edgeBack = paired ? under : aside;
   // Only the ones this map actually holds: on the conference step both maps
   // are drawn and a Senate key means nothing to the House.
   const mine = selected.filter((k) => k in cells);
-  // The edge that marks the chosen seat, in whatever colour that seat already
+  // The edge that marks the chosen seat, in whatever color that seat already
   // is. Opacity alone will not carry it: a seat recorded as neither yea nor
-  // nay is drawn in faint grey, and taking faint grey to full grey is
+  // nay is drawn in faint gray, and taking faint gray to full gray is
   // invisible.
   const edgeFor = (key: string) => {
     const vote = live ? roll.votes[key] : undefined;
@@ -611,7 +720,11 @@ export function VoteMap({
               making, and the label should not leave it to be counted off the
               picture. On a roll call the number is how many votes were recorded,
               which is rarely the whole chamber. */}
-      <p className="font-body font-semibold text-2xs uppercase tracking-[0.08em] text-ink-muted mb-[8px]">
+      <p
+        className={`font-body font-semibold text-2xs uppercase tracking-[0.08em] mb-[8px] [transition:color_120ms_ease] ${
+          aside ? "text-ink-faint" : "text-ink-muted"
+        }`}
+      >
         {label ?? (chamber === "house" ? "House" : "Senate")} ·{" "}
         {shown === null ? seats : `${shown} of ${seats}`}
       </p>
@@ -638,7 +751,10 @@ export function VoteMap({
             </clipPath>
           </defs>
           {/* The coastline under the cells, so any sliver a cell does not reach
-                still reads as land rather than as a hole. */}
+                still reads as land rather than as a hole. It stays at full
+                strength while a district is being read: the map is the frame
+                the answer sits in, and a frame that fades takes the answer
+                with it. */}
           {L.geo.outline.map((d) => (
             <path key={d.slice(0, 24)} d={d} className="fill-sunken" />
           ))}
@@ -654,13 +770,13 @@ export function VoteMap({
               // you find someone; pinning is how you hold onto them long enough
               // to follow the link out.
               const can = Boolean(onPin) && Boolean(people?.[key]);
-              // Every coloured seat sits back at partial opacity, and the one
-              // being read comes forward to full. The colour never changes, so
+              // Every colored seat sits back at partial opacity, and the one
+              // being read comes forward to full. The color never changes, so
               // a seat cannot be mistaken for a different vote or a different
               // party on the way past.
               const coloured = Boolean(vote || party);
               // The fill carries the transparency; the edge does not. Drawn in
-              // the cell's own colour at full strength, it keeps one seat
+              // the cell's own color at full strength, it keeps one seat
               // distinct from the next without a white hairline cutting across
               // the map.
               const colour = vote
@@ -676,12 +792,29 @@ export function VoteMap({
                     can ? "cursor-pointer outline-none" : ""
                   }`}
                   fill={colour}
-                  fillOpacity={dim && coloured && !sel.has(key) ? 0.45 : 1}
-                  // One edge colour for every seat, lit or not, so the grid of
+                  fillOpacity={
+                    coloured && !sel.has(key)
+                      ? only && sel.size > 0
+                        ? 0
+                        : dim && !full?.includes(key)
+                          ? 0.45
+                          : 1
+                      : 1
+                  }
+                  // One edge color for every seat, lit or not, so the grid of
                   // districts reads as a single surface. The seat being read is
-                  // the only one that takes its own colour, which is what makes
+                  // the only one that takes its own color, which is what makes
                   // it findable.
-                  stroke={sel.has(key) ? colour : "var(--color-ground)"}
+                  // Lighter while the veil is down: the page gray that
+                  // separates the districts at rest reads as a dark grid once
+                  // everything around it has been washed out.
+                  stroke={
+                    sel.has(key)
+                      ? colour
+                      : under
+                        ? "var(--color-surface)"
+                        : "var(--color-ground)"
+                  }
                   strokeWidth={1.2}
                   vectorEffect="non-scaling-stroke"
                   {...(can && {
@@ -729,17 +862,91 @@ export function VoteMap({
                   />
                 );
               })}
+            {/* The veil, and the seat being read painted over it. Both ignore
+                the pointer, so the cells underneath still answer it. */}
+            {under && (
+              <>
+                <rect
+                  x={x}
+                  y={y}
+                  width={w}
+                  height={h}
+                  fill="#fff"
+                  opacity={veilAt}
+                  className="pointer-events-none"
+                />
+              </>
+            )}
+            {/* Inside the clip, with everything else. The cells are grown
+                  from seed points and tile the whole box; the clip is what makes
+                  them Massachusetts. Drawn outside it, a selected district came
+                  back as the raw cell, a wedge running off into the sea. */}
+            {under && (
+              <>
+                {[...sel]
+                  .filter((key) => key in cells)
+                  .map((key) => {
+                    const pts = cells[key];
+                    const d = Array.isArray(pts) ? pts[0] : pts;
+                    const vote = live ? roll?.votes[key] : undefined;
+                    const party = L.seats[key]?.p;
+                    const colour = vote
+                      ? (VOTE_COLOR[vote] ?? "var(--color-ink-faint)")
+                      : (PARTY_COLOR[party ?? ""] ?? "var(--color-sunken)");
+                    // A city seat is a speck, and "where is this person
+                    // from" should not be a dot to hunt for. The district is
+                    // still drawn at its own size and shape: scaling it up
+                    // warped the map, and on a shape like the Cape it ballooned
+                    // into something that was not a district at all. A ring
+                    // around it points at it instead, and only where it is too
+                    // small to find on its own.
+                    return (
+                      <polygon
+                        key={`over-${key}`}
+                        points={d}
+                        fill={colour}
+                        // Everything selected is painted over the veil, and
+                        // where some of it is enlarged the rest of it sits
+                        // behind: a committee's six stay on the map while the
+                        // one being read comes forward.
+                        fillOpacity={
+                          enlarged && enlarged.length && !enlarged.includes(key)
+                            ? 0.45
+                            : 1
+                        }
+                        stroke={colour}
+                        strokeOpacity={
+                          enlarged && enlarged.length && !enlarged.includes(key)
+                            ? 0.45
+                            : 1
+                        }
+                        strokeWidth={1.2}
+                        vectorEffect="non-scaling-stroke"
+                        className="pointer-events-none"
+                      />
+                    );
+                  })}
+              </>
+            )}
           </g>
           {/* The coastline again on top, as a hairline, so the state has an edge
-                of its own rather than ending wherever the cells happen to. */}
+                of its own rather than ending wherever the cells happen to.
+                This is the line that lightens on the map holding nothing: the
+                silhouette is what says "a map is here", and the one with the
+                answer in it should be the one that says it loudest. */}
           {L.geo.outline.map((d) => (
             <path
               key={d.slice(0, 24)}
               d={d}
               fill="none"
-              stroke="var(--color-line-strong)"
+              stroke={
+                edgeBack
+                  ? "var(--color-line-ghost)"
+                  : "var(--color-line-strong)"
+              }
               strokeWidth={1}
               vectorEffect="non-scaling-stroke"
+              className="[transition:stroke_120ms_ease]"
             />
           ))}
         </svg>
@@ -1515,7 +1722,7 @@ function TracedLineage({
                           })}
                         </div>
                       ) : (
-                        // A recessed panel rather than a line of grey text: the
+                        // A recessed panel rather than a line of gray text: the
                         // slot is waiting to be filled, and saying so with a
                         // surface reads as somewhere to look rather than as
                         // something missing.

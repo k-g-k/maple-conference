@@ -1,6 +1,6 @@
 // Stance marks, drawn as a matched set: thumbs up, thumbs down, and a flat
-// hand for no position. The brand colour in each source file is swapped for
-// currentColor, so a caller sets the colour once and the whole mark follows.
+// hand for no position. The brand color in each source file is swapped for
+// currentColor, so a caller sets the color once and the whole mark follows.
 // The white paths are separations inside the shape and stay white, which
 // assumes the mark sits on a white ground.
 

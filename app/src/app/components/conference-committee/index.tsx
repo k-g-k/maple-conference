@@ -11,14 +11,28 @@
 // prints the answer and puts the evidence behind a control.
 
 import { useMemo, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import type { CSSProperties } from "react";
-import { useParams, useSearchParams, Link } from "react-router-dom";
 import {
+  useParams,
+  useSearchParams,
+  useLocation,
+  useNavigate,
+  Link,
+} from "react-router-dom";
+import {
+  ArrowRight,
   ArrowUpRight,
   Check,
+  Bell,
+  BellOff,
+  BellPlus,
+  BellRing,
   ChevronDown,
+  ChevronLeft,
   ChevronRight,
   Plus,
+  Share,
   Star,
   X,
 } from "lucide-react";
@@ -38,6 +52,7 @@ import {
   type ConfereeDetail,
   type OpenQuestion,
 } from "../../data/conference-committees/committees";
+import { BY_SLUG as BILL_BY_SLUG } from "../../data/bills-194";
 import { SOURCES } from "../../data/conference-committees/sources";
 import type { Meeting } from "../../data/conference-committees/meetings";
 import {
@@ -53,14 +68,29 @@ import {
   MINE,
   profileUrl,
 } from "../../data/bill-lineage/members";
-import { holdPlace, holdPress } from "../ballot";
-import { Chapter, Span, Disclosure, StickyBand } from "../bill-example/spine";
+import {
+  ClampedText,
+  Pagination,
+  holdPlace,
+  holdPress,
+  useMatchMedia,
+} from "../ballot";
+import {
+  Chapter,
+  Span,
+  Disclosure,
+  StickyBand,
+  CARD_PX,
+  CARD_PT,
+  CARD_PB,
+  HEAD_GAP,
+} from "../bill-example/spine";
 import {
   Conferees,
   VoteMap,
   surname as shortName,
 } from "../bill-example/lineage-section";
-import { LINEAGE_TEXTS } from "../../data/bill-lineage/texts";
+import { billDocument, mapleBillUrl } from "../../data/bills-194/texts";
 import { MapleFab } from "../tax-rebate-62f/maple-fab";
 import {
   SubmissionFeed,
@@ -71,12 +101,10 @@ import {
   DEMO_ACCOUNTS,
   DEMO_SEATS,
   DEMO_TESTIMONY,
+  VIEWER,
 } from "../../data/conference-committees/testimony";
-import type { ConferencePosition } from "../../data/conference-committees/positions";
-import {
-  CONFERENCE_POSITIONS,
-  POSITIONS,
-} from "../../data/conference-committees/positions";
+import type { ConferenceSubmission } from "../../data/conference-committees/testimony";
+import { POSITIONS } from "../../data/conference-committees/positions";
 import {
   MAP_OUTLINE,
   MAP_SQUASH,
@@ -85,6 +113,20 @@ import {
 } from "../../data/conference-committees/geography";
 import { SiteNav } from "../site-nav";
 import { LobbyingDisclosures } from "./lobbying";
+// The writing step, the review step and the three containers it is being
+// compared in. The page decides which container a route asks for; none of them
+// knows about the others.
+import {
+  ConferenceCompose,
+  asSubmission,
+  REVIEW_PAGE_COPY,
+  ReviewModal,
+  ReviewPageBody,
+  ReviewPane,
+  reviewTitle,
+} from "./compose";
+import { detailPath, reviewPath, useDraft, useDrafted, useRail } from "./draft";
+import type { ReviewStyle } from "./draft";
 // The bill page's panel on the right edge, under a second name: this page
 // already calls the twelve committees down the left a rail, and two rails
 // would be one word doing two jobs.
@@ -155,7 +197,7 @@ const lead = (t: string) => {
 /**
  * What the committee is, in the legislature's own construction.
  *
- * One shape for all twelve: "Committee of conference" + the subject, + "to
+ * One shape for all twelve: "Conference committee" + the subject, + "to
  * resolve differences between" the two bills.
  *
  * The subject defaults to the House bill's title with its "An Act" removed,
@@ -185,22 +227,38 @@ function ConferenceByline({
   const phrase =
     SUBJECT[slug] ??
     (house ? BILL_TITLES[house]?.replace(/^An Act\s+/i, "") : undefined);
-  const bill = (n?: string) =>
-    n ? (
-      <Link
-        to={`/bills/${slugFor(n)}`}
-        className="font-semibold underline decoration-dotted underline-offset-[3px] text-link hover:text-brand"
-      >
+  // Only the bills this prototype actually carries get an internal link. The
+  // rest go to the General Court, because the alternative was worse than a
+  // dead link: an unknown number redirected to the first bill, so a reader who
+  // pressed H.5175 arrived on a different committee's bill with nothing
+  // saying so.
+  const linkClass =
+    "font-semibold underline decoration-dotted underline-offset-[3px] text-link hover:text-brand";
+  const bill = (n?: string) => {
+    if (!n) return null;
+    const here = BILL_BY_SLUG[slugFor(n)];
+    return here ? (
+      <Link to={`/bills/${slugFor(n)}`} className={linkClass}>
         {n}
       </Link>
-    ) : null;
+    ) : (
+      <a
+        href={`https://malegislature.gov/Bills/194/${n.replace(".", "")}`}
+        target="_blank"
+        rel="noreferrer"
+        className={linkClass}
+      >
+        {n}
+      </a>
+    );
+  };
   // One sentence with the resolving as the means rather than the purpose:
   // what the committee is for is passing the act, and reconciling the two
   // texts is how.
   return (
     <>
-      Committee of conference to pass &ldquo;<em>An Act {phrase}</em>&rdquo; by
-      resolving differences between {bill(house)} and {bill(senate)}
+      Conference committee to pass &ldquo;<em>An Act {phrase}</em>&rdquo; by
+      resolving differences between {bill(senate)} and {bill(house)}
     </>
   );
 }
@@ -220,9 +278,15 @@ function hostLabel(url: string) {
 // the position of the source in the list below, ordered by first mention.
 function Cite({ id, order }: { id?: string; order: string[] }) {
   if (!id || !SOURCES[id]) return null;
+  // A source the page did not collect has no number, and printing 0 is worse
+  // than printing nothing: it reads as a footnote the reader cannot find. The
+  // mark is dropped instead, which is true, and the id is still in the data
+  // for whoever is reading the file.
+  const n = order.indexOf(id) + 1;
+  if (!n) return null;
   return (
     <sup className="font-body font-semibold text-[0.55em] ml-[1px] align-super text-ink-faint">
-      {order.indexOf(id) + 1}
+      {n}
     </sup>
   );
 }
@@ -303,7 +367,7 @@ function Term({ label, note }: { label: string; note: string[] }) {
       {label}
       <span
         role="tooltip"
-        className={`pointer-events-none absolute left-0 w-[320px] max-w-[80vw] bg-surface border border-line-strong rounded-control shadow-popover p-[14px] z-40 text-left ${
+        className={`pointer-events-none absolute left-0 w-[320px] max-w-[80vw] bg-surface border border-line-strong rounded-control shadow-popover p-[14px] z-[80] text-left ${
           open ? "block" : "hidden"
         } ${up ? "bottom-full mb-[8px]" : "top-full mt-[8px]"}`}
       >
@@ -588,8 +652,11 @@ function Hearings({
           has never met in public is the more interesting fact, and a section
           that vanishes reads as missing data rather than as an answer. */}
       {meetings.length === 0 && (
+        // What the record supports is that nothing was noticed, which is not
+        // the same claim as that nothing happened. A conference can meet
+        // without filing a notice and nothing published would show it.
         <p className="font-body text-sm text-ink-muted">
-          No hearing has been held.
+          No meeting has been noticed.
         </p>
       )}
       {/* The description's own metrics, 16px at 1.6, so every row is the same
@@ -657,30 +724,45 @@ function PeopleAndMaps({
       },
     ]),
   );
-  // Given the leftover width rather than a fixed 200: the names are the
-  // fixed-size thing in this row, so the two maps take what is left of it and
-  // stay equal to each other.
+  // The map is the grid cell rather than something inside one: a wrapper
+  // around it only moved the cap a level away from the thing being capped.
+  //
+  // Capped below the breakpoint where the three columns become one stack, the
+  // same cap and the same currency the bill page uses for this pair. Given a
+  // whole row the map grew to fill it while the names beside it stayed at
+  // reading size, which put a map the height of a phone screen between two
+  // short lists. Above the breakpoint the two 1fr columns already hold it, so
+  // the cap comes off and the pair stays equal to each other.
   const map = (chamber: "senate" | "house") => (
-    <div className="flex-1 min-w-0">
-      <VoteMap
-        chamber={chamber}
-        dim={false}
-        highlight={six
-          .filter((m) => m.key.startsWith("S:") === (chamber === "senate"))
-          .map((m) => m.key)}
-        selected={showing ? [showing] : []}
-        onHover={setHovered}
-        onPin={pin}
-        people={people}
-      />
-    </div>
+    <VoteMap
+      key={chamber}
+      className="flex-1 min-w-0"
+      chamber={chamber}
+      // No veil and nothing sat back: reading one of the six is marked by a
+      // rim on that person's face, here and in the list beside it, and the
+      // rest of the committee stays painted. The committees index dims
+      // instead, and does it with its own opt-in props, so the two pages can
+      // answer the pointer differently.
+      highlight={six
+        .filter((m) => m.key.startsWith("S:") === (chamber === "senate"))
+        .map((m) => m.key)}
+      selected={showing ? [showing] : []}
+      // A cell leaving is not an answer: dragging across the map crosses the
+      // hairline between two districts, and clearing on that gap made the
+      // section flicker between every one of them. The reading changes when
+      // something else claims it, and is let go of when the pointer leaves
+      // the block altogether.
+      onHover={(k) => k && setHovered(k)}
+      onPin={pin}
+      people={people}
+    />
   );
   const names = (ch: "S" | "H") => (
     <Conferees
       ch={ch}
       people={six}
       showing={showing ? [showing] : []}
-      onHover={setHovered}
+      onHover={(k) => k && setHovered(k)}
       onPin={pin}
     />
   );
@@ -689,12 +771,17 @@ function PeopleAndMaps({
     // identical and take every pixel the names leave. The wider break on
     // either side of the pair is padding on the name columns, never on a map
     // cell: padding inside a 1fr column would make that map the smaller one.
-    <div>
+    //
+    // Its own container, so the pairing is chosen by how much room this block
+    // actually has rather than by how wide the window is. The two differ
+    // whenever the panel is open or the card is narrow, and the window was
+    // telling it to lay out four columns in the width of two.
+    <div className="@container">
       {/* No card and no card title: a section heading in the page's own
           hierarchy, the same one the chapters below use, pinned the same way
           where the layout pins them. */}
       {title && (
-        <p className="font-display font-medium text-xl text-ink leading-[1.3] mb-[18px]">
+        <p className="font-display font-medium text-xl text-ink leading-[1.3]">
           {title}
         </p>
       )}
@@ -706,32 +793,51 @@ function PeopleAndMaps({
         ) : (
           <h2 className={SUB_HEAD}>Who&rsquo;s in the committee?</h2>
         ))}
-      {/* The name columns take what they need and the two maps split the
-          rest, so the maps stay identical. The break between the names and
-          the maps is padding on the House column, never on a map cell. */}
+      {/* One arrangement at every width: two pairs, each chamber's names
+          beside its own map, the House pair mirrored so the two maps meet in
+          the middle.
+
+          There used to be a second, wider one, both name lists then both maps
+          in a single row of four. It only appeared on a page with nothing else
+          open, so the same card looked like two different things depending on
+          whether the input panel was out. */}
       <div
-        className={`grid gap-y-[32px] gap-x-[20px] sm:pl-[14px] min-[880px]:grid-cols-[max-content_minmax(0,1fr)_minmax(0,1fr)] ${
-          // The gap belongs to whatever sits above: the heading, or the
-          // reader's own line where there is one. With neither, the block
-          // around this already carries the space and a second gap is a hole.
-          heading ? "mt-[28px]" : ""
+        // The names and the maps are one area to the pointer: moving between a
+        // conferee and their district, or between the two chambers, holds the
+        // reading, and leaving the block is what lets it go.
+        onPointerLeave={() => setHovered(null)}
+        className={`grid grid-cols-2 gap-y-[32px] gap-x-[20px] @[600px]:grid-cols-[max-content_max-content_minmax(0,1fr)_minmax(0,1fr)] ${
+          // The gap belongs to whatever sits above, the section heading or the
+          // card's own title, and it is the same gap a chapter leaves under
+          // its heading. With neither, the block around this already carries
+          // the space and a second gap is a hole.
+          heading || title ? HEAD_GAP : ""
         }`}
       >
-        <div className="min-[880px]:pr-[28px]">
-          <div className="flex items-start gap-[20px]">
-            {names("S")}
-            {names("H")}
-          </div>
-          {/* The hearings close the column, so the space under them is what
-              separates this section from the next rather than two rows of the
-              same block. */}
-          <div className="mt-[24px]">
-            <Hearings meetings={meetings} />
-          </div>
-          <div className="mb-[36px]" />
+        {/* The list is centred across its half while its own text stays left
+            aligned, and sits at the top of the row rather than the middle of
+            it: centred vertically, its chamber heading fell half a map below
+            the map's own, and the two headings are a pair. */}
+        <div className="justify-self-center @[600px]:justify-self-start @[600px]:col-start-1 @[600px]:row-start-1">
+          {names("S")}
         </div>
-        {map("senate")}
-        {map("house")}
+        <div className="min-w-0 @[600px]:col-start-3 @[600px]:row-start-1">
+          {map("senate")}
+        </div>
+        {/* Mirrored below the breakpoint: the map on the left so the two maps
+            sit together, the names on the right. Above it, both name lists are
+            together instead. */}
+        <div className="min-w-0 @[600px]:col-start-4 @[600px]:row-start-1">
+          {map("house")}
+        </div>
+        <div className="justify-self-center @[600px]:justify-self-start @[600px]:col-start-2 @[600px]:row-start-1 @[600px]:pr-[28px]">
+          {names("H")}
+        </div>
+        {/* The hearings close the block, so the space under them is what
+            separates this section from the next. */}
+        <div className="col-span-2 @[600px]:col-start-1 @[600px]:col-span-2 @[600px]:row-start-2">
+          <Hearings meetings={meetings} />
+        </div>
       </div>
     </div>
   );
@@ -743,8 +849,8 @@ const SHOW_MEMBERS: boolean = false;
 /** Parked: the clause naming what the two chambers differ on. */
 const SHOW_CLAIM: boolean = false;
 
-/** Parked: the switch between reading public input inline and in the panel. */
-const SHOW_TESTIMONY_SWITCH: boolean = false;
+/** The switch between reading public input inline and in the panel. */
+const SHOW_TESTIMONY_SWITCH: boolean = true;
 
 /**
  * Parked: the committee card in the card layout.
@@ -848,94 +954,6 @@ function Six({
 }
 
 /**
- * Filing on a conference.
- *
- * The ballot pages' composer, with the two things a conference changes: the
- * positions are the four a conferee could act on rather than support and
- * oppose, and the weekly update to the conferees is offered at the bottom,
- * which is the one thing this page can do that a bill page cannot, because the
- * conferees are six named people. The guidance block that used to sit on top
- * is gone: three lines of rules before the reader has done anything.
- *
- * The four come from the conference data rather than from a list in here, so the
- * form, the feed's filter, the chip on a submission and the map are all reading
- * the same four.
- */
-function ConferenceCompose({ onCancel }: { onCancel: () => void }) {
-  const [position, setPosition] = useState<ConferencePosition>("pass");
-  const [digest, setDigest] = useState(true);
-
-  return (
-    // Exactly the panel's height, so the panel itself never scrolls. The
-    // textarea takes what is left, which makes the thing you are writing the
-    // only thing that scrolls.
-    <div className="h-full flex flex-col gap-[16px] min-h-0">
-      <div className="flex-1 min-h-0 flex flex-col">
-        {/* One a row rather than a wrapping line of chips. Four of these are
-            sentences, not one-word stances, and on a panel's width they wrapped
-            into a block a reader had to pick apart. */}
-        <div className="flex flex-col gap-[8px] mb-[20px]">
-          {CONFERENCE_POSITIONS.map((o) => {
-            const on = position === o.k;
-            return (
-              <button
-                key={o.k}
-                type="button"
-                onClick={() => setPosition(o.k)}
-                aria-pressed={on}
-                className={`w-full text-left rounded-control border px-[14px] py-[10px] font-body font-semibold text-sm cursor-pointer transition-colors ${
-                  on
-                    ? o.on
-                    : "bg-surface border-line-strong text-ink-muted hover:bg-wash"
-                }`}
-              >
-                {/* The sentence alone. No thumb: the form has room to state each
-                    position in full, and the mark is for the filter row, where
-                    a row of sentences would not fit. */}
-                {o.l}
-              </button>
-            );
-          })}
-        </div>
-        <textarea
-          placeholder="What do you want lawmakers and other voters to know about this question?"
-          // White on the panel's grey: the one place you are meant to type
-          // should look like the one place you are meant to type.
-          className="flex-1 min-h-0 w-full resize-none bg-surface border border-line-strong rounded-control p-[12px] font-body text-base text-ink leading-[1.55] placeholder:text-ink-muted focus:outline-none focus:border-brand"
-        />
-      </div>
-
-      {/* On the panel's own surface. A tinted band around one line of text
-          made it the loudest thing in the form, ahead of what you came to
-          write. */}
-      <label className="shrink-0 flex items-center gap-[10px] cursor-pointer">
-        <input
-          type="checkbox"
-          checked={digest}
-          onChange={(e) => setDigest(e.target.checked)}
-          className="w-[16px] h-[16px] shrink-0 cursor-pointer accent-brand"
-        />
-        <span className="font-body text-sm text-ink leading-[1.4]">
-          Include my input in MAPLE&rsquo;s weekly update to the conferees
-        </span>
-      </label>
-
-      <div className="shrink-0 flex items-center justify-end gap-[12px]">
-        <button
-          onClick={onCancel}
-          className="font-body font-semibold text-sm text-ink-muted hover:text-ink cursor-pointer px-[8px] py-[8px]"
-        >
-          Cancel
-        </button>
-        <button className="bg-brand text-ink-inverse font-body font-semibold text-sm px-[18px] py-[8px] rounded-control cursor-pointer hover:bg-brand-hover">
-          Review and Post
-        </button>
-      </div>
-    </div>
-  );
-}
-
-/**
  * How long each county holds before the map moves on.
  *
  * Long enough to read the shortest submission in the panel rather than to
@@ -944,6 +962,19 @@ function ConferenceCompose({ onCancel }: { onCancel: () => void }) {
  * map holds for the same count, because it is the same act of reading.
  */
 const TOUR_MS = 7000;
+
+/**
+ * How many of a county's filers the column prints before the rest go behind a
+ * pager.
+ *
+ * Five, the same number the Public Input section deals its own feed out in, so
+ * the two lists of submissions on this page turn at the same length and the
+ * control under them is the same control. Eight filers across the state is what
+ * the placeholder data holds today; thirty from one county is the case this is
+ * for, and thirty printed in a column beside a map is a column nobody reaches
+ * the bottom of.
+ */
+const COUNTY_PAGE = 5;
 
 /**
  * Public input as a map, for the view where the whole feed is a press away.
@@ -956,16 +987,16 @@ const TOUR_MS = 7000;
  *
  * The state is the page's own outline rather than a second one drawn for this,
  * and the places on it are dots rather than filled districts. Eight people, and
- * a filled map would paint a district the colour of one submission and invite a
+ * a filled map would paint a district the color of one submission and invite a
  * reader to take an empty district as a district that disagrees. A dot can only
  * say "somebody here filed", which is all the data carries.
  *
- * Colour follows the one axis the four positions share. Three of them ask the
+ * Color follows the one axis the four positions share. Three of them ask the
  * conference to pass something and the fourth asks it to pass nothing, so a
  * county can lean toward a bill or toward none: green for a bill, red for none,
  * the map's own faint ink where the two are even. Which of the two texts a
  * county prefers is deliberately not here. House and Senate are a choice, not a
- * scale, and a dot cannot hold three colours and still be read as one place.
+ * scale, and a dot cannot hold three colors and still be read as one place.
  */
 function PublicMap({ onOpenRail }: { onOpenRail?: () => void }) {
   const [picked, setPicked] = useState<string | null>(null);
@@ -1004,7 +1035,7 @@ function PublicMap({ onOpenRail }: { onOpenRail?: () => void }) {
   // One marker per place, at the middle of the district the account is
   // assigned to. A place leans whichever way more of its filers are asking:
   // toward a bill, or toward none. Where those two are even it keeps the map's
-  // own faint ink rather than a colour that would take a side.
+  // own faint ink rather than a color that would take a side.
   const places = useMemo(
     () =>
       [...new Set(filers.map((f) => f.seat))].flatMap((seat) => {
@@ -1053,6 +1084,26 @@ function PublicMap({ onOpenRail }: { onOpenRail?: () => void }) {
 
   const selected = touched ? picked : (tour[step % tour.length] ?? null);
   const shown = selected ? at(selected) : [];
+
+  // Which page of a county's filers is showing, held with the county it belongs
+  // to rather than beside it. Derived rather than reset in an effect: the
+  // rotation changes the county without any control being pressed, and a page
+  // number that outlived the county it was counted in would open the next one
+  // part way down.
+  const [paging, setPaging] = useState<{ seat: string | null; page: number }>({
+    seat: null,
+    page: 0,
+  });
+  const pageCount = Math.max(1, Math.ceil(shown.length / COUNTY_PAGE));
+  // Clamped rather than trusted, the way the feed clamps its own.
+  const page = Math.min(
+    paging.seat === selected ? paging.page : 0,
+    pageCount - 1,
+  );
+  const paged = shown.slice(
+    page * COUNTY_PAGE,
+    page * COUNTY_PAGE + COUNTY_PAGE,
+  );
 
   useEffect(() => {
     if (touched || tour.length < 2) return;
@@ -1149,8 +1200,8 @@ function PublicMap({ onOpenRail }: { onOpenRail?: () => void }) {
                     x={m.point.x}
                     y={m.point.y - 12 - m.count * 3}
                     textAnchor="middle"
-                    className={`font-body fill-ink-muted text-[19px] transition-opacity duration-400 ${
-                      selected && !active ? "opacity-35" : ""
+                    className={`font-body fill-ink text-[19px] pointer-events-none transition-opacity duration-400 ${
+                      active ? "opacity-100" : "opacity-0"
                     }`}
                   >
                     {m.label}
@@ -1188,18 +1239,39 @@ function PublicMap({ onOpenRail }: { onOpenRail?: () => void }) {
                   Clear
                 </button>
               </div>
+              {/* Five at a time, each one clamped, and both of those are the
+                  feed's own behaviour rather than a second way of handling a long
+                  list: without either, one county with thirty filers who each
+                  wrote at length is a column several screens tall with the map
+                  stranded at the top of it. */}
               <ul className="flex flex-col gap-[20px] mt-[16px]">
-                {shown.map((f) => (
+                {paged.map((f) => (
                   <li key={f.id}>
                     <p className="font-body font-semibold text-sm text-ink">
                       {f.name}
                     </p>
-                    <p className="font-body text-sm text-ink leading-[1.65] mt-[6px]">
-                      {f.excerpt}
-                    </p>
+                    <div className="mt-[6px]">
+                      <ClampedText
+                        text={f.excerpt}
+                        className="font-body text-sm text-ink leading-[1.65] whitespace-pre-line"
+                      />
+                    </div>
                   </li>
                 ))}
               </ul>
+              {pageCount > 1 && (
+                <Pagination
+                  page={page}
+                  pageCount={pageCount}
+                  onPage={(p) => {
+                    // Through `choose`, like every other control in here, so
+                    // turning a page stops the rotation and keeps the county it
+                    // was turned in.
+                    choose(selected);
+                    setPaging({ seat: selected, page: p });
+                  }}
+                />
+              )}
               {onOpenRail && (
                 <button
                   onClick={() => {
@@ -1223,6 +1295,36 @@ function PublicMap({ onOpenRail }: { onOpenRail?: () => void }) {
 }
 
 /**
+ * The way in, beside the section's heading.
+ *
+ * The panel's own plus, exactly: the same glyph at the same size, the same
+ * padding, the same gray wash arriving on hover at the control radius. The one
+ * difference is that this one says what it does as it lights up, because it
+ * stands in the page beside a heading rather than in a panel header where the
+ * title above it has already said.
+ */
+function AddInput({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      aria-label="Add Public Input"
+      className="group inline-flex items-center p-[6px] rounded-control text-ink-muted hover:text-ink hover:bg-wash cursor-pointer transition-colors"
+    >
+      <Plus className="w-[18px] h-[18px] shrink-0" />
+      {/* The label takes no width until it is wanted: a grid track that goes
+          from nothing to its content, which animates where a width cannot. */}
+      <span className="grid grid-cols-[0fr] group-hover:grid-cols-[1fr] group-focus-visible:grid-cols-[1fr] transition-[grid-template-columns] duration-300 ease-out motion-reduce:transition-none">
+        <span className="overflow-hidden">
+          <span className="block pl-[7px] pr-[3px] font-body font-semibold text-sm whitespace-nowrap">
+            Add Public Input
+          </span>
+        </span>
+      </span>
+    </button>
+  );
+}
+
+/**
  * The negotiation at a glance, as built: two columns.
  *
  * Two thirds to the argument, one third to what is already agreed. The
@@ -1234,6 +1336,7 @@ function PublicMap({ onOpenRail }: { onOpenRail?: () => void }) {
 function Scan({
   c,
   card = false,
+  asked = false,
   onCompose,
 }: {
   c: CommitteeDetail;
@@ -1241,6 +1344,15 @@ function Scan({
    *  answers. The stacked one presses on the topic and opens onto the
    *  question with the answers under it, so its column scans as subjects. */
   card?: boolean;
+  /**
+   * Press on the question rather than on the topic.
+   *
+   * Two readings of the same list. Topics scan as subjects, which is the
+   * faster way to find the one you care about; questions say what is actually
+   * unresolved about each, which is the honest way to see how much is open.
+   * Either reading works in either layout, so this is its own choice.
+   */
+  asked?: boolean;
   /** Offered where one of the six is the reader's own legislator. */
   onCompose?: () => void;
 }) {
@@ -1264,10 +1376,11 @@ function Scan({
           card ? "gap-x-[48px]" : "gap-x-[80px]"
         } gap-y-[32px] items-start @[720px]:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]`}
       >
-        {/* Tabbed view keeps what the surface gave it on three sides and
-            drops it on the left, so the chevrons line up with the heading
-            above them rather than standing in from it. */}
-        <div className={card ? "py-[18px] pr-[18px]" : ""}>
+        {/* No padding of its own in either view. The card around the section
+            holds the gutter, and 18px more here stood the chevrons in from the
+            heading above them and started the list lower in the tabbed view
+            than in the scrolling one. */}
+        <div>
           {/* No column label in either view. The section heading above
               already says what this column is, and the questions are the
               content rather than a list under a label. */}
@@ -1281,10 +1394,14 @@ function Scan({
                   {(["Senate", "House"] as const).map((ch) => (
                     <div
                       key={ch}
-                      // Filled, not outlined. On the page's own ground the
-                      // fill is what separates one answer from the other, and
-                      // a border around a white card only draws it twice.
-                      className="flex-1 min-w-0 bg-surface rounded-card p-[16px]"
+                      // Outlined in the chamber's own color, which is the one
+                      // the label above it is already set in, so the box says
+                      // whose answer it is before the word does. The fill alone
+                      // separated these while the section around them was the
+                      // page's gray; on a white section it does nothing.
+                      className={`flex-1 min-w-0 bg-surface border rounded-card p-[16px] ${
+                        ch === "Senate" ? "border-[#2562b9]" : "border-user-ink"
+                      }`}
                     >
                       <Answer
                         chamber={ch}
@@ -1312,7 +1429,7 @@ function Scan({
                     // any one of them is opened.
                     // Card presses on the question; stacked presses on the
                     // topic and prints the question inside.
-                    label={card ? o.q : (o.topic ?? o.q)}
+                    label={asked ? o.q : (o.topic ?? o.q)}
                     labelClass="font-body font-medium text-lg text-ink text-left leading-[1.35]"
                     // Tabbed lays the questions out on their own, so a wash
                     // over the row would be a second surface on a page that
@@ -1370,7 +1487,7 @@ function Scan({
                   <>
                     {MINE[mine[0].key]} is on this committee,{" "}
                     <span className="font-semibold">
-                      {surname(mine[0].name)}
+                      {shortName(mine[0].name)}
                     </span>
                     .
                   </>
@@ -1379,11 +1496,23 @@ function Scan({
               {onCompose && (
                 <>
                   {" "}
+                  {/* The arrow the ballot pages' testimony link carried, kept
+                      inside the control so it is part of the target rather than
+                      punctuation after it.
+
+                      `items-baseline` rather than the centred version that link
+                      used: this one sits mid-sentence, and a flex container only
+                      hands its own baseline to the line it is on if something
+                      inside it is baseline aligned. Without it the words drop
+                      below the sentence they belong to. The arrow is centred
+                      against them on its own, and carries `no-underline` so the
+                      dotted rule stops at the last word. */}
                   <button
                     onClick={onCompose}
-                    className="font-body font-semibold text-base text-brand-ink hover:text-brand cursor-pointer underline decoration-dotted underline-offset-[4px]"
+                    className="inline-flex items-baseline gap-[4px] font-body font-semibold text-base text-brand-ink hover:text-brand cursor-pointer underline decoration-dotted underline-offset-[4px]"
                   >
                     Share your input
+                    <ArrowRight className="w-[14px] h-[14px] shrink-0 self-center no-underline" />
                   </button>
                 </>
               )}
@@ -1391,19 +1520,16 @@ function Scan({
           )}
         </div>
 
-        {/* Same inset as the questions beside it, and the same ground. Pulled
-            up in the tabbed view so the label sits level with the section
-            heading rather than a list-length below it. The scrolling view
-            cannot do this in flow, because there the heading sits in an opaque
-            band, so it floats its label instead. */}
-        <div
-          // The same net offset in both views. Tabbed carries 18px of padding
-          // inside the column, so it needs 18 more of pull to land where the
-          // scrolling view lands without it.
-          className={
-            card ? "p-[18px] @[720px]:-mt-[52px]" : "@[720px]:-mt-[34px]"
-          }
-        >
+        {/* Pulled up so the label sits level with the section heading rather
+            than a list-length below it. One offset for both views now that
+            neither column carries padding of its own: the pull is HEAD_GAP
+            plus the 14px that lands the label on the heading's own line.
+
+            This is the one section whose heading does not pin, which is what
+            lets the label sit level with it in normal flow. A pinned heading's
+            band is opaque and runs the full width of the card, so it would
+            paint over the label. */}
+        <div className="@[720px]:-mt-[44px]">
           <ScanColumn head="Where bill texts match" count={settled.length}>
             {settled.map((x) => (
               <Row
@@ -1538,14 +1664,39 @@ function Row({
  * conference without the reader going back to an index. The bill numbers are
  * the second line because they are the one descriptor we hold for all twelve.
  */
-function Rail({ current, label }: { current: string; label: boolean }) {
+function Rail({
+  current,
+  composing = false,
+  label,
+  href,
+}: {
+  /** Whether the composer is open on the current committee. The mark is for
+   *  a draft you are not looking at, so it comes back the moment the form is
+   *  put away, even without leaving the page. */
+  composing?: boolean;
+  current: string;
+  label: boolean;
+  /**
+   * Where a committee is. Handed in rather than written here, because the
+   * address carries which container draws the review step and which layout the
+   * page is read in, and neither is this list's business to know.
+   */
+  href: (slug: string) => string;
+}) {
+  const drafted = useDrafted();
   return (
     // In the flow, not absolute. The page below the nav widens by exactly the
     // rail plus its gap, so the rail lands in what would otherwise be margin
     // and the reading column still begins where the nav's content does.
     <nav
       aria-label="Conference committees"
-      className="hidden lg:block w-[236px] shrink-0 sticky top-[var(--nav-h)] self-start max-h-[calc(100vh-var(--nav-h))] overflow-y-auto pt-[26px] pb-[48px]"
+      // It narrows rather than collapsing, and narrows by the window rather
+      // than at a step: a strip of twelve pills across the top costs a whole
+      // band of the page and still has to be scrolled sideways, while a
+      // column that gives up a few pixels at a time keeps the list where a
+      // reader already found it. 236 down to 168, and the names wrap rather
+      // than being cut.
+      className="hidden md:block w-[clamp(168px,19vw,236px)] shrink-0 sticky top-[var(--nav-h)] self-start max-h-[calc(100vh-var(--nav-h))] overflow-y-auto pt-[26px] pb-[48px]"
     >
       {label && (
         <p className="font-body font-semibold text-2xs uppercase tracking-[0.08em] text-ink-muted mb-[14px]">
@@ -1570,17 +1721,38 @@ function Rail({ current, label }: { current: string; label: boolean }) {
                       : "text-ink"
                 }`}
               >
-                {displayName(x.slug, x.short)}
+                {/* The mark sits at the far edge of the row rather than
+                    against the name, so a column of them reads down the right
+                    the way a list of unread things does. Never on the one you
+                    are reading: the draft is on screen, and a mark pointing at
+                    where you already are says nothing. */}
+                <span className="flex items-start justify-between gap-[8px]">
+                  <span className="min-w-0">
+                    {displayName(x.slug, x.short)}
+                  </span>
+                  {(!on || !composing) && drafted.has(x.slug) && (
+                    // A word rather than a glyph, because an icon says there
+                    // is something here without saying it is unfinished and
+                    // yours. No fill and no caps: at this size the word alone
+                    // is enough, and the row is a list of committees rather
+                    // than a list of drafts.
+                    <span className="shrink-0 mt-[2px] font-body text-2xs italic text-ink-faint">
+                      draft
+                    </span>
+                  )}
+                </span>
               </span>
               <span className="block font-body text-xs text-ink-faint leading-[1.35] mt-[1px]">
-                {[recordForSlug(x.slug)?.house, recordForSlug(x.slug)?.senate]
+                {[recordForSlug(x.slug)?.senate, recordForSlug(x.slug)?.house]
                   .filter(Boolean)
                   .join(" · ")}
               </span>
             </>
           );
+          // overflow-hidden on the row, so the rounded right edge clips its
+          // own background instead of the rail's scroll box cutting it.
           const box =
-            "block border-l-[3px] pl-[11px] pr-[8px] py-[7px] rounded-r-control transition-colors";
+            "block overflow-hidden border-l-[3px] pl-[11px] pr-[8px] py-[7px] rounded-r-control transition-colors";
           return (
             <li key={x.slug}>
               {off ? (
@@ -1595,12 +1767,23 @@ function Rail({ current, label }: { current: string; label: boolean }) {
                 </span>
               ) : (
                 <Link
-                  to={`/conferenceCommittees/${x.slug}`}
+                  to={href(x.slug)}
                   aria-current={on ? "page" : undefined}
                   className={`${box} group ${
                     on
-                      ? "border-brand bg-wash-strong"
-                      : "border-transparent hover:border-line-strong hover:bg-wash"
+                      ? // A hairline rather than more colour: the ground is
+                        // within three per cent of white, so the white row
+                        // needed an edge to read as white at all. Drawn as a
+                        // half pixel ring rather than a border, because three
+                        // of the four sides are free but the fourth carries
+                        // the brand bar that marks where you are. Inset, so
+                        // the list's own scroller cannot clip it: an outer
+                        // ring was cut off down the column's edge.
+                        "border-brand bg-surface shadow-[inset_0_0_0_0.5px_var(--color-line)]"
+                      : // No rule on hover. The left bar is what marks the one
+                        // you are on, so lighting it under the pointer says
+                        // you are somewhere you are not.
+                        "border-transparent hover:bg-wash"
                   }`}
                 >
                   {inside}
@@ -1615,41 +1798,185 @@ function Rail({ current, label }: { current: string; label: boolean }) {
 }
 
 /** The rail's content at widths too narrow to put a column beside the page. */
-function RailStrip({ current }: { current: string }) {
+/**
+ * The committee list where there is no room for a column.
+ *
+ * A picker rather than a strip of twelve pills: the pills cost a whole band of
+ * the page, had to be scrolled sideways to reach the twelfth, and still only
+ * showed one at a time as the current one. This says which committee you are
+ * reading and opens the rest on a press, in the platform's own list, and it
+ * stays under the nav as the page scrolls so changing committee never means
+ * scrolling back up.
+ */
+/**
+ * The committee list as the title itself, where there is no room for a column.
+ *
+ * A panel of our own rather than the browser's select, which paints in the
+ * operating system's style and arrives nothing like the rest of the page. The
+ * rows are the rail's rows: the name, the two bill numbers under it, and the
+ * one being read marked rather than ticked.
+ */
+function TitlePicker({
+  slug,
+  short,
+  href,
+}: {
+  slug: string;
+  short: string;
+  href: (slug: string) => string;
+}) {
+  const [open, setOpen] = useState(false);
+  const box = useRef<HTMLDivElement>(null);
+  const panel = useRef<HTMLDivElement>(null);
+  // Where the panel is drawn. It hangs off the body rather than off the
+  // heading, so no card, sticky band or overflow on the way up can clip it or
+  // paint over it, and it is placed against the button by hand instead.
+  const [at, setAt] = useState<{ left: number; top: number } | null>(null);
+  useEffect(() => {
+    if (!open) return;
+    // The heading is sticky, so the button moves under the pointer as the
+    // page scrolls. Measured on every scroll in any ancestor, not only once.
+    const place = () => {
+      const r = box.current?.getBoundingClientRect();
+      if (r) setAt({ left: r.left, top: r.bottom + 10 });
+    };
+    place();
+    const away = (e: PointerEvent) => {
+      const t = e.target as Node;
+      if (!box.current?.contains(t) && !panel.current?.contains(t))
+        setOpen(false);
+    };
+    const esc = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    window.addEventListener("scroll", place, true);
+    window.addEventListener("resize", place);
+    window.addEventListener("pointerdown", away);
+    window.addEventListener("keydown", esc);
+    return () => {
+      window.removeEventListener("scroll", place, true);
+      window.removeEventListener("resize", place);
+      window.removeEventListener("pointerdown", away);
+      window.removeEventListener("keydown", esc);
+    };
+  }, [open]);
   return (
-    <nav
-      aria-label="Conference committees"
-      className="lg:hidden -mx-[20px] sm:-mx-[32px] px-[20px] sm:px-[32px] pt-[20px] overflow-x-auto"
-    >
-      <ul className="flex gap-[8px] w-max">
-        {COMMITTEES.map((x) => {
-          const on = x.slug === current;
-          return (
-            <li key={x.slug}>
-              {NOT_LINKED.has(x.slug) ? (
+    <div ref={box} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        aria-haspopup="listbox"
+        // Inert once the rail is back: above the breakpoint the heading is a
+        // heading and the list is a column down the left.
+        className="md:pointer-events-none inline-flex items-start gap-[8px] text-left cursor-pointer"
+      >
+        <h1 className="font-body font-bold text-[28px] @[700px]:text-[40px] leading-[1.2] text-[#0b1a4d]">
+          {displayName(slug, short)}
+        </h1>
+        <ChevronDown
+          aria-hidden
+          strokeWidth={2.5}
+          className={`md:hidden shrink-0 mt-[9px] w-[22px] h-[22px] text-[#0b1a4d] transition-transform ${
+            open ? "rotate-180" : ""
+          }`}
+        />
+      </button>
+      {open &&
+        at &&
+        createPortal(
+          <div
+            ref={panel}
+            role="listbox"
+            style={{ left: at.left, top: at.top }}
+            // Z_MENU: something the reader has just opened, so it sits above
+            // the nav and the floating buttons. Scrolls inside itself, and
+            // keeps that scroll off the page behind it.
+            className="md:hidden fixed z-[70] w-[min(340px,calc(100vw-40px))] max-h-[62vh] overflow-y-auto overscroll-contain rounded-card bg-surface border border-line shadow-popover py-[6px]"
+          >
+            {COMMITTEES.map((x) => {
+              const on = x.slug === slug;
+              const rec = recordForSlug(x.slug);
+              const meta = [rec?.senate, rec?.house]
+                .filter(Boolean)
+                .join(" · ");
+              const inside = (
+                <>
+                  <span className="block font-body text-base leading-[1.3]">
+                    {displayName(x.slug, x.short)}
+                  </span>
+                  <span className="block font-body text-xs text-ink-faint leading-[1.35] mt-[1px]">
+                    {meta}
+                  </span>
+                </>
+              );
+              const row =
+                "block border-l-[3px] pl-[13px] pr-[12px] py-[9px] transition-colors";
+              return NOT_LINKED.has(x.slug) ? (
                 <span
+                  key={x.slug}
                   aria-disabled
-                  className="block whitespace-nowrap font-body text-sm rounded-pill border px-[12px] py-[6px] text-ink-faint border-line cursor-default"
+                  className={`${row} border-transparent text-ink-faint cursor-default`}
                 >
-                  {displayName(x.slug, x.short)}
+                  {inside}
                 </span>
               ) : (
                 <Link
-                  to={`/conferenceCommittees/${x.slug}`}
-                  aria-current={on ? "page" : undefined}
-                  className={`block whitespace-nowrap font-body text-sm rounded-pill border px-[12px] py-[6px] transition-colors ${
+                  key={x.slug}
+                  to={href(x.slug)}
+                  role="option"
+                  aria-selected={on}
+                  onClick={() => setOpen(false)}
+                  className={`${row} ${
                     on
-                      ? "font-semibold text-brand border-brand bg-wash-strong"
-                      : "text-ink border-line hover:border-line-strong hover:bg-wash"
+                      ? "border-brand bg-wash font-semibold text-brand"
+                      : "border-transparent text-ink hover:bg-wash"
                   }`}
                 >
-                  {displayName(x.slug, x.short)}
+                  {inside}
                 </Link>
-              )}
-            </li>
-          );
-        })}
-      </ul>
+              );
+            })}
+          </div>,
+          document.body,
+        )}
+    </div>
+  );
+}
+
+function RailStrip({
+  current,
+  href,
+}: {
+  current: string;
+  href: (slug: string) => string;
+}) {
+  const navigate = useNavigate();
+  return (
+    <nav
+      aria-label="Conference committees"
+      className="md:hidden sticky top-[var(--nav-h)] z-[12] -mx-[20px] sm:-mx-[32px] px-[20px] sm:px-[32px] pt-[16px] pb-[12px] bg-ground"
+    >
+      <div className="relative">
+        <select
+          aria-label="Conference committee"
+          value={current}
+          onChange={(e) => navigate(href(e.target.value))}
+          className="appearance-none w-full font-body font-semibold text-base text-ink bg-surface border border-line rounded-control pl-[14px] pr-[38px] py-[10px] cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+        >
+          {COMMITTEES.map((x) => (
+            <option
+              key={x.slug}
+              value={x.slug}
+              disabled={NOT_LINKED.has(x.slug)}
+            >
+              {displayName(x.slug, x.short)}
+            </option>
+          ))}
+        </select>
+        <ChevronDown
+          aria-hidden
+          className="pointer-events-none absolute right-[14px] top-1/2 -translate-y-1/2 w-[16px] h-[16px] text-ink-muted"
+        />
+      </div>
     </nav>
   );
 }
@@ -1683,23 +2010,34 @@ function ConferenceText({
    */
   pinTop?: string;
 }) {
-  const [side, setSide] = useState<"house" | "senate">("house");
+  const [side, setSide] = useState<"house" | "senate" | "both">("both");
   const bill = side === "house" ? c.houseBill : c.senateBill;
-  const doc = LINEAGE_TEXTS.find((d) => d.number === bill?.n);
+  const doc = billDocument(bill?.n);
+  // Both, side by side in the same well. A conference is two texts being
+  // reconciled, so the comparison is the thing; one sheet at a time makes the
+  // reader hold one of them in their head.
+  const pair = side === "both";
+  const other = side === "house" ? c.senateBill : c.houseBill;
+  const otherDoc = billDocument(other?.n);
+  /** Where a reader goes when there is nothing to show. MAPLE has the text of
+      all five documents whose own API record carries none. */
+  const maple = bill ? mapleBillUrl(bill.n) : null;
   /**
    * Where the box comes to rest: everything the page has pinned above it, plus
-   * the 20px of air `to()` leaves when it lands a section under the bar, so the
-   * picker does not sit on the rule. One expression, used twice: as the offset
-   * it rests at, and taken off the window to get the height that reaches the
-   * bottom of the screen. The two cannot drift.
+   * the air a landed section leaves under the bar, so the picker comes to rest
+   * exactly where the jump put it instead of sliding the last few pixels. It
+   * had 20 of its own against the page's 24, and that 4px slide was visible.
+   * One expression, used twice: as the offset it rests at, and taken off the
+   * window to get the height that reaches the bottom of the screen.
    */
-  const rest = pinTop ? `calc(${pinTop} + 20px)` : undefined;
+  const rest = pinTop ? `calc(${pinTop} + ${SECTION_AIR}px)` : undefined;
   /**
    * Whether the viewer takes the window.
    *
-   * Only where there is a document to read. Most of the twelve have no text
-   * bundled for either chamber yet, and a full window of empty well behind one
-   * line of apology is worse than the short box it replaces.
+   * Only where there is a document to read. Five of the twenty-two documents
+   * carry no text, and the economic development conference has no bills
+   * recorded at all, and a full window of empty well behind one line of
+   * apology is worse than the short box it replaces.
    */
   const fill = !!doc?.text && !!rest;
   /**
@@ -1771,8 +2109,8 @@ function ConferenceText({
         the well. `sticky` is what would hold it there if anything were ever put
         underneath, which is also why no padding is left under this section.
 
-        Unpinned, on the committees with no text bundled, the well keeps its own
-        height and the section carries the bottom of the page itself.
+        Unpinned, on a chamber whose document carries no text, the well keeps its
+        own height and the section carries the bottom of the page itself.
       */}
       <div
         ref={boxRef}
@@ -1801,7 +2139,9 @@ function ConferenceText({
             <select
               id="cc-text-version"
               value={side}
-              onChange={(e) => setSide(e.target.value as "house" | "senate")}
+              onChange={(e) =>
+                setSide(e.target.value as "house" | "senate" | "both")
+              }
               onPointerDown={() => (byPointer.current = true)}
               onFocus={() => {
                 setKbFocus(!byPointer.current);
@@ -1816,8 +2156,9 @@ function ConferenceText({
               {/* The chamber rather than the number. Two bill numbers in a
                   closed menu say nothing about which is which, and the number
                   is on the sheet below anyway. */}
-              <option value="house">House Version</option>
               <option value="senate">Senate Version</option>
+              <option value="house">House Version</option>
+              <option value="both">Senate and House</option>
             </select>
             <ChevronDown
               aria-hidden
@@ -1836,40 +2177,53 @@ function ConferenceText({
             fill ? "flex-1 min-h-0" : "h-[min(74vh,860px)]"
           }`}
         >
-          {doc?.text ? (
-            <div
-              className={`mx-auto w-full max-w-[680px] bg-surface shadow-popover rounded-[3px] scrollbar-always px-[28px] py-[34px] sm:px-[52px] sm:py-[44px] ${
-                // Locked until the box is parked, so the wheel finishes the
-                // page before it starts on the bill.
-                fill && !parked ? "overflow-hidden" : "overflow-y-auto"
-              }`}
-            >
-              <p className="font-body font-semibold text-sm text-ink-muted">
-                {doc.number}
-              </p>
-              <p className="font-display font-medium text-lg text-ink leading-[1.3] mt-[2px] mb-[24px]">
-                {doc.title}
-              </p>
-              {/* Preformatted, because the legislature's own line breaks carry
-                  the only structure a bill has. */}
-              <pre className="font-body text-sm text-ink leading-[1.75] whitespace-pre-wrap break-words">
-                {doc.text}
-              </pre>
+          {pair ? (
+            // Two sheets in the one well, each scrolling on its own, so a
+            // reader can hold a section of one against the same section of
+            // the other. Always side by side, and narrow: a column of statute
+            // at half the width reads like the phone does, which is a shape
+            // the page already handles.
+            <div className="flex-1 min-w-0 min-h-0 flex gap-[16px]">
+              {[doc, otherDoc].map((d, i) => (
+                <div key={i} className="flex-1 min-w-0 min-h-0 flex">
+                  {d?.text ? (
+                    <Sheet doc={d} locked={fill && !parked} />
+                  ) : (
+                    <div className="m-auto max-w-[280px] text-center">
+                      <p className="font-body text-sm text-ink-muted leading-[1.7]">
+                        {(i === 0 ? bill : other)?.n ?? "This side"} is not
+                        bundled here.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              ))}
             </div>
+          ) : doc?.text ? (
+            <Sheet doc={doc} locked={fill && !parked} />
           ) : (
             <div className="mx-auto max-w-[560px] text-center py-[14px]">
               <p className="font-body text-sm text-ink-muted leading-[1.7]">
-                {bill
-                  ? `The text of ${bill.n} is not bundled with this prototype yet.`
-                  : "This committee's bills are not recorded yet."}{" "}
+                {!bill
+                  ? "This committee's bills are not recorded yet."
+                  : doc?.absence === "none-published"
+                    ? `The legislature's machine-readable record has no text for ${bill.n}.`
+                    : `The text of ${bill.n} is not bundled with this prototype yet.`}{" "}
+                {/* MAPLE rather than the General Court. The General Court
+                    publishes these five as a PDF and carries no text under the
+                    number, which is why its own API returns nothing; MAPLE has
+                    the words, so it is the link that answers the question the
+                    reader just asked. */}
                 {bill && (
                   <a
-                    href={bill.u}
+                    href={maple ?? bill.u}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="font-semibold underline decoration-dotted underline-offset-[4px] text-link hover:text-brand"
                   >
-                    Read it on malegislature.gov
+                    {maple
+                      ? "Read it on MAPLE"
+                      : "Read it on malegislature.gov"}
                   </a>
                 )}
               </p>
@@ -1882,17 +2236,76 @@ function ConferenceText({
 }
 
 /**
- * A section's own spacing, in the stacked layout.
+ * The gap above every section, in both layouts. The one number.
+ *
+ * Read by the box that draws it and by the jump that lands a section under the
+ * bar, so a section you pressed a tab to reach sits where one you scrolled to
+ * sits. It was three numbers in four places before, and they had drifted: the
+ * boxes said 24, the jump said 24 but measured it from the wrong box, the bill
+ * text's well came to rest at 20, and a scroll margin said 120.
+ */
+const SECTION_AIR = 24;
+/** The tab bar's own height, its rule included. */
+const BAR_H = 47;
+/**
+ * Everything pinned above a section, as a CSS length: the fixed nav and the
+ * bar resting under it. `pinned()` is the same sum in numbers, so an offset
+ * and a height cannot drift apart.
+ */
+const PINNED_H = `calc(var(--nav-h) + ${BAR_H}px)`;
+
+/**
+ * The box a section's air is measured from.
+ *
+ * The id sits on the heading's own `<section>`, which in the scrolling view is
+ * inside the card rather than around it: a jump that landed that put the
+ * card's own top padding above the bar and its edge behind it. The box is the
+ * outermost one, the one carrying the air, and `Boxed` marks it.
+ */
+const sectionBox = (id: string) => {
+  const el = document.getElementById(id);
+  // `closest` starts at the element, so a section that is its own box in the
+  // tabbed view answers for itself.
+  return el?.closest<HTMLElement>("[data-air]") ?? el;
+};
+
+/**
+ * How much of a box's top the reader cannot see.
+ *
+ * A framed section shows its edge, so the air is the gap to the box. A
+ * frameless one shows nothing until its content, so the padding inside it is
+ * not air anybody can see and the gap is measured past it. Read off the box
+ * rather than written down a second time: the box already knows.
+ */
+const unpainted = (el: HTMLElement) => {
+  if ("frame" in el.dataset) return 0;
+  const cs = getComputedStyle(el);
+  return (
+    (parseFloat(cs.paddingTop) || 0) + (parseFloat(cs.borderTopWidth) || 0)
+  );
+};
+
+/**
+ * A section's own box, and the air above it.
+ *
+ * Always here, in both layouts: `on` decides whether it draws a card, not
+ * whether it exists. It is the section's outermost box either way, which is
+ * what lets one margin and one jump agree about where a section starts.
  *
  * Vertical only. The white cards came off, and with them the reason to inset
  * from the sides: a section should start where the heading above it starts.
  */
 function Boxed({
+  id,
   on,
   flushBottom,
   plain,
+  filled,
+  bleed,
   children,
 }: {
+  /** For the one section whose heading is not drawn by a `Chapter`. */
+  id?: string;
   on: boolean;
   /** Drop the padding underneath, for a section that ends the page. */
   flushBottom?: boolean;
@@ -1901,22 +2314,67 @@ function Boxed({
    * already framed, where a second border is a box inside a box.
    */
   plain?: boolean;
+  /** White rather than the page ground. */
+  filled?: boolean;
+  /**
+   * Keep the vertical rhythm and give the width back.
+   *
+   * For a section whose content is already a run of cards: a second card
+   * around them is a box inside a box, and the inset made them narrower than
+   * the card above for no reason a reader could see. The block pulls back out
+   * by exactly the padding it sets, so its content starts on the page column
+   * and lines up with the outside edge of the cards above it.
+   */
+  bleed?: boolean;
   children: React.ReactNode;
 }) {
-  return on ? (
-    // Outlined, not filled: each section is its own block on a page that is
-    // otherwise one long column. The side padding matches the bleed a pinned
-    // heading takes, so the heading's band runs to the inside of the line
-    // rather than over it.
+  // Whether the box's own top edge is something the reader can see: a line, a
+  // fill, or both. A bled or plain box paints nothing until its content, so
+  // the air above it is measured to that instead.
+  const framed = on && (filled || !(plain || bleed));
+  return (
+    // The card, where it draws one, is outlined rather than filled: each
+    // section is its own block on a page that is otherwise one long column.
+    // The side padding matches the bleed a pinned heading takes, so the
+    // heading's band runs to the inside of the line rather than over it.
     <div
-      className={`border rounded-card px-[20px] sm:px-[32px] ${
-        plain ? "border-transparent" : "border-line"
-      } ${flushBottom ? "pt-[20px] sm:pt-[24px]" : "py-[20px] sm:py-[24px]"}`}
+      id={id}
+      // What the jump measures from. The id it would otherwise find is on the
+      // heading's section, one box further in.
+      data-air=""
+      // Whether that measurement stops at this edge or goes on to the content.
+      data-frame={framed ? "" : undefined}
+      // The air, from the one constant rather than from a class, because a
+      // class would be a second place to write the number down.
+      //
+      // Anything inside that paints a band of the page's own color, a pinned
+      // heading or a pinned row of controls, reads --band and so follows the
+      // card rather than the page. Written as a style rather than a class:
+      // an arbitrary custom property whose value is itself a var() generates
+      // no rule, so as a class it silently did nothing.
+      style={
+        {
+          marginTop: SECTION_AIR,
+          ...(filled && on ? { "--band": "var(--color-surface)" } : null),
+        } as CSSProperties
+      }
+      // flow-root, so nothing inside can move this edge. A pinned heading's
+      // band carries a negative top margin, and through a box with no padding
+      // of its own that margin collapsed outward and took the box up with it:
+      // 12px in the scrolling view and none in the tabbed one, from the same
+      // markup.
+      className={`flow-root ${
+        on
+          ? `border rounded-card ${CARD_PX} ${CARD_PT} ${
+              filled ? "bg-surface" : ""
+            } ${plain || bleed ? "border-transparent" : "border-line"} ${
+              bleed ? "-mx-[32px]" : ""
+            } ${flushBottom ? "" : CARD_PB}`
+          : ""
+      }`}
     >
       {children}
     </div>
-  ) : (
-    <>{children}</>
   );
 }
 
@@ -1957,22 +2415,26 @@ function Contents({
      * Measured rather than observed. An IntersectionObserver can only fire on
      * the sections themselves, so it has to pick a band of the window and call
      * that "here", which lands the change somewhere inside one section or the
-     * other. The handover belongs in the gap: the line is the underside of the
-     * bar, and a section takes the bar once the midpoint of the space above it
-     * has passed that line.
+     * other.
+     *
+     * The mark is where a jump parks a section: its own box top, SECTION_AIR
+     * below the underside of the bar. That is the whole point. The handover
+     * used to sit at the midpoint of the gap above a section, which is 12px
+     * higher, so pressing a tab scrolled the section into place and then left
+     * the bar lit on the section before it. A control that does not light when
+     * you press it is the page telling the reader it did not hear them.
      */
     const read = () => {
       const line = barRef.current?.getBoundingClientRect().bottom ?? 0;
       let current = sections[0]?.id ?? "";
-      let below: number | null = null;
       for (const x of sections) {
-        const el = document.getElementById(x.id);
+        // The section's own box, the one the jump measures, rather than the
+        // inner element, which sits 25px inside a card.
+        const el = sectionBox(x.id);
         if (!el) continue;
-        const r = el.getBoundingClientRect();
-        // No gap above the first one, so its own top is the mark.
-        const mark = below === null ? r.top : (below + r.top) / 2;
-        if (mark <= line) current = x.id;
-        below = r.bottom;
+        // The half pixel keeps a landing that rounds down from missing it.
+        if (el.getBoundingClientRect().top <= line + SECTION_AIR + 0.5)
+          current = x.id;
       }
       setActive(current);
     };
@@ -1994,7 +2456,7 @@ function Contents({
       // edges rather than going away. A bar has to hide what passes under it:
       // that is what lets a section's own chrome come to rest against its
       // underside. Same opaque ground the heading bands use.
-      className="sticky z-10 -mx-[20px] sm:-mx-[32px] px-[20px] sm:px-[32px] bg-ground border-b border-line"
+      className="sticky z-10 -mx-[32px] px-[32px] bg-ground border-b border-line"
     >
       <div className="flex items-stretch gap-[18px] sm:gap-[22px] h-[46px] overflow-x-auto scrollbar-hide">
         {sections.map((x) => (
@@ -2040,7 +2502,7 @@ function Contents({
  * empty. The balance stays, for the ones that do wrap on a narrow window.
  */
 const SUB_HEAD =
-  "font-display font-normal text-lg sm:text-xl lg:text-[22px] text-ink text-balance";
+  "font-display font-normal text-xl lg:text-[22px] text-ink text-balance";
 
 const CONTENTS = [
   { id: "committee", label: "Committee" },
@@ -2069,31 +2531,94 @@ function Pills<T extends string>({
   value,
   onChange,
   labels,
+  head,
 }: {
   options: readonly T[];
   value: T;
   onChange: (v: T) => void;
+  /** What the switch is for, over the top of it. Two of these sit together and
+   *  neither pair says on its own which axis it moves. */
+  head?: string;
   /** What each option is called, where the word on the switch is not the word
    *  the state is keyed by. */
   labels?: Partial<Record<T, string>>;
 }) {
   return (
-    <div className="flex items-center gap-[4px] bg-surface border border-line-strong rounded-pill shadow-popover p-[4px]">
-      {options.map((v) => (
-        <button
-          key={v}
-          type="button"
-          onClick={() => onChange(v)}
-          aria-pressed={value === v}
-          className={`font-body font-semibold text-sm capitalize rounded-pill px-[12px] py-[5px] cursor-pointer transition-colors ${
-            value === v
-              ? "bg-ink text-ink-inverse"
-              : "text-ink-muted hover:bg-wash"
-          }`}
-        >
-          {labels?.[v] ?? v}
-        </button>
-      ))}
+    <div className="flex flex-col items-start gap-[4px]">
+      {head && (
+        <span className="font-body font-semibold text-2xs uppercase tracking-[0.07em] text-ink-faint">
+          {head}
+        </span>
+      )}
+      <div className="flex items-center gap-[2px] bg-surface border border-line-strong rounded-pill shadow-popover p-[3px]">
+        {options.map((v) => (
+          <button
+            key={v}
+            type="button"
+            onClick={() => onChange(v)}
+            aria-pressed={value === v}
+            className={`min-w-[62px] text-center font-body font-semibold text-sm capitalize rounded-pill px-[10px] py-[4px] cursor-pointer transition-colors ${
+              value === v
+                ? "bg-ink text-ink-inverse"
+                : "text-ink-muted hover:bg-wash"
+            }`}
+          >
+            {labels?.[v] ?? v}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * One document, as a sheet in the well.
+ *
+ * `locked` holds its scroll until the well itself has come to rest, so the
+ * wheel finishes the page before it starts on the bill.
+ */
+function Sheet({
+  doc,
+  locked,
+}: {
+  doc: { number: string; title: string; text: string };
+  locked: boolean;
+}) {
+  return (
+    <div
+      // overflow-x-hidden is not belt and braces: setting only the y axis
+      // leaves x as `visible`, which the spec then computes to `auto` because
+      // the two cannot differ that way, so the page scrolled sideways over a
+      // pixel of rounding.
+      className={`mx-auto w-full max-w-[680px] overflow-x-hidden bg-surface shadow-popover rounded-[3px] scrollbar-always px-[28px] py-[34px] sm:px-[52px] sm:py-[44px] ${
+        locked ? "overflow-hidden" : "overflow-y-auto"
+      }`}
+    >
+      {/* The chamber before the number. Side by side, two numbers alone make
+          a reader work out which text they are in from the prefix on them. */}
+      <p className="font-body font-semibold text-sm text-ink-muted">
+        {doc.number.startsWith("S") ? "Senate" : "House"} &ndash; {doc.number}
+      </p>
+      <p className="font-display font-medium text-lg text-ink leading-[1.3] mt-[2px] mb-[24px]">
+        {doc.title}
+      </p>
+      {/* One block per line the legislature broke, rather than one block for
+          the whole bill. Its line breaks are the only structure a bill has, and
+          as a single preformatted run they could only be breaks; split, each
+          one is a paragraph and can take space after it, which is what makes a
+          wall of statute readable. Blank lines are dropped, since the space is
+          now carried by the margin. */}
+      {doc.text
+        .split(/\r?\n/)
+        .filter((line) => line.trim())
+        .map((line, i) => (
+          <p
+            key={i}
+            className="font-body text-sm text-ink leading-[1.7] mb-[12px] last:mb-0 whitespace-pre-wrap break-words"
+          >
+            {line}
+          </p>
+        ))}
     </div>
   );
 }
@@ -2132,7 +2657,17 @@ const drawerWidth = () =>
   Math.min(Math.max(DRAWER_MIN, DRAWER_VW * window.innerWidth), DRAWER_MAX);
 
 /** How much of the window the panel may be dragged to hold. */
-const RAIL_MAX_SHARE = 0.6;
+const RAIL_MAX_SHARE = 0.48;
+/**
+ * What the page keeps, whatever the panel is dragged to.
+ *
+ * A share of the window is the wrong limit on its own: the committee list and
+ * the gutters come off the same side, so the panel was leaving the cards
+ * narrower than a phone, with names wrapping a word to a line. This is the
+ * list, both gutters, the card's own padding either side, and 390px of card,
+ * which is where the committee block stops being readable.
+ */
+const PAGE_MIN = 236 + 64 + 64 + 390;
 /**
  * Where the page stops holding its left edge still.
  *
@@ -2161,10 +2696,44 @@ type Layout = "card" | "stacked";
  * Crossed with the two layouts, that is four views of the same material.
  */
 type TestimonyMode = "sidebar" | "inline";
+/** Which of the two the unresolved list presses on. */
+type UnresolvedMode = "topics" | "questions";
 
-function Detail({ c }: { c: CommitteeDetail }) {
+function Detail({ c, style }: { c: CommitteeDetail; style: ReviewStyle }) {
   const rec = recordForSlug(c.slug);
   const meetings = MEETINGS[c.slug] ?? [];
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [draft, patchDraft] = useDraft(c.slug);
+  /**
+   * What the full-page review sent the reader back with.
+   *
+   * Only the page style needs this. Routing away unmounts the page, so coming
+   * back from the review lands on a fresh one with everything shut: "Back to
+   * editing" would make the reader reopen the form they were in the middle of,
+   * and
+   * "Read what others filed" would drop them at the top of the page rather
+   * than on the list. History state rather than a query parameter, so the URL
+   * still says only which committee and which layout, and it survives
+   * HashRouter because it is held in the history entry rather than the address.
+   *
+   * This is the bookkeeping the route option costs. The pane and the modal
+   * never unmount the page, so neither of them needs a line of it.
+   */
+  const landed = location.state as {
+    compose?: boolean;
+    feed?: boolean;
+  } | null;
+  const returning = landed?.compose === true;
+  const landedOnFeed = landed?.feed === true;
+  /**
+   * Whether the review step is in front, for the two styles that draw it here.
+   *
+   * The page style has no flag of its own: its review is a route, and the URL
+   * is the state. That asymmetry is most of what is being compared, so it is
+   * left standing rather than smoothed over with a flag the route never reads.
+   */
+  const [review, setReview] = useState(false);
   /**
    * Which of the two reads this is, and a way to link to either.
    *
@@ -2173,7 +2742,7 @@ function Detail({ c }: { c: CommitteeDetail }) {
    * in the right one. Anything else, or nothing, is the tabbed read.
    */
   const [params, setParams] = useSearchParams();
-  const layout: Layout = params.get("view") === "scroll" ? "stacked" : "card";
+  const layout: Layout = params.get("view") === "tabbed" ? "card" : "stacked";
   const setLayout = (v: Layout) => {
     const next = new URLSearchParams(params);
     next.set("view", v === "stacked" ? "scroll" : "tabbed");
@@ -2185,9 +2754,35 @@ function Detail({ c }: { c: CommitteeDetail }) {
   // in both, where the perspectives are read, and it sits beside the layout
   // switch as one control. The panel's own state stays keyed by layout under
   // it, so the two axes do not interfere.
-  // Inline by default: the page reads on its own, and the panel is something
-  // the reader opens rather than something that is already taking width.
-  const [testimony, setTestimony] = useState<TestimonyMode>("inline");
+  // In the URL beside the layout, for the same reason: a link can say how the
+  // page should be read, not only which page it is. ?input=sidebar opens in
+  // the panel; anything else, or nothing, is the inline read, because the page
+  // reads on its own and the panel is something the reader opens rather than
+  // something already taking width.
+  const testimony: TestimonyMode =
+    params.get("input") === "sidebar" ? "sidebar" : "inline";
+  // Not in the URL, unlike the layout and where input is read. Those two are
+  // how a link asks for the page to be read; this is a preference inside one
+  // section, and a link that carried it would be making a claim about the
+  // page it is not entitled to make.
+  //
+  // Topics by default: the list is quicker to scan as subjects, and the
+  // question is one press away either way.
+  const [unresolved, setUnresolved] = useState<UnresolvedMode>("topics");
+  const [following, setFollowing] = useState(false);
+  // Folded away while the panel is open or the window is narrow, which are the
+  // two cases where the corner is not the page's to spend.
+  // 1440 rather than the lg breakpoint: the twelve committees down the left
+  // are part of a centred block, so the corner stops being free long before
+  // the window is a phone's. Below this the switches sit over that list.
+  const narrowControls = useMatchMedia("(max-width: 1439.98px)");
+  const [controlsOpen, setControlsOpen] = useState(true);
+  const [controlsTouched, setControlsTouched] = useState(false);
+  const setTestimony = (v: TestimonyMode) => {
+    const next = new URLSearchParams(params);
+    next.set("input", v);
+    setParams(next, { replace: true });
+  };
   const inlineTestimony = testimony === "inline";
   // Two views, not four. The card gathers the committee onto one pinned
   // surface and its bar swaps what sits under it; the stacked one lays every
@@ -2201,14 +2796,18 @@ function Detail({ c }: { c: CommitteeDetail }) {
   // than remounted, because the panel's own promise is that nothing in it is
   // thrown away: a half-written submission and the feed's filters survive a
   // trip through the other layout.
-  const [rail, setRail] = useState<Record<Layout, "open" | "min">>({
-    card: "min",
-    stacked: "min",
-  });
-  const [railView, setRailView] = useState<Record<Layout, string>>({
-    card: RAIL_DEFAULT,
-    stacked: RAIL_DEFAULT,
-  });
+  //
+  // Opened on the form when the reader is coming back from the full-page
+  // review, so "Back to editing" puts them where they were rather than on a
+  // page with everything shut.
+  // Held per committee rather than per page, so going to look at another
+  // conference does not shut the one you were writing on, and coming back
+  // finds it open on the form with your own words still in it.
+  const { rail, setRail, railView, setRailView } = useRail(
+    c.slug,
+    returning,
+    returning ? "compose" : RAIL_DEFAULT,
+  );
   /**
    * Whether the panel is standing, for a layout and a mode that may not be the
    * pair on screen yet.
@@ -2220,9 +2819,19 @@ function Detail({ c }: { c: CommitteeDetail }) {
   const panelStanding = (l: Layout, m: TestimonyMode) =>
     rail[l] === "open" && (m === "sidebar" || railView[l] === "compose");
   const panelOpen = panelStanding(layout, testimony);
-  const showView = (id: string) => setRailView((v) => ({ ...v, [layout]: id }));
+  /** When the corner is not the page's to spend on three stacked switches. */
+  const tightControls = narrowControls || panelOpen;
+  // The default follows the room available; a press overrides it for good.
+  const showControls = controlsTouched ? controlsOpen : !tightControls;
+  const openControls = (v: boolean) => {
+    setControlsTouched(true);
+    setControlsOpen(v);
+  };
+  /** The form is open, so the control that opens it has nothing to offer. */
+  const composing = panelOpen && railView[layout] === "compose";
+  const showView = (id: string) => setRailView({ ...railView, [layout]: id });
   const openWhen = (state: "open" | "min") =>
-    setRail((r) => ({ ...r, [layout]: state }));
+    setRail({ ...rail, [layout]: state });
 
   // What the feed is showing and what is narrowing it. Shared by both layouts
   // rather than keyed: there is one feed mounted, so there is one set of
@@ -2233,6 +2842,23 @@ function Detail({ c }: { c: CommitteeDetail }) {
   const [railCount, setRailCount] = useState(DEMO_TESTIMONY.length);
   const [railFiltered, setRailFiltered] = useState(false);
   const [railReset, setRailReset] = useState(0);
+
+  /**
+   * The list, with the reader's own submission at the top of it once it is
+   * posted.
+   *
+   * Prepended rather than appended, so the press has somewhere to land: a post
+   * that left the feed looking exactly as it did would be asking the reader to
+   * take it on trust. The card is the one `asSubmission` built for the review
+   * step, unchanged, which is the promise the review step makes.
+   *
+   * The viewer is in the roster either way, because the roster is who the feed
+   * can resolve rather than who is in it.
+   */
+  const feedItems: ConferenceSubmission[] = draft.posted
+    ? [asSubmission(draft), ...DEMO_TESTIMONY]
+    : DEMO_TESTIMONY;
+  const feedAccounts = [VIEWER, ...DEMO_ACCOUNTS];
 
   const shellRef = useRef<HTMLDivElement>(null);
   // What the reader dragged the panel to, remembered so collapsing and
@@ -2269,9 +2895,16 @@ function Detail({ c }: { c: CommitteeDetail }) {
       el.removeAttribute("data-resizing");
       return;
     }
-    const w = Math.round(
-      Math.min(Math.max(px, drawerWidth()), RAIL_MAX_SHARE * window.innerWidth),
+    // Whichever limit bites first: the share of the window, or leaving the
+    // page enough to stay a page. Never below the panel's own resting width.
+    const ceiling = Math.max(
+      drawerWidth(),
+      Math.min(
+        RAIL_MAX_SHARE * window.innerWidth,
+        window.innerWidth - PAGE_MIN,
+      ),
     );
+    const w = Math.round(Math.min(Math.max(px, drawerWidth()), ceiling));
     el.dataset.resizing = "true";
     railWidthRef.current[layout] = w;
     applyRailWidth(w);
@@ -2305,7 +2938,7 @@ function Detail({ c }: { c: CommitteeDetail }) {
     let el: HTMLElement | null = null;
     let first: HTMLElement | null = null;
     for (const x of CONTENTS) {
-      const found = document.getElementById(x.id);
+      const found = sectionBox(x.id);
       if (!found) continue;
       // The first one on the page, for a reader who has not scrolled yet.
       // Without it there was no anchor at the top of the page, which is
@@ -2318,6 +2951,22 @@ function Detail({ c }: { c: CommitteeDetail }) {
     // past it and catches the last frame.
     holdPlace(el ?? first, run, 480);
   };
+
+  // Arriving at a different committee is not the panel closing, it is a
+  // different page. The shell keeps its dragged width as an inline style, so
+  // without this the margin transitions back over 400ms and reads as a slide.
+  // `data-resizing` is the page's own way of saying "this change is not an
+  // animation", and it is lifted for the frame the width lands on.
+  useEffect(() => {
+    const el = shellRef.current;
+    if (!el) return;
+    el.dataset.resizing = "true";
+    applyRailWidth(panelOpen ? railWidthRef.current[layout] : null);
+    const id = requestAnimationFrame(() => el.removeAttribute("data-resizing"));
+    return () => cancelAnimationFrame(id);
+    // The committee, and nothing else: a width change inside one committee is
+    // a drag or a press, and both of those should animate.
+  }, [c.slug]);
 
   const openRailClean = () =>
     holdAnchor(() => {
@@ -2336,6 +2985,13 @@ function Detail({ c }: { c: CommitteeDetail }) {
     });
   const compose = () =>
     holdAnchor(() => {
+      // Opening the form on a submission that is already on the record is
+      // revising it, so it comes off the feed until it is posted again. The
+      // review step's promise is that the card in the list is the card that
+      // was approved, and a card left standing while its words are being
+      // rewritten is the one way to break it.
+      if (draft.posted) patchDraft({ posted: false });
+      setReview(false);
       showView("compose");
       openWhen("open");
     });
@@ -2345,7 +3001,9 @@ function Detail({ c }: { c: CommitteeDetail }) {
     layout === "stacked"
       ? CONTENTS
       : CONTENTS.filter((x) => x.id !== "committee");
-  const [tab, setTab] = useState(tabs[0].id);
+  // Opened on the public input when the full-page review sent the reader back
+  // to read the list, since in this view that section is a page of its own.
+  const [tab, setTab] = useState(landedOnFeed ? "input" : tabs[0].id);
   useEffect(() => {
     if (!tabs.some((x) => x.id === tab)) setTab(tabs[0].id);
   }, [tabs, tab]);
@@ -2356,7 +3014,6 @@ function Detail({ c }: { c: CommitteeDetail }) {
   // it a reader who has scrolled down lands mid-page on the new section, and
   // one who has not sees the bar sitting under a card that did not move.
   const mainRef = useRef<HTMLElement>(null);
-  const BAR_H = 47;
   /**
    * How much of the top of the window is spoken for right now.
    *
@@ -2374,18 +3031,14 @@ function Detail({ c }: { c: CommitteeDetail }) {
     return navH + BAR_H;
   };
   /**
-   * The same sum as a CSS length, for anything that has to rest against the
-   * underside of it or size itself against what is left of the window. The one
-   * expression both uses share, so an offset and a height cannot drift apart:
-   * `pinned()` in numbers and this in CSS are the same two terms.
-   */
-  const pinnedH = `calc(var(--nav-h) + ${BAR_H}px)`;
-  /**
    * Where a section heading comes to rest: under the nav and the bar, which is
    * the same sum `pinned()` uses to land a jump. One value rather than three
    * copies, because the three had already drifted from it once.
+   *
+   * The scrolling view only. Tabbed shows one section at a time, so a heading
+   * that stayed on screen would be naming the only thing there is.
    */
-  const stickyTop = mode === "scroll" ? pinnedH : undefined;
+  const stickyTop = mode === "scroll" ? PINNED_H : undefined;
   /**
    * A section's own chrome, a filter row or a table head, comes to rest under
    * everything above it, which in the scrolling view includes that section's
@@ -2395,26 +3048,36 @@ function Detail({ c }: { c: CommitteeDetail }) {
   const inputBand = useBandHeight(mode);
   const lobbyBand = useBandHeight(mode);
   const underHeading = (h: number) =>
-    mode === "scroll" ? `calc(${pinnedH} + ${h}px)` : pinnedH;
+    mode === "scroll" ? `calc(${PINNED_H} + ${h}px)` : PINNED_H;
   const smooth = () =>
     window.matchMedia("(prefers-reduced-motion: reduce)").matches
       ? ("auto" as const)
       : ("smooth" as const);
-  // 20px of air under the bar, so a section arrives with room above it
-  // rather than flush against the rule.
-  const to = (el: Element) =>
-    window.scrollTo({
-      top: Math.max(
-        0,
-        el.getBoundingClientRect().top + window.scrollY - pinned() - 20,
-      ),
-      behavior: smooth(),
-    });
-  // Lands a section's own top on the underside of the bar, scrolling up or
-  // down. A scroll margin cannot do it: the pinned height changes with the
-  // title's wrap, and an element's margin is written once.
+  /**
+   * Where the page has to be for a section to sit SECTION_AIR under the bar.
+   *
+   * The one sum, so a landed section and a scrolled-to one cannot
+   * disagree: `SECTION_AIR` is the same number the box above draws as its
+   * margin, measured to the same edge the reader sees. Flush against the rule
+   * a card reads as attached to the bar; landed here, the space above it says
+   * the card is a thing on a page and there is more of the page above it.
+   */
+  const landing = (el: HTMLElement) =>
+    Math.max(
+      0,
+      el.getBoundingClientRect().top +
+        window.scrollY +
+        unpainted(el) -
+        pinned() -
+        SECTION_AIR,
+    );
+  // Lands a section's own top under the bar, scrolling up or down. A scroll
+  // margin cannot do it: the pinned height changes with the nav's own height,
+  // and an element's margin is written once.
+  const to = (el: HTMLElement) =>
+    window.scrollTo({ top: landing(el), behavior: smooth() });
   const jumpTo = (id: string) => {
-    const el = document.getElementById(id);
+    const el = sectionBox(id);
     if (el) to(el);
   };
   /**
@@ -2428,21 +3091,105 @@ function Detail({ c }: { c: CommitteeDetail }) {
   const pickTab = (id: string) => {
     setTab(id);
     requestAnimationFrame(() => {
-      const el = document.getElementById(id);
+      const el = sectionBox(id);
       if (!el) return;
       // Only ever upward. A reader at the bottom of one section should not
       // arrive at the bottom of the next, but a reader who has not scrolled
       // at all should see nothing move: the tab already put them at the top.
       //
       // Landed, not scrolled. The section under the bar is a different page,
-      // so travelling to it says the two are one long thing, and animating
+      // so traveling to it says the two are one long thing, and animating
       // past content the reader did not ask to see is worse than arriving.
-      const top =
-        el.getBoundingClientRect().top + window.scrollY - pinned() - 20;
-      if (window.scrollY > top)
-        window.scrollTo({ top: Math.max(0, top), behavior: "auto" });
+      const top = landing(el);
+      if (window.scrollY > top) window.scrollTo({ top, behavior: "auto" });
     });
   };
+
+  /**
+   * The search string survives every move, because it is what selects the
+   * layout: a review that dropped `?view=scroll` would hand the reader back a
+   * differently built page than the one they left.
+   */
+  const keepSearch = (path: string) => `${path}${location.search}`;
+  /**
+   * Another committee, read the same way this one is.
+   *
+   * The twelve down the left keep both the container being compared and the
+   * layout, so changing committee mid-comparison does not quietly change what
+   * is being compared.
+   */
+  const committeeHref = (slug: string) => keepSearch(detailPath(slug, style));
+
+  /**
+   * "Review and Post", in whichever container this route asks for.
+   *
+   * The one branch in the page. Every press under it does the same thing
+   * whichever container drew it, which is what makes the three comparable.
+   */
+  const toReview = () => {
+    if (style === "page") navigate(keepSearch(reviewPath(c.slug)));
+    else setReview(true);
+  };
+  /**
+   * The review has taken the flyout's second pane.
+   *
+   * The other two styles leave the form standing where it is: the modal covers
+   * it and the page navigates away from it.
+   */
+  const paneReview = style === "pane" && review;
+  /** Back to the form, from the pane or the modal in front of it. */
+  const toEditing = () => setReview(false);
+  /** Nothing is sent. The flag is as far as a prototype with no backend goes. */
+  const post = () => patchDraft({ posted: true });
+  /** The review put away from a container's own close control. */
+  const closeReview = () => {
+    setReview(false);
+    // Once it is on the record there is nothing left to write, so the form goes
+    // with the review rather than being left standing behind it.
+    if (draft.posted) collapseRail();
+  };
+  /**
+   * Off the review and onto the list the card is now at the top of.
+   *
+   * Where the list is depends on the mode rather than on the style: inline
+   * reads it in the page's own section, sidebar rests it in the panel.
+   */
+  const readOthers = () => {
+    setReview(false);
+    if (!inlineTestimony) {
+      openRailClean();
+      return;
+    }
+    // The panel closed without the hold `collapseRail` puts on the reader's
+    // place. This press is a request to be moved, and the hold runs for the
+    // length of the panel's transition: it would correct the jump straight
+    // back out again.
+    clearRailFilters();
+    applyRailWidth(null);
+    openWhen("min");
+    if (mode === "scroll") jumpTo("input");
+    else pickTab("input");
+  };
+  // The scrolling view's share of landing on the feed after the full-page
+  // review. The tabbed view opens on the section instead, which it can do
+  // before the first paint; this one has to wait for the section to exist.
+  useEffect(() => {
+    if (landedOnFeed && mode === "scroll") {
+      requestAnimationFrame(() => jumpTo("input"));
+      return;
+    }
+    // A link to one section, or a reload of a page the bar had put a fragment
+    // on. The browser lands a fragment with the element's own scroll margin,
+    // which is a second opinion about this gap and sat 11px off the jump's:
+    // the page lands it itself instead, so arriving by link and arriving by
+    // press put the section in the same place.
+    const id = location.hash.slice(1);
+    if (!id || !CONTENTS.some((x) => x.id === id)) return;
+    if (mode === "tabbed" && tabs.some((x) => x.id === id)) pickTab(id);
+    else requestAnimationFrame(() => jumpTo(id));
+    // Once, on arrival. A later press is somebody navigating rather than
+    // landing, and it has a handler of its own.
+  }, []);
 
   const order: string[] = [];
   const see = (id?: string) => {
@@ -2512,70 +3259,125 @@ function Detail({ c }: { c: CommitteeDetail }) {
           --fab-r keeps both clear of the panel instead of under it. */}
       <div className="fixed bottom-[24px] right-[var(--fab-r,24px)] z-50 flex items-center gap-[12px] transition-[right] duration-400 ease-out motion-reduce:transition-none [[data-resizing]_&]:transition-none">
         <MapleFab inline open={askOpen} onOpenChange={setAskOpen} />
-        <button
-          onClick={compose}
-          aria-label="Add public input"
-          className="group hidden lg:inline-flex items-center h-[52px] px-[16px] rounded-pill border border-brand bg-brand text-ink-inverse hover:bg-brand-hover hover:border-brand-hover cursor-pointer transition-colors"
-        >
-          <Plus className="w-[22px] h-[22px] shrink-0" />
-          <span className="grid grid-cols-[0fr] group-hover:grid-cols-[1fr] group-focus-visible:grid-cols-[1fr] transition-[grid-template-columns] duration-300 ease-out motion-reduce:transition-none">
-            <span className="overflow-hidden">
-              <span className="block pl-[10px] pr-[2px] font-body font-semibold text-sm whitespace-nowrap">
-                Add Public Input
+        {/* Hidden while the form it opens is already open, where it would be
+            an invitation to do the thing being done. */}
+        {/* At every width. Below lg the panel it opens is a sheet rather than a
+            rail, so this is the way in on a phone as well as the shortcut on a
+            wide window; --fab-r falls back to the plain 24px there, since
+            nothing is being taken from the page for a panel to stand in. */}
+        {!composing && (
+          <button
+            onClick={compose}
+            aria-label="Add public input"
+            className="group inline-flex items-center h-[52px] px-[16px] rounded-pill border border-brand bg-brand text-ink-inverse hover:bg-brand-hover hover:border-brand-hover cursor-pointer transition-colors"
+          >
+            <Plus className="w-[22px] h-[22px] shrink-0" />
+            <span className="grid grid-cols-[0fr] group-hover:grid-cols-[1fr] group-focus-visible:grid-cols-[1fr] transition-[grid-template-columns] duration-300 ease-out motion-reduce:transition-none">
+              <span className="overflow-hidden">
+                <span className="block pl-[10px] pr-[10px] font-body font-semibold text-sm whitespace-nowrap">
+                  Add Public Input
+                </span>
               </span>
             </span>
-          </span>
-        </button>
+          </button>
+        )}
       </div>
 
-      {/* Prototype controls, not part of the page. Only the layout switch is
-          offered for now; the testimony one is parked below. */}
-      <div className="fixed bottom-[20px] left-[20px] z-50 flex flex-col items-start gap-[8px]">
-        {/* Parked: where public input is read. The page runs inline, with the
-            panel opening only to write, and the sidebar mode is still here
-            behind the switch when it is wanted back. */}
-        {SHOW_TESTIMONY_SWITCH && (
-          <Pills
-            options={["sidebar", "inline"] as const}
-            value={testimony}
-            onChange={(v) => {
-              setTestimony(v);
-              // A dragged width is an inline style on the shell and beats the
-              // class ternaries, so the shell has to be told whether the panel
-              // is still standing under the mode being switched to.
-              applyRailWidth(
-                panelStanding(layout, v) ? railWidthRef.current[layout] : null,
-              );
-            }}
-          />
+      {/* Prototype controls, not part of the page: where public input is read,
+          and which of the two layouts draws it. */}
+      {/* In the corner itself rather than floating near it: shut, it is a tab
+          growing out of the window's edge, so it reads as a drawer rather than
+          another floating button competing with the two on the right. Open, the
+          same corner holds a white panel with the way to shut it at the top,
+          above the switches it controls. */}
+      <div className="fixed bottom-0 left-0 z-50">
+        {!showControls ? (
+          <button
+            onClick={() => openControls(true)}
+            title="Prototype controls"
+            className="flex items-center gap-[8px] rounded-tr-card bg-ink px-[16px] py-[11px] font-body font-semibold text-2xs uppercase tracking-[0.09em] text-ink-inverse hover:bg-ink/90 cursor-pointer transition-colors"
+          >
+            Toggles
+          </button>
+        ) : (
+          // Clipped, so the black head takes the panel's own rounded corner
+          // rather than sitting square inside it.
+          <div className="rounded-tr-card overflow-hidden bg-surface border-t border-r border-line-strong shadow-popover">
+            {
+              <button
+                onClick={() => openControls(false)}
+                aria-label="Hide prototype controls"
+                className="w-full flex items-center gap-[6px] bg-ink px-[16px] py-[11px] font-body font-semibold text-2xs uppercase tracking-[0.09em] text-ink-inverse hover:bg-ink/90 cursor-pointer transition-colors"
+              >
+                <ChevronDown className="w-[14px] h-[14px]" />
+                Hide
+              </button>
+            }
+            <div className="flex flex-col items-start gap-[10px] px-[16px] pt-[14px] pb-[16px]">
+              {/* Where public input is read. Inline keeps it in the page's own section
+            and opens the panel only to write; sidebar rests the panel on the
+            feed down the right edge. */}
+              <Pills
+                head="Page"
+                // Tabbed first, scroll second, which is the order she reads them in.
+                // The default being second is fine: this switch says which of the two
+                // you are in, not which one comes first.
+                options={["card", "stacked"] as const}
+                // Named for what each one does rather than what it looks like, which
+                // is also what the page calls them internally: card is the tabbed
+                // read, stacked is the scrolling one.
+                labels={{ card: "Tabbed", stacked: "Scroll" }}
+                value={layout}
+                // Back to the top and the first tab. The two views put different
+                // things at different heights, so keeping the scroll position drops
+                // you into the middle of a section you did not choose.
+                onChange={(v) => {
+                  setLayout(v);
+                  setTab(
+                    (v === "stacked"
+                      ? CONTENTS
+                      : CONTENTS.filter((x) => x.id !== "committee"))[0].id,
+                  );
+                  window.scrollTo({ top: 0 });
+                  // One shell for both layouts, so a dragged width is one inline
+                  // style on it. The layout being switched to has its own, and the
+                  // shell has to be told which rather than keeping the width the
+                  // layout being left was at.
+                  applyRailWidth(
+                    panelStanding(v, testimony)
+                      ? railWidthRef.current[v]
+                      : null,
+                  );
+                }}
+              />
+              {SHOW_TESTIMONY_SWITCH && (
+                <Pills
+                  head="Input"
+                  options={["inline", "sidebar"] as const}
+                  value={testimony}
+                  onChange={(v) => {
+                    setTestimony(v);
+                    // A dragged width is an inline style on the shell and beats the
+                    // class ternaries, so the shell has to be told whether the panel
+                    // is still standing under the mode being switched to.
+                    applyRailWidth(
+                      panelStanding(layout, v)
+                        ? railWidthRef.current[layout]
+                        : null,
+                    );
+                  }}
+                />
+              )}
+              <Pills
+                head="Resolution"
+                options={["questions", "topics"] as const}
+                labels={{ questions: "Qs?" }}
+                value={unresolved}
+                onChange={setUnresolved}
+              />
+            </div>
+          </div>
         )}
-        <Pills
-          options={["card", "stacked"] as const}
-          // Named for what each one does rather than what it looks like, which
-          // is also what the page calls them internally: card is the tabbed
-          // read, stacked is the scrolling one.
-          labels={{ card: "Tabbed", stacked: "Scroll" }}
-          value={layout}
-          // Back to the top and the first tab. The two views put different
-          // things at different heights, so keeping the scroll position drops
-          // you into the middle of a section you did not choose.
-          onChange={(v) => {
-            setLayout(v);
-            setTab(
-              (v === "stacked"
-                ? CONTENTS
-                : CONTENTS.filter((x) => x.id !== "committee"))[0].id,
-            );
-            window.scrollTo({ top: 0 });
-            // One shell for both layouts, so a dragged width is one inline
-            // style on it. The layout being switched to has its own, and the
-            // shell has to be told which rather than keeping the width the
-            // layout being left was at.
-            applyRailWidth(
-              panelStanding(v, testimony) ? railWidthRef.current[v] : null,
-            );
-          }}
-        />
       </div>
 
       {/* 1180 of reading column, plus 236 of rail and its 24px gap. Centred at
@@ -2620,11 +3422,14 @@ function Detail({ c }: { c: CommitteeDetail }) {
         }
         className={`${PAGE_COLUMN} [--page-cap:1180px] lg:[--page-cap:1320px] min-[1480px]:[--page-cap:1764px] flex gap-[24px] lg:gap-[56px] lg:mx-0 lg:ml-[var(--page-left)] lg:mr-[var(--taken-w)] lg:[--page-w:calc(100vw-var(--taken-w))] transition-[margin] duration-400 ease-out motion-reduce:transition-none [[data-resizing]_&]:transition-none`}
       >
-        <Rail current={c.slug} label={false} />
+        <Rail
+          current={c.slug}
+          label={false}
+          href={committeeHref}
+          composing={composing}
+        />
 
         <div className="min-w-0 flex-1">
-          <RailStrip current={c.slug} />
-
           {/* The title and its byline scroll away, in both layouts. Nothing
               pins here: the tab bar is the only thing that comes to rest under
               the nav, so the sum every pinned offset on this page is built from
@@ -2635,7 +3440,7 @@ function Detail({ c }: { c: CommitteeDetail }) {
               the page. The negative margins let the band's own background run
               to the edge of the reading column; the padding gives that width
               back, so the column inside is the one it would have had. */}
-          <div className="z-20 -mx-[20px] sm:-mx-[32px] px-[20px] sm:px-[32px] bg-ground/95 backdrop-blur">
+          <div className="z-20 -mx-[32px] px-[32px] bg-ground/95 backdrop-blur">
             {/* 26px, so the title's cap sits level with the top of the rail's
                 first pill: a 40px face at 1.2 leaves about 10px above the cap
                 inside its own line box. */}
@@ -2644,9 +3449,54 @@ function Detail({ c }: { c: CommitteeDetail }) {
                 Nunito. Lexend has a far larger x-height and wider letterforms,
                 so the same 48px reads noticeably bigger. 40px is where the two
                 match optically. */}
-              <h1 className="font-body font-bold text-[28px] @[700px]:text-[40px] leading-[1.2] text-[#0b1a4d] max-w-[22ch]">
-                {displayName(c.slug, c.short)}
-              </h1>
+              {/* The two page level utilities sit with the title rather than
+                  with the input controls below: these act on the committee as
+                  a record, not on the debate about it. Ported from the ballot
+                  question pages, which put Follow and Share in the same
+                  place. */}
+              <div className="flex items-start justify-between gap-[24px]">
+                <TitlePicker
+                  slug={c.slug}
+                  short={c.short}
+                  href={committeeHref}
+                />
+                <div className="shrink-0 flex items-center gap-[18px] mt-[6px]">
+                  <button
+                    onClick={() => setFollowing((f) => !f)}
+                    aria-pressed={following}
+                    // Following, it steps back to gray and only reports a
+                    // state; before, it is asking to be pressed. On hover each
+                    // half swaps to the sign of what a press would do, so the
+                    // outcome shows before it happens.
+                    // Blue in both states. The ballot pages grayed it once
+                    // followed, on the argument that it was then only reporting
+                    // a state; here it stays a control you can press again, and
+                    // the icon and the word already say which way it goes.
+                    className="group inline-flex items-center gap-[6px] font-body font-semibold text-sm text-link hover:text-brand cursor-pointer"
+                  >
+                    {following ? (
+                      <>
+                        <BellRing className="w-[15px] h-[15px] group-hover:hidden" />
+                        <BellOff className="w-[15px] h-[15px] hidden group-hover:block" />
+                        <span className="group-hover:hidden">Following</span>
+                        <span className="hidden group-hover:inline">
+                          Unfollow
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <Bell className="w-[15px] h-[15px] group-hover:hidden" />
+                        <BellPlus className="w-[15px] h-[15px] hidden group-hover:block" />
+                        Follow
+                      </>
+                    )}
+                  </button>
+                  <button className="inline-flex items-center gap-[6px] font-body font-semibold text-sm text-link hover:text-brand cursor-pointer">
+                    <Share className="w-[15px] h-[15px]" />
+                    Share
+                  </button>
+                </div>
+              </div>
               <p className="font-body text-xl @[980px]:text-2xl text-ink-muted leading-[1.4] mt-[10px]">
                 <ConferenceByline
                   slug={c.slug}
@@ -2667,7 +3517,9 @@ function Detail({ c }: { c: CommitteeDetail }) {
                 // Outlined rather than filled: the people and the two maps are
                 // one block on a page whose sections are otherwise unbounded,
                 // and a border says where it ends without adding a surface.
-                className="mt-[8px] border border-line rounded-card px-[20px] pt-[20px] pb-[8px] scroll-mt-[120px]"
+                // The same padding the boxes in the scrolling view carry, so
+                // a card reads the same whichever view it is in.
+                className={`mt-[8px] border border-line rounded-card ${CARD_PX} ${CARD_PT} ${CARD_PB} scroll-mt-[120px]`}
               >
                 {SHOW_CARD ? (
                   <Six
@@ -2725,23 +3577,18 @@ function Detail({ c }: { c: CommitteeDetail }) {
                 )}
 
                 {show("committee") && (
-                  // This section sits outside <main>, so it misses the gap
-                  // that separates the sections inside it. It carries the
-                  // same gap itself.
-                  <div
-                    id="committee"
-                    // The 24px under the bar plus this makes the same 48px the
-                    // sections inside main leave between themselves.
-                    className="scroll-mt-[120px] mt-[24px] mb-[24px]"
-                  >
-                    <Boxed on={layout === "stacked"}>
-                      <PeopleAndMaps
-                        six={sixOf(c)}
-                        meetings={meetings}
-                        stickyTop={stickyTop}
-                      />
-                    </Boxed>
-                  </div>
+                  // Sits outside <main>, and needs nothing arranged for it
+                  // there: the box carries the air wherever it is put. The id
+                  // is on the box here rather than on a heading's section,
+                  // because the people and the maps are not drawn by a
+                  // Chapter.
+                  <Boxed id="committee" on={layout === "stacked"} filled>
+                    <PeopleAndMaps
+                      six={sixOf(c)}
+                      meetings={meetings}
+                      stickyTop={stickyTop}
+                    />
+                  </Boxed>
                 )}
               </>
             )}
@@ -2758,18 +3605,21 @@ function Detail({ c }: { c: CommitteeDetail }) {
             // had come to rest, dragging it up behind the bar. The section
             // carries that 80px itself on the committees whose text is not
             // bundled, where the well keeps its own height instead.
-            className={`${show("text") ? "pb-0" : "pb-[80px]"} flex flex-col gap-[48px] ${
-              // Stacked's sections carry their own 20px of top padding, so this
-              // adds nothing on top of it.
-              mode === "tabbed" ? "pt-[28px]" : "pt-[24px]"
-            }`}
+            // No gap set here and no margin on the children from here either.
+            // Each section's own box carries SECTION_AIR above it, so the
+            // number lives in one place and the sections outside this element
+            // get it on the same terms as the ones inside. Nothing carries a
+            // bottom margin, which is what lets the bill text's well end
+            // exactly where the page ends; it measures itself against the
+            // bottom of the window.
+            className="pt-0 pb-0 flex flex-col gap-0"
           >
             {/* The same chapter the bill page's lineage uses for "How did it
                 get here?", so the two pages open a section the same way. */}
             {/* Both layouts. The two column labels below say what each list
                 is; this says why either of them is there. */}
             {show("decided") && (
-              <Boxed on={layout === "stacked"}>
+              <Boxed on={layout === "stacked"} filled>
                 <Chapter
                   id="decided"
                   question="What needs to be resolved?"
@@ -2781,7 +3631,12 @@ function Detail({ c }: { c: CommitteeDetail }) {
                   // because their controls pin under them.
                   flush
                 >
-                  <Scan c={c} card={layout === "card"} onCompose={compose} />
+                  <Scan
+                    c={c}
+                    card={layout === "card"}
+                    asked={unresolved === "questions"}
+                    onCompose={compose}
+                  />
                 </Chapter>
               </Boxed>
             )}
@@ -2868,14 +3723,19 @@ function Detail({ c }: { c: CommitteeDetail }) {
               ))}
 
             {show("lobbying") && (
-              <Boxed on={layout === "stacked"}>
+              <Boxed on={layout === "stacked"} filled>
                 <LobbyingDisclosures
                   c={c}
                   titleClass={SUB_HEAD}
-                  stickyHeading={stickyTop}
-                  // Tabbed does not pin its headings, but the column heads
-                  // still travel back up the window when they let go, so the
-                  // heading needs the band's paint order even without the pin.
+                  // Scrolling pins it at every width. Tabbed does not pin its
+                  // headings, with one exception: below sm the table becomes a
+                  // stack and loses its column heads, and then the section's
+                  // own heading is the only thing naming what the rows are.
+                  stickyHeading={stickyTop ?? PINNED_H}
+                  narrowPin={mode === "tabbed"}
+                  // The column heads still travel back up the window when they
+                  // let go, so the heading needs the band's paint order even
+                  // without the pin.
                   bandHeading={mode === "tabbed"}
                   headingRef={lobbyBand.ref}
                   // The column heads stay over the rows they name, the way
@@ -2887,11 +3747,21 @@ function Detail({ c }: { c: CommitteeDetail }) {
             )}
 
             {show("input") && (
-              <Boxed on={layout === "stacked"} plain>
+              <Boxed
+                on={layout === "stacked"}
+                bleed={inlineTestimony}
+                filled={!inlineTestimony}
+              >
                 <Chapter
                   id="input"
                   question="Public Input"
                   titleClass={SUB_HEAD}
+                  // Reading it inline, this is the way in. Reading it in the
+                  // panel, the panel's header already has one and a second
+                  // here would be two doors to the same room.
+                  action={
+                    inlineTestimony ? <AddInput onClick={compose} /> : undefined
+                  }
                   stickyHeading={stickyTop}
                   bandHeading={mode === "tabbed"}
                   headingRef={inputBand.ref}
@@ -2904,9 +3774,10 @@ function Detail({ c }: { c: CommitteeDetail }) {
                       question and a conference, and a reader who asked for the
                       Senate text would have come back as "Supports".
 
-                      No invitation to file inside it. A conference takes no
-                      testimony of its own, so the page's own form is the only
-                      place that offers one. */}
+                      No form inside it: the page owns that, and the panel is
+                      where it is written. What the feed does carry is the way in,
+                      the same plus the panel's own header shows, so the inline
+                      reading has it where the sidebar reading has it. */}
                   {/* The filter row carries its own 16px of air above it,
                       for a feed that begins a section on its own. Here a
                       heading is already doing that, so the row's share comes
@@ -2914,8 +3785,8 @@ function Detail({ c }: { c: CommitteeDetail }) {
                   {inlineTestimony ? (
                     <div className="-mt-[16px]">
                       <SubmissionFeed
-                        items={DEMO_TESTIMONY}
-                        accounts={DEMO_ACCOUNTS}
+                        items={feedItems}
+                        accounts={feedAccounts}
                         subject={displayName(c.slug, c.short)}
                         pageSize={5}
                         includeTypeFilter
@@ -2943,7 +3814,7 @@ function Detail({ c }: { c: CommitteeDetail }) {
 
             {show("text") && (
               // Nothing under this section: the well ends the page.
-              <Boxed on={layout === "stacked"} flushBottom plain>
+              <Boxed on={layout === "stacked"} flushBottom bleed>
                 <ConferenceText
                   c={c}
                   titleClass={SUB_HEAD}
@@ -2953,7 +3824,7 @@ function Detail({ c }: { c: CommitteeDetail }) {
                   // underside of the bar and the well takes the window that is
                   // left, which is the same sum every other pinned thing on
                   // this page resolves to rather than a height of its own.
-                  pinTop={pinnedH}
+                  pinTop={PINNED_H}
                 />
               </Boxed>
             )}
@@ -3030,6 +3901,11 @@ function Detail({ c }: { c: CommitteeDetail }) {
       </div>
 
       <Panel
+        // Keyed by committee, so changing committee replaces the panel rather
+        // than animating the old one shut. Shut is a thing a reader does; a
+        // different committee simply has a different panel, and it should
+        // arrive the way the rest of the page arrives.
+        key={c.slug}
         views={[
           {
             id: RAIL_DEFAULT,
@@ -3048,8 +3924,8 @@ function Detail({ c }: { c: CommitteeDetail }) {
                     column of its own height, so the list scrolls rather than
                     being dealt out five at a time. */}
                 <SubmissionFeed
-                  items={DEMO_TESTIMONY}
-                  accounts={DEMO_ACCOUNTS}
+                  items={feedItems}
+                  accounts={feedAccounts}
                   subject={displayName(c.slug, c.short)}
                   filter={position}
                   onFilterChange={setPosition}
@@ -3067,20 +3943,41 @@ function Detail({ c }: { c: CommitteeDetail }) {
           },
           {
             id: "compose",
-            title: "Add Public Input",
+            // The pane style draws the review in this same view, so the header
+            // names whichever of the two steps is showing rather than calling
+            // both of them the form.
+            title: paneReview ? reviewTitle(draft.posted) : "Add Public Input",
             content: (
               <div className="flex-1 min-h-0 flex flex-col px-[var(--rail-pad,18px)] pt-[12px] pb-[22px]">
-                {/* Cancel goes where the close control goes. In sidebar mode
-                    that is back to the list the panel rests on; inline mode
-                    has no such rest, so it puts the panel away, as the close
-                    control does. */}
-                <ConferenceCompose
-                  onCancel={
-                    inlineTestimony
-                      ? collapseRail
-                      : () => showView(RAIL_DEFAULT)
-                  }
-                />
+                {paneReview ? (
+                  <ReviewPane
+                    draft={draft}
+                    onChange={patchDraft}
+                    six={sixOf(c)}
+                    subject={displayName(c.slug, c.short)}
+                    onBack={toEditing}
+                    onPost={post}
+                    onClose={closeReview}
+                    onSeeOthers={readOthers}
+                  />
+                ) : (
+                  /* Cancel goes where the close control goes. In sidebar mode
+                     that is back to the list the panel rests on; inline mode
+                     has no such rest, so it puts the panel away, as the close
+                     control does. */
+                  <ConferenceCompose
+                    draft={draft}
+                    onChange={patchDraft}
+                    six={sixOf(c)}
+                    onCancel={
+                      inlineTestimony
+                        ? collapseRail
+                        : () => showView(RAIL_DEFAULT)
+                    }
+                    onReview={toReview}
+                    active={railView[layout] === "compose"}
+                  />
+                )}
               </div>
             ),
           },
@@ -3105,31 +4002,126 @@ function Detail({ c }: { c: CommitteeDetail }) {
         onResize={setRailWidth}
         onResizeEnd={endRailResize}
       />
+
+      {/* Style two. Over the page rather than in it, so the form the reader
+          came from is still behind the scrim: the modal is the only one of the
+          three that shows you where you were while you check what you wrote. */}
+      {style === "modal" && review && (
+        <ReviewModal
+          draft={draft}
+          onChange={patchDraft}
+          six={sixOf(c)}
+          subject={displayName(c.slug, c.short)}
+          onBack={toEditing}
+          onPost={post}
+          onClose={closeReview}
+          onSeeOthers={readOthers}
+        />
+      )}
     </div>
   );
 }
 
-export function ConferenceCommittee() {
+/** No committee at that slug, on whichever of the routes asked for one. */
+function NoCommittee() {
+  return (
+    <div className="bg-ground min-h-screen font-body text-ink">
+      <SiteNav inner={NAV_COLUMN} />
+      <main className="mx-auto max-w-[1180px] px-[20px] sm:px-[32px] pt-[48px]">
+        <p className="font-body text-base text-ink-muted">
+          No conference committee at that address.{" "}
+          <Link
+            to="/conferenceCommittees"
+            className="underline decoration-dotted underline-offset-[4px] text-link"
+          >
+            See all twelve
+          </Link>
+          .
+        </p>
+      </main>
+    </div>
+  );
+}
+
+/**
+ * One committee's page, drawing the review step the way its route says to.
+ *
+ * Three routes reach this, one per container, and the style is a prop rather
+ * than something read off the URL in here: the routes are where the comparison
+ * is set up, so that is where it should be legible.
+ */
+export function ConferenceCommittee({
+  style = "pane",
+}: {
+  style?: ReviewStyle;
+}) {
   const { slug } = useParams();
   const c = slug ? BY_SLUG[slug] : undefined;
-  if (!c) {
-    return (
-      <div className="bg-ground min-h-screen font-body text-ink">
-        <SiteNav inner={NAV_COLUMN} />
-        <main className="mx-auto max-w-[1180px] px-[20px] sm:px-[32px] pt-[48px]">
-          <p className="font-body text-base text-ink-muted">
-            No conference committee at that address.{" "}
-            <Link
-              to="/conferenceCommittees"
-              className="underline decoration-dotted underline-offset-[4px] text-link"
-            >
-              See all twelve
-            </Link>
-            .
+  if (!c) return <NoCommittee />;
+  return <Detail c={c} style={style} />;
+}
+
+/**
+ * Style three: the review with a page and an address of its own.
+ *
+ * A component rather than a mode of the page above, because that is what the
+ * option being compared actually costs. The committee page unmounts on the way
+ * here, so the heading, the way back out and the width are this file's problem
+ * again, and the draft has to have been kept somewhere neither page owns. The
+ * pane and the modal are a flag.
+ */
+export function ConferenceReview() {
+  const { slug } = useParams();
+  const c = slug ? BY_SLUG[slug] : undefined;
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [draft, patchDraft] = useDraft(slug ?? "");
+  if (!c) return <NoCommittee />;
+
+  // Back to the committee, in the style and the layout it was read in. What is
+  // handed along in history state says what the reader asked for: the form they
+  // were in the middle of, the list their card is now on top of, or neither.
+  const back = (state?: { compose?: boolean; feed?: boolean }) =>
+    navigate(`${detailPath(c.slug, "page")}${location.search}`, { state });
+
+  return (
+    <div className="bg-ground min-h-screen font-body text-ink">
+      <SiteNav inner={NAV_COLUMN} />
+      {/* Narrower than the committee page. The two columns below put the card
+          in about the measure the feed sets it in, which is the width a review
+          has to show it at: the page's full 1180 would re-set the reader's
+          paragraph in a measure it will never appear in, at the moment they
+          are checking where the lines break. */}
+      <main className="mx-auto max-w-[880px] px-[20px] sm:px-[32px] pt-[28px] pb-[80px]">
+        <button
+          onClick={() => back()}
+          className="inline-flex items-center gap-[4px] -ml-[4px] font-body font-semibold text-sm text-ink-muted hover:text-ink cursor-pointer"
+        >
+          <ChevronLeft className="w-[16px] h-[16px] shrink-0" />
+          {REVIEW_PAGE_COPY.back}
+        </button>
+        <h1 className="font-body font-bold text-[28px] sm:text-[40px] leading-[1.2] text-brand mt-[14px]">
+          {reviewTitle(draft.posted)}
+        </h1>
+        {/* Before posting only. Afterwards the heading is already the sentence
+            that says what happened, and a lead under it would be telling the
+            reader to read it once more. */}
+        {!draft.posted && (
+          <p className="font-body text-lg text-ink-muted leading-[1.5] mt-[10px] max-w-[56ch]">
+            {REVIEW_PAGE_COPY.lead}
           </p>
-        </main>
-      </div>
-    );
-  }
-  return <Detail c={c} />;
+        )}
+        <ReviewPageBody
+          draft={draft}
+          subject={displayName(c.slug, c.short)}
+          six={sixOf(c)}
+          onChange={patchDraft}
+          onBack={() => back({ compose: true })}
+          onPost={() => patchDraft({ posted: true })}
+          onClose={() => back()}
+          onSeeOthers={() => back({ feed: true })}
+        />
+      </main>
+    </div>
+  );
 }

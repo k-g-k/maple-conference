@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 
-// The overlay panel every modal on the page is built from. Grey ground with
+import { useMatchMedia, useVisibleBox } from "./sheet";
+
+// The overlay panel every modal on the page is built from. Gray ground with
 // white cards on it, the same relationship the page itself uses, so a modal
 // reads as a small page rather than a floating card.
 //
@@ -24,7 +26,26 @@ import { X } from "lucide-react";
 //
 // `asidePinned` (default) makes the aside sticky under the header, so actions
 // stay put while a long body scrolls beside them.
+//
+// Below SHEET_BELOW the panel is a full-screen sheet instead: no scrim showing
+// around it, square corners, and the two columns stacked, body then aside, or
+// aside then body with `asideFirst`. `maxWidth`, `minHeight` and `mainMinWidth`
+// all stop applying there, because a window that narrow has no room to honour
+// any of them and a body held to its floor would simply run off the side.
+//
+// The sheet is sized to the part of the screen in view rather than to the
+// viewport, so when the on-screen keyboard opens the panel shortens above it and
+// the sticky footer stays reachable.
 const PAD = 20;
+
+/**
+ * Where the modal gives up being a panel on a scrim and becomes a sheet.
+ *
+ * The widest thing here asks for 760px of panel and 32px of scrim on each side,
+ * so below about 950 the scrim is decoration around a panel that has already run
+ * out of room.
+ */
+const SHEET_BELOW = "(max-width: 949.98px)";
 
 export function Modal({
   onClose,
@@ -58,6 +79,9 @@ export function Modal({
   mainMinWidth?: string;
   children: ReactNode;
 }) {
+  const sheet = useMatchMedia(SHEET_BELOW);
+  const box = useVisibleBox(sheet);
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
@@ -94,17 +118,33 @@ export function Modal({
       role="dialog"
       aria-modal="true"
       onClick={onClose}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-[3px] p-[32px]"
+      // Above the page's own side panel, which becomes a sheet at a narrower
+      // window than this: a modal opened from inside that sheet is the surface
+      // that has taken over, so it has to be the one on top.
+      style={
+        box ? { top: box.top, height: box.height, bottom: "auto" } : undefined
+      }
+      className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 backdrop-blur-[3px] min-[950px]:p-[32px]"
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        style={{ maxWidth, minHeight }}
-        className="relative flex w-full max-h-full flex-col overflow-y-auto bg-ground rounded-panel shadow-[0_20px_60px_rgba(0,0,0,0.28)]"
+        // The width cap and the height floor apply from 950px up only. Below
+        // that the panel is a sheet filling the screen that is in view, which the
+        // keyboard can make shorter than any floor.
+        style={
+          {
+            "--panel-max": maxWidth,
+            ...(minHeight ? { "--panel-min": minHeight } : {}),
+          } as CSSProperties
+        }
+        className={`relative flex w-full h-full max-h-full min-[950px]:h-auto flex-col overflow-y-auto bg-ground min-[950px]:max-w-[var(--panel-max)] ${
+          minHeight ? "min-[950px]:min-h-[var(--panel-min)]" : ""
+        } min-[950px]:rounded-panel shadow-[0_20px_60px_rgba(0,0,0,0.28)]`}
       >
         <div
           ref={headerRef}
           style={{ padding: `${PAD}px ${PAD}px 12px` }}
-          className="sticky top-0 z-20 flex items-center gap-[12px] bg-ground rounded-t-panel"
+          className="sticky top-0 z-20 flex items-center gap-[12px] bg-ground min-[950px]:rounded-t-panel"
         >
           <div className="flex-1 min-w-0">{title}</div>
           <div className="shrink-0 flex items-center gap-[18px]">
@@ -119,22 +159,35 @@ export function Modal({
           </div>
         </div>
 
+        {/* Side by side from 950px up, stacked below it: the body first, or the
+            aside first where the page asked for that, which is the order the
+            columns already read in. */}
         <div
           style={{ padding: `0 ${PAD}px ${footer ? 0 : PAD}px` }}
           className={`flex flex-1 items-stretch gap-[16px] ${
-            asideFirst ? "flex-row-reverse" : ""
+            asideFirst
+              ? "flex-col-reverse min-[950px]:flex-row-reverse"
+              : "flex-col min-[950px]:flex-row"
           }`}
         >
           <div
-            style={{ minWidth: mainMinWidth }}
-            className={mainMinWidth ? "flex-1" : "flex-1 min-w-0"}
+            style={
+              mainMinWidth
+                ? ({ "--main-min": mainMinWidth } as CSSProperties)
+                : undefined
+            }
+            className={`flex-1 min-w-0 ${
+              mainMinWidth ? "min-[950px]:min-w-[var(--main-min)]" : ""
+            }`}
           >
             {children}
           </div>
           {aside && (
             <div
               style={asidePinned ? { top: headerH } : undefined}
-              className={`w-[200px] shrink-0 self-start ${asidePinned ? "sticky" : ""}`}
+              className={`w-full min-[950px]:w-[200px] shrink-0 self-start ${
+                asidePinned ? "min-[950px]:sticky" : ""
+              }`}
             >
               {aside}
             </div>
@@ -144,7 +197,7 @@ export function Modal({
         {footer && (
           <div
             style={{ padding: `12px ${PAD}px ${PAD}px` }}
-            className="sticky bottom-0 z-20 mt-auto bg-ground rounded-b-panel"
+            className="sticky bottom-0 z-20 mt-auto bg-ground min-[950px]:rounded-b-panel"
           >
             {footer}
           </div>

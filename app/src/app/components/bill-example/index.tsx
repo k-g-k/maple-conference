@@ -119,7 +119,7 @@ function Contents({ active }: { active: string }) {
  *
  * So a two-line record is taken to have no status of its own, and the chain is
  * walked upward to the first bill that has a real history. Where that happens
- * the status is labelled with whose record it came from, because it is not this
+ * the status is labeled with whose record it came from, because it is not this
  * document's.
  */
 function statusOf(bill: BillRecord): {
@@ -260,15 +260,55 @@ function Brief({ bill }: { bill: BillRecord }) {
   );
 }
 
+/**
+ * A bill this prototype does not carry.
+ *
+ * Out to the General Court rather than back to the index: the reader came for
+ * one bill, and the place that has it is one press away.
+ */
+function NoBill({ number }: { number?: string }) {
+  const shown = number ? number.toUpperCase().replace(/^([HS])/, "$1.") : null;
+  return (
+    <div className="bg-ground min-h-screen font-body text-ink">
+      <main className="mx-auto max-w-[680px] px-[20px] sm:px-[32px] pt-[48px]">
+        <h1 className="font-display font-semibold text-2xl text-ink">
+          {shown ?? "That bill"} is not in this prototype
+        </h1>
+        <p className="font-body text-base text-ink-muted leading-[1.6] mt-[12px]">
+          Only some of the 194th General Court's bills are bundled here.{" "}
+          {shown && (
+            <a
+              href={`https://malegislature.gov/Bills/194/${shown.replace(".", "")}`}
+              target="_blank"
+              rel="noreferrer"
+              className="font-semibold underline decoration-dotted underline-offset-[3px] text-link hover:text-brand"
+            >
+              Read {shown} on malegislature.gov
+            </a>
+          )}
+          {shown ? ", or go " : "Go "}
+          <Link
+            to="/conferenceCommittees"
+            className="font-semibold underline decoration-dotted underline-offset-[3px] text-link hover:text-brand"
+          >
+            back to the conference committees
+          </Link>
+          .
+        </p>
+      </main>
+    </div>
+  );
+}
+
 export function BillExample() {
   const { billId } = useParams();
   const bill = billId ? BY_SLUG[billId] : undefined;
-  // An unknown number goes to the first bill rather than a dead end: this is a
-  // prototype and there is always something worth landing on.
-  if (!bill) {
-    const first = Object.values(BILLS)[0];
-    return <Navigate to={`/bills/${slugFor(first.number)}`} replace />;
-  }
+  // An unknown number says so. It used to go to the first bill instead, on the
+  // grounds that a prototype should always land on something, and that turned
+  // out to be the worse failure: a reader who pressed H.5175 arrived on H.5630
+  // with the page presenting it as the bill they had asked for. A dead end you
+  // can see beats a wrong answer you cannot.
+  if (!bill) return <NoBill number={billId} />;
   return <BillPage bill={bill} />;
 }
 
@@ -277,12 +317,17 @@ function BillPage({ bill }: { bill: BillRecord }) {
   // viewer names a document, and each step that produced a document is tied to
   // it, so choosing either moves the other.
   const [stage, setStage] = useState("conf");
-  const [textNumber, setTextNumber] = useState(
-    TEXT_FOR_STAGE["conf"] ?? LINEAGE_TEXTS[LINEAGE_TEXTS.length - 1].number,
-  );
+  // The bill this page is about, not the last document of somebody else's
+  // lineage. Seeding from the lineage put one bill's text under every bill's
+  // number, which was invisible while one bill was reachable and is not now.
+  const [textNumber, setTextNumber] = useState(bill.number);
+  // Only one bill's lineage is transcribed, so only on its page does a step name
+  // a document the viewer can show. Elsewhere the stepper moves on its own and
+  // the viewer stays on the bill the page is about.
+  const stepsCarryText = LINEAGE_TEXTS.some((d) => d.number === bill.number);
   const pickStage = (id: string) => {
     setStage(id);
-    const doc = TEXT_FOR_STAGE[id];
+    const doc = stepsCarryText ? TEXT_FOR_STAGE[id] : undefined;
     if (doc) setTextNumber(doc);
   };
   const pickText = (n: string) => {
@@ -490,7 +535,11 @@ function BillPage({ bill }: { bill: BillRecord }) {
               active={stage}
               onActive={pickStage}
             />
-            <BillTextSection number={textNumber} onNumber={pickText} />
+            <BillTextSection
+              bill={bill}
+              number={textNumber}
+              onNumber={pickText}
+            />
           </main>
         </div>
 

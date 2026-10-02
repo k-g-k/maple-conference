@@ -96,7 +96,7 @@ export function AISynthSources({ ids }: { ids: string[] }) {
 /**
  * The mark that says a block is synthesis rather than record.
  *
- * Greyscaled at rest and full colour on hover, so a page carrying synthesis in
+ * Greyscaled at rest and full color on hover, so a page carrying synthesis in
  * most of its sections is not covered in purple. It expects a `group` on an
  * ancestor; standing alone it simply stays muted, which is the resting state
  * anyway.
@@ -201,7 +201,7 @@ export function SynthSourcesNote({
       aria-label="Sources"
       className={`absolute left-0 ${
         placement === "up" ? "bottom-full mb-[8px]" : "top-full mt-[8px]"
-      } w-[440px] max-w-[80vw] max-h-[420px] overflow-y-auto bg-surface border border-line-strong rounded-control shadow-[0_10px_28px_rgba(0,0,0,0.14)] p-[18px] z-30 text-left`}
+      } w-[440px] max-w-[80vw] max-h-[420px] overflow-y-auto bg-surface border border-line-strong rounded-control shadow-[0_10px_28px_rgba(0,0,0,0.14)] p-[18px] z-[70] text-left`}
     >
       {prompt && (
         <div className="border-b border-dotted border-line-strong mb-[14px] pb-[14px]">

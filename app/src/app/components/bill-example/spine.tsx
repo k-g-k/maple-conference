@@ -1,10 +1,17 @@
-import { useEffect, useRef, useState, type ReactNode, type Ref } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+  type Ref,
+} from "react";
 import { ArrowRight, ChevronRight } from "lucide-react";
 import { SynthSourcesNote, holdPress } from "../ballot";
 
 /**
  * The page is built on one idea: a ballot question is a binary decision, so the
- * page has a centre.
+ * page has a center.
  *
  * Material that belongs to a side sits on that side of a hairline spine.
  * Material both sides share spans the full width and the spine simply is not
@@ -12,7 +19,7 @@ import { SynthSourcesNote, holdPress } from "../ballot";
  * meet, and a reader can see the shape of the disagreement before reading a
  * word of it.
  *
- * The two sides are told apart by position and label only, never by colour.
+ * The two sides are told apart by position and label only, never by color.
  * Green-for-yes and red-for-no is the single most common way a civic page stops
  * looking neutral, and this platform does not take positions.
  */
@@ -46,7 +53,7 @@ export function Split({
    * "rule" draws the spine between the sides. "cards" gives each side its own
    * container and drops the rule, because a border on each side plus a rule
    * between them is three vertical lines in fifty pixels and none of them reads
-   * as the centre. "bare" pairs the sides with neither: for chapters that
+   * as the center. "bare" pairs the sides with neither: for chapters that
    * already carry enough vertical edges without the spine adding another.
    */
   variant?: "rule" | "cards" | "bare";
@@ -116,6 +123,32 @@ export function SideHead({
 }
 
 /**
+ * What a section card holds around its contents, and what sits under its
+ * heading. One rule, written here because more than one file draws a card: the
+ * page's own box, and the committee block above it.
+ *
+ * The numbers are the ones the pinned, banded cards read as before the band
+ * stopped taking room: a card's 20 and 24 plus the 6 the band's own margin
+ * left above the heading, and the 20 under the heading plus the band's 10. Any
+ * card in either view now carries them whether its heading pins or not.
+ *
+ * The card owns all four sides. Content inside starts against them, so a child
+ * adding an inset of its own is a second gutter and reads as a mistake where
+ * the thing beside it does not have one.
+ */
+export const CARD_PX = "px-[32px]";
+export const CARD_PT = "pt-[24px]";
+export const CARD_PB = "pb-[32px]";
+
+/**
+ * The gap between a section heading and the first thing under it.
+ *
+ * Padding rather than margin, so a banded heading's negative bottom margin
+ * cannot collapse into it and take 10px of the gap with it.
+ */
+export const HEAD_GAP = "pt-[24px]";
+
+/**
  * A heading that comes to rest while its section is still on screen.
  *
  * Above the section's own content, which runs under it, and below the page's
@@ -139,14 +172,35 @@ export function SideHead({
  * everything already pinned above it. Left off, the band does not pin at all,
  * for a view whose headings scroll away. It keeps the ground and the paint
  * order, so chrome letting go cannot cut a heading that has not left yet.
+ *
+ * The color is whatever the container it sits in sets as `--band`, so a band
+ * inside a white card is white and one on the page is the page's own ground,
+ * without either knowing about the other.
+ *
+ * It takes no room. The band changed the spacing around a heading just by
+ * being there, which is how two cards in the same stack came to be spaced
+ * differently: the one whose heading pinned sat lower in its card and left
+ * more air under its heading than the one whose heading did not. The padding
+ * it needs while pinned is canceled by margins of the same size, so the
+ * heading lands exactly where it would without a band, and the card and the
+ * chapter are the only things holding the rhythm. See CARD_PT and HEAD_GAP.
  */
 export function StickyBand({
   top,
+  narrowOnly,
   innerRef,
   children,
 }: {
   /** Where it comes to rest. Left off, the band does not pin at all. */
   top?: string;
+  /**
+   * Pin below sm and let go above it.
+   *
+   * For a section that is a table on a wide screen and a stack on a phone:
+   * the table has its own column heads to say what a row means, the stack has
+   * nothing, so the section's own heading has to stay and say it.
+   */
+  narrowOnly?: boolean;
   /** For a page that has to know how tall the band is, because something
    *  below it comes to rest under it. */
   innerRef?: Ref<HTMLDivElement>;
@@ -155,16 +209,37 @@ export function StickyBand({
   return (
     <div
       ref={innerRef}
-      style={top ? { top } : undefined}
-      // The top padding is larger than the gap it leaves at rest: a negative
-      // margin of the difference holds the heading where it was in the flow,
-      // and the padding is only visible once the band is pinned, which is when
-      // it is needed, to keep the words off the underside of the bar.
+      // The offset rides on a custom property rather than on `top` itself, so
+      // a variant can take it away again. Set as `top` inline it could not be:
+      // an inline style beats every class, and `relative` with a leftover
+      // `top` does not sit still, it moves down by it, which put a section's
+      // heading a hundred pixels into its own content.
+      style={top ? ({ "--pin-top": top } as CSSProperties) : undefined}
+      // Each padding is canceled by a negative margin of the same size, so
+      // the band occupies exactly the height of the heading in the flow and
+      // paints beyond it in both directions. The top padding keeps the words
+      // off the underside of the bar once the band is pinned; the bottom
+      // padding is the opaque strip that content passes behind on its way out,
+      // so it never touches the descenders. At rest both sit on the card's own
+      // padding and the gap under the heading, in the card's own color, so
+      // neither shows.
+      //
+      // The horizontal pair is the negative twin of CARD_PX: the band bleeds
+      // to the inside of the card's line and then gives the width back, so the
+      // heading stays in the same column as the content under it.
       //
       // One z whether it pins or not, because the reason for it is the same
       // either way: over the section's own chrome, under the page's bar.
-      className={`z-[9] bg-ground -mx-[20px] sm:-mx-[32px] px-[20px] sm:px-[32px] -mt-[10px] pt-[16px] pb-[10px] ${
-        top ? "sticky" : "relative"
+      //
+      // The top corners are rounded to the card's own radius. The band bleeds
+      // to the inside of the card's line and reaches up into its top padding,
+      // so square corners painted over the corner the card had just rounded.
+      className={`z-[9] rounded-t-card bg-[var(--band,var(--color-ground))] -mx-[32px] px-[32px] -mt-[12px] pt-[12px] -mb-[12px] pb-[12px] ${
+        top
+          ? narrowOnly
+            ? "sticky top-[var(--pin-top)] sm:relative sm:top-auto"
+            : "sticky top-[var(--pin-top)]"
+          : "relative"
       }`}
     >
       {children}
@@ -190,6 +265,7 @@ export function Chapter({
   hideQuestion = false,
   flush = false,
   stickyHeading,
+  narrowPin,
   bandHeading,
   headingRef,
   titleClass,
@@ -222,6 +298,8 @@ export function Chapter({
   /** Pin the heading at this offset while the section's own content scrolls
    *  past it, releasing when the section ends. Any CSS length. */
   stickyHeading?: string;
+  /** Pin that heading below sm only, and let go above it. */
+  narrowPin?: boolean;
   /**
    * Give the heading the band without pinning it, for a view that pins the
    * section's chrome but not its headings. The heading keeps the band's paint
@@ -308,7 +386,11 @@ export function Chapter({
               inside its own section, so it leaves with it. Banded but not
               pinned, it only takes the ground and the paint order. */}
           {stickyHeading || bandHeading ? (
-            <StickyBand top={stickyHeading} innerRef={headingRef}>
+            <StickyBand
+              top={stickyHeading}
+              narrowOnly={narrowPin}
+              innerRef={headingRef}
+            >
               {heading}
             </StickyBand>
           ) : (
@@ -320,7 +402,7 @@ export function Chapter({
           {body && (
             <div
               className={
-                heading ? (flush ? "mt-[20px]" : "mt-[28px] sm:mt-[40px]") : ""
+                heading ? (flush ? HEAD_GAP : "pt-[28px] sm:pt-[40px]") : ""
               }
             >
               {body}
@@ -378,7 +460,7 @@ export function Label({ children }: { children: ReactNode }) {
 }
 
 /**
- * A labelled block the reader opens, for material that answers a question they
+ * A labeled block the reader opens, for material that answers a question they
  * may not have asked yet.
  *
  * Closed by default, so the chapter reads at its shortest and the depth is
@@ -425,7 +507,7 @@ export function Disclosure({
   /**
    * What hovering the row looks like. "wash" shades the whole hit area, which
    * is right where the row is a control among other content. "text" leaves the
-   * ground alone and moves the label's colour instead, for a row that already
+   * ground alone and moves the label's color instead, for a row that already
    * sits on a surface of its own and would otherwise gain a second one.
    * The hit area is the same either way.
    */
@@ -480,13 +562,13 @@ export function Disclosure({
   };
   const lit = shaded && open;
   return (
-    // The padding arrives with the shading and is cancelled by a matching
+    // The padding arrives with the shading and is canceled by a matching
     // negative margin, so the block grows a surface around the words without
     // the words themselves moving.
     <div
       className={
         lit
-          ? "bg-surface rounded-card -mx-[16px] px-[16px] -my-[12px] py-[12px]"
+          ? "bg-surface rounded-card -mx-[32px] px-[32px] -my-[12px] py-[12px]"
           : ""
       }
     >
@@ -509,7 +591,7 @@ export function Disclosure({
       >
         <ChevronRight
           aria-hidden
-          className={`shrink-0 text-ink-faint group-hover:text-ink-muted transition-transform duration-150 ${
+          className={`shrink-0 text-ink-faint group-hover:text-ink transition-transform duration-150 ${
             variant === "heading"
               ? size === "large"
                 ? // Aligned to the label's first line optically rather than
@@ -531,8 +613,13 @@ export function Disclosure({
                 }`
               : "font-body font-semibold text-sm text-ink-muted")
           } ${
-            hover === "text"
-              ? "group-hover:text-ink-muted transition-colors"
+            // Never lighter on hover. A label that fades when you reach for
+            // it reads as going away rather than as answering. A heading is
+            // already at the darkest ink the page has, so it simply holds;
+            // the smaller variant sits muted and comes up to full ink. Either
+            // way the chevron beside it darkens, which is the movement.
+            hover === "text" && variant !== "heading"
+              ? "group-hover:text-ink transition-colors"
               : ""
           }`}
         >

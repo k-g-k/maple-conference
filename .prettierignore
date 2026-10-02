@@ -2,3 +2,7 @@
 # rather than a page of wrapped objects. Prettier would reflow every line and
 # bury a one-word change in a thousand-line diff.
 app/src/app/data/bill-lineage/members.ts
+
+# One line per source, same reason: the registry is read down the ids, and
+# prettier would wrap every entry into eight lines.
+app/src/app/data/conference-committees/sources.ts

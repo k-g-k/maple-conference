@@ -1,4 +1,6 @@
 export { Card } from "./Card";
+export { ClampedText } from "./ClampedText";
+export { useMatchMedia, useVisibleBox } from "./sheet";
 export { Modal } from "./Modal";
 export {
   Cite,

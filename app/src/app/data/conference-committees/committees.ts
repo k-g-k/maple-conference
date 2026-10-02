@@ -198,7 +198,7 @@ export const COMMITTEES: CommitteeDetail[] = [
         s: null,
         snote:
           "Not in the Senate bill. The Senate text is about phones in schools and nothing else.",
-        h: "Regulates social media companies directly, through Chapter 93M. The House writes this as a new chapter of the consumer protection law, alongside the 93A the Attorney General already enforces under: platforms must bar users under 14; require verifiable parental consent at 14 and 15; give 14\u201315 year olds locked-down default settings, no addictive feed, and no notifications between midnight and 6 a.m.; run an age-assurance system with a three-day appeal; segregate the age data and never share a minor's LGBTQ+ status; publish counts of users processed and denied. Violations are 93A violations with fines of up to $5,000 per non-compliant account, and up to $1 million per day for failing to publish the counts. The Attorney General writes the rules and runs a complaint portal.",
+        h: "Regulates social media companies within the new law under Chapter 93M Online Protections. The House writes this as a new chapter of the consumer protection law, alongside the 93A the Attorney General already enforces under: platforms must bar users under 14; require verifiable parental consent at 14 and 15; give 14\u201315 year olds locked-down default settings, no addictive feed, and no notifications between midnight and 6 a.m.; run an age-assurance system with a three-day appeal; segregate the age data and never share a minor's LGBTQ+ status; publish counts of users processed and denied. Violations are 93A violations with fines of up to $5,000 per non-compliant account, and up to $1 million per day for failing to publish the counts. The Attorney General writes the rules and runs a complaint portal.",
         hc: "s30",
         why: "This is the negotiation. It is a full regulatory chapter travelling inside a school bill. The conferees can keep it, drop it, or split it. Sen. Comerford reports constituents raising concerns about the age-verification piece specifically.",
         regional: {
@@ -206,7 +206,7 @@ export const COMMITTEES: CommitteeDetail[] = [
           c: "s78",
         },
         notes: {
-          "Chapter 93M": [
+          "Chapter 93M Online Protections": [
             "Platforms must bar users under 14.",
             "At 14 and 15, verifiable parental consent is required.",
             "Those accounts get locked-down defaults: no algorithmic feed, and no notifications between midnight and 6 a.m.",
@@ -727,8 +727,9 @@ export const COMMITTEES: CommitteeDetail[] = [
         kind: "include",
         s: "If profiling drives a decision about credit, housing, insurance, education, employment or health care, the consumer may question it, be told why, be told what would change the outcome, and have it re-run on corrected data.",
         sc: "s36",
-        h: null,
-        why: "The House bill has the opt-out from automated decisions but not the right to an explanation.",
+        h: "The consumer may opt out of profiling that drives solely automated decisions, but gets no right to an explanation.",
+        hc: "s35",
+        why: "Both bills carry the opt-out. Only the Senate turns it into a right to be told why, and to have the decision re-run on corrected data.",
         ties: [],
       },
       {
@@ -1349,14 +1350,14 @@ export const COMMITTEES: CommitteeDetail[] = [
     short: "Mass Ready Act",
     title: "The environmental bond, plus the policy the Senate hung on it",
     subtitle:
-      "Both chambers back a multibillion-dollar environmental bond for climate resilience, water and land, and they are about $867 million apart on its size. The Senate attached policy the House did not, a plastic-bag ban and flood-risk disclosure among them, and the House leaned harder on easing environmental permitting.",
+      "Both chambers back a multibillion-dollar environmental bond for climate resilience, water and land, and they differ on its size. The Senate attached policy the House did not, a plastic-bag ban and flood-risk disclosure among them, and the House waives more local process for the culvert permits both bills fast-track.",
     senateBill: { n: "S.3064", u: "https://malegislature.gov/Bills/194/S3064" },
     houseBill: { n: "H.5518", u: "https://malegislature.gov/Bills/194/H5518" },
     since: "July 2026",
     checked: "September 28, 2026",
     textRead: false,
     claim:
-      "about $867 million apart on the borrowing and further apart on the policy riding with it, including a statewide plastic bag ban and how far to ease environmental permitting for housing",
+      "apart on the borrowing and further apart on the policy riding with it, including a statewide plastic bag ban and how much local process to waive for culvert permits",
     who: "Cyr, who represents more coastline than any other senator",
     settled: [
       {
@@ -1404,14 +1405,14 @@ export const COMMITTEES: CommitteeDetail[] = [
         ties: [],
       },
       {
-        topic: "Housing permitting",
-        q: "How far to ease environmental permitting for housing?",
+        topic: "Culvert permitting",
+        q: "How far to fast-track permits for municipal culvert work?",
         kind: "calibrate",
-        s: "Contains permitting provisions, framed around balancing protections with housing production.",
-        sc: "s48",
-        h: "The House emphasized ensuring environmental regulations aren't 'unnecessarily burdensome' when permitting new housing and infrastructure.",
-        hc: "s49",
-        why: "Both touch permitting; the House framed it as a headline goal. The exact scope is where they'll meet.",
+        s: "A general permit for municipal culvert repair and replacement that meets new resilient-design standards, with water-quality certification due within 60 days.",
+        sc: "s89",
+        h: "The same general permit, reaching further: local wetlands bylaws and ordinances do not apply, and no public hearing is required.",
+        hc: "s90",
+        why: "The permitting easing in both texts is this one class of municipal culvert work, not housing. The House waives more of the local process, which is where the two part.",
         ties: [],
       },
     ],
@@ -1422,7 +1423,7 @@ export const COMMITTEES: CommitteeDetail[] = [
         c: "s48",
       },
       {
-        p: "Public beach access and culvert replacement",
+        p: "Public beach access",
         d: "In the Senate bill. House position not compared.",
         c: "s48",
       },
@@ -1777,19 +1778,19 @@ export const COMMITTEES: CommitteeDetail[] = [
           district: "Bristol and Norfolk",
           party: "D",
           chair: true,
-          vote: { v: "unan", t: "38\\u20130", c: "s54" },
+          vote: { v: "unan", t: "38–0", c: "s54" },
         },
         {
           name: "Jason M. Lewis",
           district: "Fifth Middlesex",
           party: "D",
-          vote: { v: "unan", t: "38\\u20130", c: "s54" },
+          vote: { v: "unan", t: "38–0", c: "s54" },
         },
         {
           name: "Bruce E. Tarr",
           district: "First Essex and Middlesex",
           party: "R",
-          vote: { v: "unan", t: "38\\u20130", c: "s54" },
+          vote: { v: "unan", t: "38–0", c: "s54" },
         },
       ],
       house: [
@@ -1798,19 +1799,19 @@ export const COMMITTEES: CommitteeDetail[] = [
           district: "14th Worcester",
           party: "D",
           chair: true,
-          vote: { v: "Y", t: "151\\u20131", c: "s56" },
+          vote: { v: "Y", t: "151–1", c: "s56" },
         },
         {
           name: "Jack Patrick Lewis",
           district: "7th Middlesex",
           party: "D",
-          vote: { v: "Y", t: "151\\u20131", c: "s56" },
+          vote: { v: "Y", t: "151–1", c: "s56" },
         },
         {
           name: "Steven S. Howitt",
           district: "4th Bristol",
           party: "R",
-          vote: { v: "Y", t: "151\\u20131", c: "s56" },
+          vote: { v: "Y", t: "151–1", c: "s56" },
         },
       ],
     },
@@ -1993,8 +1994,8 @@ export const COMMITTEES: CommitteeDetail[] = [
     who: "Friedman, who filed the Senate bill and sat on the Primary Care Task Force",
     settled: [
       {
-        p: "A primary-care spending target, without growing total spend",
-        d: "Both require insurers and provider organizations to raise the share of spending going to primary care while holding overall health-care spending flat. The House adopted this from the Senate.",
+        p: "A primary-care spending target, without pushing up premiums",
+        d: "Both raise the share of spending that goes to primary care, and both direct the state to monitor that the increase does not add to overall cost growth or to premiums and cost-sharing. The House adopted this from the Senate.",
         c: "s60",
       },
       {
@@ -2013,9 +2014,9 @@ export const COMMITTEES: CommitteeDetail[] = [
         topic: "The spending target",
         q: "How high, how fast, and how enforced is the target?",
         kind: "calibrate",
-        s: "Primary-care spending rises to 9% in 2028, 12% in 2029 and 15% in 2030.",
+        s: "The target rises to 9% of total health care expenditures in 2028, 12% in 2029 and 15% in 2030, and applies both statewide and to each health care entity.",
         sc: "s59",
-        h: "Establishes a spending target with a longer implementation runway and different accountability provisions.",
+        h: "The same three steps six years later, 9% by 2030, 12% by 2033 and 15% by 2036, statewide only and with no required annual progress before each target year.",
         hc: "s60",
         why: "Both now have a target; the numbers, timeline and enforcement are where they meet, and where insurers are expected to press.",
         regional: {

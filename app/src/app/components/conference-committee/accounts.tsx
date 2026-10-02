@@ -48,7 +48,7 @@ const ACCOUNT_TYPE_ICON: Record<
 
 export function AccountTypeIcon({
   type,
-  size = 15,
+  size = 16,
 }: {
   type: ConferenceAccount["userType"];
   size?: number;
@@ -64,8 +64,8 @@ export function AccountTypeIcon({
 /**
  * What a submission asked the conference for.
  *
- * Words and colour, no thumb. The thumbs belong to the filter row, where they
- * are the mark you press; here the chip is already colour coded and already
+ * Words and color, no thumb. The thumbs belong to the filter row, where they
+ * are the mark you press; here the chip is already color coded and already
  * sitting beside the name of whoever filed, so the label is all it needs, and a
  * thumb beside a person's name is louder than what they wrote.
  */
@@ -73,7 +73,11 @@ export function PositionChip({ position }: { position: ConferencePosition }) {
   const p = POSITIONS[position];
   return (
     <span
-      className={`${p.on} border px-[8px] py-[1px] rounded-pill font-body font-semibold text-2xs`}
+      // Never broken across two lines. These labels are two words at their
+      // longest and the chip shares a line with a name in the submission card's
+      // header, so at a panel's width a wrapped pill reads as two chips rather
+      // than one and takes the whole line a step taller with it.
+      className={`${p.on} shrink-0 border px-[8px] py-[1px] rounded-pill font-body font-semibold text-2xs whitespace-nowrap`}
     >
       {p.short}
     </span>

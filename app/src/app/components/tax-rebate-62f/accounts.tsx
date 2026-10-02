@@ -52,7 +52,7 @@ export function AvatarWithTooltip({
 }: {
   user: PositionUser;
   size?: number;
-  /** Wraps the avatar in a coloured ring, e.g. the side it has taken. */
+  /** Wraps the avatar in a colored ring, e.g. the side it has taken. */
   ringColor?: string;
 }) {
   return (

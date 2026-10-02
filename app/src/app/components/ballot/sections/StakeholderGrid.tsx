@@ -34,7 +34,7 @@ export function StakeholderGrid({ rows }: { rows: Stakeholder[] }) {
                   // the meaning travels with the row.
                   <span className="relative inline-block group align-baseline ml-[5px] text-caution-ink">
                     <span>⚠</span>
-                    <span className="absolute left-0 bottom-full mb-[6px] hidden group-hover:block w-[250px] bg-surface border border-line-strong rounded-control shadow-[0_10px_28px_rgba(0,0,0,0.14)] p-[10px] z-30 font-body font-normal text-xs text-ink leading-[1.5] pointer-events-none">
+                    <span className="absolute left-0 bottom-full mb-[6px] hidden group-hover:block w-[250px] bg-surface border border-line-strong rounded-control shadow-[0_10px_28px_rgba(0,0,0,0.14)] p-[10px] z-[80] font-body font-normal text-xs text-ink leading-[1.5] pointer-events-none">
                       <span className="font-semibold">Disputed:</span> opponents
                       and proponents do not agree on this statement.
                     </span>

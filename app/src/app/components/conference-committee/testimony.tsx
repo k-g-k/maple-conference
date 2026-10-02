@@ -23,10 +23,11 @@ import {
   UserPlus,
   Flag,
   FileText,
+  Plus,
   Users,
   Share,
 } from "lucide-react";
-import { FilterChip, Modal, Pagination } from "../ballot";
+import { ClampedText, FilterChip, Modal, Pagination } from "../ballot";
 import { AccountAvatar, AccountTypeIcon, PositionChip } from "./accounts";
 import type {
   ConferenceAccount,
@@ -41,70 +42,6 @@ import {
   CONFERENCE_POSITIONS,
   POSITIONS,
 } from "../../data/conference-committees/positions";
-
-// Body text capped at six lines with an inline "Show more". A hidden measurer
-// binary-searches the longest prefix that, with "… Show more" appended, still
-// fits six lines at the current width; recomputed on resize.
-function ClampedBody({ text }: { text: string }) {
-  const [expanded, setExpanded] = useState(false);
-  const [cutoff, setCutoff] = useState<number | null>(null);
-  const wrapRef = useRef<HTMLDivElement>(null);
-  const measureRef = useRef<HTMLParagraphElement>(null);
-
-  useEffect(() => {
-    const wrap = wrapRef.current;
-    const m = measureRef.current;
-    if (!wrap || !m) return;
-    const compute = () => {
-      m.style.width = `${wrap.clientWidth}px`;
-      const maxH = parseFloat(getComputedStyle(m).lineHeight) * 6 + 2;
-      m.textContent = text;
-      if (m.scrollHeight <= maxH) {
-        setCutoff(null);
-        return;
-      }
-      let lo = 0;
-      let hi = text.length;
-      while (lo < hi) {
-        const mid = Math.ceil((lo + hi) / 2);
-        m.textContent = text.slice(0, mid).trimEnd() + "… Show more";
-        if (m.scrollHeight <= maxH) lo = mid;
-        else hi = mid - 1;
-      }
-      setCutoff(lo);
-    };
-    compute();
-    const ro = new ResizeObserver(compute);
-    ro.observe(wrap);
-    return () => ro.disconnect();
-  }, [text]);
-
-  const collapsed = !expanded && cutoff !== null;
-  return (
-    <div ref={wrapRef}>
-      <p
-        ref={measureRef}
-        aria-hidden="true"
-        className="font-body text-base leading-[1.55] absolute invisible pointer-events-none"
-      />
-      <p className="font-body text-base text-ink leading-[1.55]">
-        {collapsed ? `${text.slice(0, cutoff).trimEnd()}… ` : `${text} `}
-        {cutoff !== null && (
-          <button
-            onClick={(e) => {
-              // Keep expand/collapse from triggering the row's click-through.
-              e.stopPropagation();
-              setExpanded((x) => !x);
-            }}
-            className="font-body font-semibold text-sm text-brand hover:text-alert cursor-pointer"
-          >
-            {expanded ? "Show less" : "Show more"}
-          </button>
-        )}
-      </p>
-    </div>
-  );
-}
 
 /**
  * Per-entry actions. A kebab rather than more visible buttons: following an
@@ -172,12 +109,36 @@ function EntryActions({ name }: { name: string }) {
 /**
  * One submission, renderable on its own: everything in it comes from the filing
  * and the account that filed it, which is what a per-submission URL will need.
+ *
+ * It reflows on its own width rather than the window's, because the window is
+ * not what decides how much room it has. The same card is drawn in the page's
+ * own column, in the panel at anything from 400 to 520, and on the review step
+ * inside either of those, and the panel opening does not move the window. So the
+ * card declares itself a container and every rule below is a query on it.
+ *
+ * One threshold, 360px of card:
+ *
+ *   under it   the header is held to one line and the name gives way with an
+ *              ellipsis; the position chip and the date leave the header for a
+ *              foot row under the body; the body loses the indent that lines it
+ *              up under the name, and drops a type step so six lines still hold
+ *              something worth reading.
+ *   over it    what has always been drawn here: the name line wraps with the
+ *              icon and chip beside it, the date holds the top-right corner
+ *              beside the kebab, and the body is indented past the avatar.
+ *
+ * Why 360: the panel's own narrowest card is 364px, its 400px resting width less
+ * the 18px of padding on each side, so every width the panel can be dragged to
+ * keeps the layout that ships today. A phone puts the card between about 300 and
+ * 355 and gets the compact header. If DRAWER_MIN or --rail-pad in the page ever
+ * move, this number has to be checked against them again.
  */
-function SubmissionEntry({
+export function SubmissionEntry({
   t,
   accounts,
   onOpen,
   fullBody = false,
+  actions = true,
 }: {
   t: ConferenceSubmission;
   /** The roster `t.userId` resolves against. */
@@ -189,47 +150,94 @@ function SubmissionEntry({
    * Used where the submission is the point rather than one of a list.
    */
   fullBody?: boolean;
+  /**
+   * The kebab of per-entry actions. Dropped on the review step, where following
+   * the account and reporting the statement are both offers to act on your own
+   * unposted words.
+   */
+  actions?: boolean;
 }) {
   const user = accounts.find((u) => u.id === t.userId);
   if (!user) return null;
   return (
-    <div className="relative p-[20px] rounded-control">
-      <div className="relative flex items-center gap-[18px]">
+    // `@container` makes the card its own containment context, which also makes
+    // it a stacking context: the kebab's menu can no longer paint over the card
+    // below this one the way it did while the card was only `relative`. So a
+    // card holding an open menu lifts above its neighbours, which is the one
+    // thing the container type took away.
+    <div className="@container relative p-[20px] rounded-control [&:has([role=menu])]:z-10">
+      {/* Narrow, the avatar sits against the top of the name block rather than
+          centred on it: there is a truncated name and a descriptor there, and
+          centring a 40px disc on two lines of text leaves it floating. */}
+      <div className="relative flex items-start @[360px]:items-center gap-[14px] @[360px]:gap-[18px]">
         <AccountAvatar account={user} />
         <div className="flex-1 min-w-0">
           {/* Name, type and position wrap inside their own box; the date sits
               outside it so it always holds the top-right corner. */}
           <div className="flex items-center gap-[6px]">
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-[6px] flex-wrap">
+              {/* One line while the card is narrow, where a name, an icon and a
+                  chip wrapping into three rows costs more height than the body
+                  they sit above. Over the threshold it wraps as it always has. */}
+              <p className="flex items-end gap-[6px] @[360px]:flex-wrap font-body font-semibold text-base text-ink leading-none">
                 {/* Plain text for now. The name should be a link to the
                   submission's own page, and it will be an anchor when that page
                   exists; a button that opens a modal is not that, and dressing
                   it as a link before there is a URL behind it teaches the wrong
                   thing about what clicking a name does. `onOpen` is kept so the
                   wiring is here when the route is. */}
-                <p className="font-body font-semibold text-base text-ink leading-[1.3]">
+                {/* The name is what gives way, so the icon and the chip beside it
+                    never land on a line of their own. The whole name is in the
+                    title while it is cut. */}
+                <span
+                  title={user.name}
+                  // No leading under the letters, so the name's box ends where
+                  // the letters do and everything on this line can share one
+                  // bottom edge. Descenders still paint; they simply do not
+                  // reserve space that pushes the glyph and the chip up.
+                  className="min-w-0 truncate leading-none @[360px]:overflow-visible @[360px]:whitespace-normal"
+                >
                   {user.name}
-                </p>
-                <AccountTypeIcon type={user.userType} />
+                </span>
+                {/* Flush with the name and the chip: one bottom edge for the
+                    three of them, with the space under it coming from the
+                    line below rather than from the name's own leading. */}
+                <span className="flex shrink-0">
+                  <AccountTypeIcon type={user.userType} />
+                </span>
                 {/* Always on, unlike the ballot pages' chip, which no-position
                     leaves off. All four of these are an ask, so there is no
-                    entry here whose position is nothing to report. */}
-                <PositionChip position={t.position} />
-              </div>
+                    entry here whose position is nothing to report.
+
+                    Narrow, it is in the foot row instead. These labels are two
+                    words rather than the one word a ballot stance takes, so a
+                    chip held on the name's line would leave the name about
+                    fifty pixels to be read in. */}
+                <span className="hidden @[360px]:flex shrink-0">
+                  <PositionChip position={t.position} />
+                </span>
+              </p>
               {/* Inside the name's own cell, not below the whole row: it
                   describes the account, so it belongs to the name, and the date
                   should centre against the pair rather than against the name
                   alone. */}
-              <p className="font-body text-xs text-ink-faint leading-[1.4] mt-[1px]">
+              <p className="font-body text-xs text-ink-faint leading-[1.4] mt-[8px]">
                 {user.descriptor}
               </p>
             </div>
-            <div className="shrink-0 self-start flex items-center gap-[2px] -mt-[5px] -mr-[6px]">
-              <span className="font-body text-xs text-ink-muted whitespace-nowrap mr-[2px]">
+            {/* The corner. Narrow it holds the kebab alone, and nothing at all
+                on the review step, which has no kebab: the date has gone to the
+                foot of the card and an empty cell would still be taking the
+                gap beside the name. */}
+            <div
+              className={`shrink-0 self-start items-center gap-[2px] -mt-[5px] -mr-[6px] ${
+                actions ? "flex" : "hidden @[360px]:flex"
+              }`}
+            >
+              <span className="hidden @[360px]:inline font-body text-xs text-ink-muted whitespace-nowrap mr-[2px]">
                 {t.date}
               </span>
-              <EntryActions name={user.name} />
+              {actions && <EntryActions name={user.name} />}
             </div>
           </div>
         </div>
@@ -239,16 +247,33 @@ function SubmissionEntry({
           name rather than under the avatar. A spacer rather than a left
           padding, because it is the avatar's own width and should change when
           that does. */}
+      {/* Narrow, the spacer goes and the body takes the card's full width: a
+          column of empty space under the avatar costs too much there. */}
       <div className="flex gap-[18px]">
-        <div aria-hidden className="w-[40px] shrink-0" />
-        <div className="flex-1 min-w-0 pt-[8px] pr-[12px] pb-[8px]">
+        <div aria-hidden className="hidden @[360px]:block w-[40px] shrink-0" />
+        <div className="flex-1 min-w-0 pt-[12px] @[360px]:pt-[8px] @[360px]:pr-[12px] pb-[4px] @[360px]:pb-[8px]">
           {fullBody ? (
             <p className="font-body text-base text-ink leading-[1.55] whitespace-pre-line">
               {t.body}
             </p>
           ) : (
-            <ClampedBody text={t.body} />
+            // A step smaller while the card is narrow, so six lines still hold
+            // a readable amount of what was filed. Line breaks are kept, the
+            // same as the unclamped body above: the clamp is meant to shorten
+            // what somebody wrote, not to re-set it as one paragraph.
+            <ClampedText
+              text={t.body}
+              className="font-body text-sm @[360px]:text-base text-ink leading-[1.55] whitespace-pre-line"
+            />
           )}
+          {/* Narrow, the card closes on what the header could not hold: the
+              position on the left, the date on the right, one line. */}
+          <div className="@[360px]:hidden flex items-center justify-between gap-[10px] mt-[12px]">
+            <PositionChip position={t.position} />
+            <span className="font-body text-xs text-ink-muted whitespace-nowrap">
+              {t.date}
+            </span>
+          </div>
         </div>
       </div>
     </div>
@@ -295,7 +320,7 @@ const ASK_THUMB: Record<ConferenceAsk, { glyph: string; nudge: string }> = {
  * The ballot pages put their three out bare, as glyphs and nothing else, because
  * a thumbs up, a thumbs down and a speech bubble tell themselves apart at a
  * glance. Three of these four share the thumbs up, so the words are what
- * distinguish them, and four labelled chips do not fit a feed that also lives in
+ * distinguish them, and four labeled chips do not fit a feed that also lives in
  * a panel. So they collapse into one: the pill names the position being looked
  * at, and the menu behind it states all four in full.
  */
@@ -543,7 +568,7 @@ function SubmissionModal({
       }
       footer={
         // Deliberately empty: the bar is here so its slots have somewhere to
-        // go, and so the scroll behaviour beneath it can be judged.
+        // go, and so the scroll behavior beneath it can be judged.
         <div className="h-[36px]" />
       }
       maxWidth="880px"
@@ -578,10 +603,12 @@ function SubmissionModal({
 /**
  * Everything filed on a conference, with the controls that narrow it.
  *
- * No composer and no add button. The page owns the form, because filing on a
- * conference offers the weekly update to the conferees and a ballot question has
- * no such thing, and putting a second copy of the form in here would be a second
- * set of four positions to keep in step.
+ * No composer of its own. The page owns the form, because filing on a conference
+ * offers the weekly update to the conferees and a ballot question has no such
+ * thing, and a second copy of the form in here would be a second set of four
+ * positions to keep in step. What the feed can carry is the way in: `onAdd` puts
+ * a plus at the end of the filter row and hands the press straight back out, the
+ * way the panel's own header does.
  */
 export function SubmissionFeed({
   items,
@@ -591,6 +618,8 @@ export function SubmissionFeed({
   includeTypeFilter = false,
   stickyTop,
   pageSize,
+  onAdd,
+  addLabel = "Add",
   typeFilter: controlledType,
   onTypeFilterChange,
   filter: controlledFilter,
@@ -611,6 +640,13 @@ export function SubmissionFeed({
   /** Show this many at a time and page through the rest, for a view with a
       fixed height. Unpaged when omitted. */
   pageSize?: number;
+  /**
+   * A way to file, at the end of the filter row. The feed does not know what
+   * filing involves, so the press goes back to whoever mounted it; left off,
+   * there is no plus, the way the panel leaves its own off without `onAdd`.
+   */
+  onAdd?: () => void;
+  addLabel?: string;
   /** Add a "Following" toggle that narrows any position filter to accounts the
       viewer follows. */
   includeFollowingFilter?: boolean;
@@ -814,28 +850,51 @@ export function SubmissionFeed({
         >
           {/* One row above the cards: the two pickers on the left, Following
               pinned right. Following is an overlay on whatever they set rather
-              than a third way to narrow, so it sits apart. */}
-          <div className="@container flex items-center gap-[12px] mb-[12px]">
+              than a third way to narrow, so it sits apart.
+
+              Wrapping, because the row is four controls wide and the feed is
+              drawn in a panel and on a phone as well as in the page's own
+              column. */}
+          <div className="@container flex flex-wrap items-center gap-x-[12px] gap-y-[8px] mb-[12px]">
             {includeTypeFilter && (
               <AccountTypePicker value={typeFilter} onChange={pickType} />
             )}
             <PositionPicker value={filter} onChange={pickPosition} />
-            {includeFollowingFilter && anyFollowed && (
-              <div className="ml-auto shrink-0">
-                <FilterChip
-                  active={followingOnly}
-                  ariaPressed={followingOnly}
-                  onClick={toggleFollowing}
-                  title={
-                    followingOnly
-                      ? "Clear the Following filter"
-                      : "Only accounts you follow"
-                  }
-                  className="inline-flex items-center gap-[5px]"
-                >
-                  Following
-                  {followingOnly && <X className="w-[12px] h-[12px]" />}
-                </FilterChip>
+            {/* The right end. Following first, then the way to add one: the plus
+                narrows nothing at all, so it sits past the control that does,
+                and that puts it in the same corner of the same row the panel's
+                own header keeps it in. */}
+            {((includeFollowingFilter && anyFollowed) || onAdd) && (
+              <div className="ml-auto shrink-0 flex items-center gap-[10px]">
+                {includeFollowingFilter && anyFollowed && (
+                  <FilterChip
+                    active={followingOnly}
+                    ariaPressed={followingOnly}
+                    onClick={toggleFollowing}
+                    title={
+                      followingOnly
+                        ? "Clear the Following filter"
+                        : "Only accounts you follow"
+                    }
+                    className="inline-flex items-center gap-[5px]"
+                  >
+                    Following
+                    {followingOnly && <X className="w-[12px] h-[12px]" />}
+                  </FilterChip>
+                )}
+                {onAdd && (
+                  <button
+                    onClick={onAdd}
+                    aria-label={addLabel}
+                    title={addLabel}
+                    // The panel's own plus takes a gray wash, because it sits
+                    // on the panel's chrome. This one sits in the page, where
+                    // the way in should look like the thing it opens.
+                    className="shrink-0 p-[6px] rounded-control text-ink-muted hover:bg-brand hover:text-ink-inverse cursor-pointer transition-colors"
+                  >
+                    <Plus className="w-[18px] h-[18px]" />
+                  </button>
+                )}
               </div>
             )}
           </div>

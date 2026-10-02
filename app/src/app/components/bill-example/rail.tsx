@@ -33,9 +33,49 @@
 // A page can also say the panel does not rest, with `strip={false}`. Then
 // closing it leaves nothing on the edge to press and the page takes the whole
 // width back, for a panel that is opened for one errand rather than lived in.
+//
+// ---
+//
+// Below SHEET_BELOW it is not a rail at all, it is a sheet: the full screen, over
+// the page rather than beside it. A narrow window has no width to give a column,
+// and the page's own gates stop reserving any, so the two alternatives are a
+// sheet or nothing, and nothing is what was there before.
+//
+// What changes with it, and only there:
+//
+//   * no strip and no drag handle. There is no page left showing to fold onto,
+//     and a 6px edge is not something a thumb can find.
+//   * » becomes ×. With no strip to fold to, minimize and close are the same
+//     act, so the control says the one it is doing.
+//   * it is sized to the part of the screen actually in view rather than to the
+//     viewport, so the on-screen keyboard shortens it instead of covering its
+//     footer.
+//   * it is rendered into <body>, so nothing up the page's tree can hold it
+//     under the nav or clip it.
+//   * Escape puts it away, and the page behind it does not scroll.
+//
+// Everything above the line still holds: the views stay mounted whether the
+// sheet is up or not, so the draft and the feed's filters survive it the way
+// they survive the rail being minimized.
 
+import { useEffect, useRef } from "react";
 import type { ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { ChevronsLeft, ChevronsRight, Plus, X } from "lucide-react";
+
+import { useMatchMedia, useVisibleBox } from "../ballot";
+
+/**
+ * Where the panel stops being a column beside the page and becomes a sheet over
+ * it.
+ *
+ * lg, which is the line the page's own `--rail-w` and `--taken-w` gates are
+ * written at: below it the page gives up no width on the right, so a panel drawn
+ * as a rail there would be standing on the page rather than beside it. One
+ * number, so the panel and the page cannot disagree about which of the two is on
+ * screen.
+ */
+const SHEET_BELOW = "(max-width: 1023.98px)";
 
 export interface RailView {
   id: string;
@@ -113,115 +153,192 @@ export function Rail({
   const fallback = views[0];
   const current = views.find((v) => v.id === view) ?? fallback;
   const isDefault = current.id === fallback.id;
+  const sheet = useMatchMedia(SHEET_BELOW);
+  const upAsSheet = sheet && open;
+  const box = useVisibleBox(upAsSheet);
+
+  // Held in a ref so the listener below can depend on nothing but whether the
+  // sheet is up. The page hands in a fresh closure on every render, and an
+  // effect that depended on it would tear its own listener down and put it back
+  // several times a scroll.
+  const close = useRef(onOpenChange);
+  useEffect(() => {
+    close.current = onOpenChange;
+  });
+
+  // Escape puts the sheet away, whichever view is in front: the sheet is the
+  // whole screen, so there is nothing behind it that leaving one view for another
+  // would reveal. The page it covers does not scroll while it is up.
+  useEffect(() => {
+    if (!upAsSheet) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") close.current(false);
+    };
+    document.addEventListener("keydown", onKey);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prev;
+    };
+  }, [upAsSheet]);
+
+  // Written once and drawn in either shell, so a sheet and a rail cannot end up
+  // holding two different panels.
+  const panel = (
+    <div className="flex-1 min-h-0 flex flex-col w-full [--rail-pad:18px]">
+      <header className="shrink-0 flex items-center gap-[12px] px-[var(--rail-pad)] pt-[24px] pb-[4px]">
+        {/* Lexend, like the page's own headings: the panel is a place with a
+            name, and its name should be set in the face the page sets names
+            in. It was Nunito bumped a step to make up for the x-height, which
+            was a way of imitating this. */}
+        <p className="font-display font-normal text-xl text-ink">
+          {current.title}
+        </p>
+        {current.action}
+        {/* Pushes the panel's own control to the far edge and leaves the
+          space before it free. */}
+        <div className="ml-auto flex items-center gap-[10px]">
+          {isDefault && onAdd && (
+            <button
+              onClick={onAdd}
+              aria-label={addLabel}
+              title={addLabel}
+              className="shrink-0 p-[6px] rounded-control text-ink-muted hover:text-ink hover:bg-wash cursor-pointer transition-colors"
+            >
+              <Plus className="w-[18px] h-[18px]" />
+            </button>
+          )}
+          {isDefault ? (
+            // As a sheet there is no strip to fold onto and no page left
+            // showing, so minimize and close are the same act and the control
+            // says the one it is actually doing.
+            <button
+              onClick={() => onOpenChange(false)}
+              aria-label={`${sheet ? "Close" : "Collapse"} ${current.title}`}
+              title={sheet ? "Close" : "Collapse"}
+              className="shrink-0 -mr-[6px] p-[6px] rounded-control text-ink-muted hover:text-ink hover:bg-wash cursor-pointer transition-colors"
+            >
+              {sheet ? (
+                <X className="w-[18px] h-[18px]" />
+              ) : (
+                <ChevronsRight className="w-[18px] h-[18px]" />
+              )}
+            </button>
+          ) : (
+            <button
+              onClick={() =>
+                onCloseView ? onCloseView() : onViewChange(fallback.id)
+              }
+              aria-label={`Close ${current.title}`}
+              title="Close"
+              className="shrink-0 -mr-[6px] p-[6px] rounded-control text-ink-muted hover:text-ink hover:bg-wash cursor-pointer transition-colors"
+            >
+              <X className="w-[18px] h-[18px]" />
+            </button>
+          )}
+        </div>
+      </header>
+
+      {/* All of them, one visible. `hidden` rather than a conditional render,
+        so a view keeps its scroll, its filters, and anything typed into it
+        while another view is in front. */}
+      {views.map((v) => (
+        <div
+          key={v.id}
+          hidden={v.id !== current.id}
+          className="flex-1 min-h-0 flex flex-col"
+        >
+          {v.content}
+        </div>
+      ))}
+    </div>
+  );
 
   return (
     <>
-      {/* The panel. Below a modal's layer on purpose: the modal is the same
-          content on a surface that has taken over, so the panel belongs behind
-          its scrim like everything else. It sits clear of the floating buttons
-          by position rather than by stacking, since they are offset by whatever
-          the rail is taking. */}
-      <aside
-        aria-label={current.title}
-        aria-hidden={!open}
-        // Clipped while it is closed, and only then. The panel is narrower
-        // shut than open, and `translate-x-full` moves it by its own width, so
-        // anything inside that is wider than the closed box was left standing
-        // at the edge of the screen: a button, most visibly. Open, the
-        // overflow has to stay visible, because notes and menus inside the
-        // panel rise out of it.
-        className={`hidden lg:flex fixed right-0 top-[calc(var(--nav-h)+1px)] bottom-0 z-40 w-[var(--rail-w)] flex-col ${current.surface ?? "bg-ground"} border-l border-line transition-transform duration-400 ease-out motion-reduce:transition-none ${
-          open ? "translate-x-0" : "translate-x-full overflow-hidden"
-        }`}
-      >
-        {/* The left edge, draggable. Bare for now: no handle, no cursor, no
-            hover state, so the mechanism can be judged before it is dressed.
+      {sheet ? (
+        // Into <body>, so nothing between here and the root can hold the sheet
+        // under the nav or clip it: at this width the panel is not part of the
+        // page's column any more, it is over the whole of it.
+        //
+        // Above the modal's layer, unlike the rail below, and the modal is above
+        // this one again. The rail can sit under a scrim because the page around
+        // it is still visible; a sheet that let the nav and the floating buttons
+        // through would be a sheet with holes in it.
+        //
+        // Mounted whether it is up or not, and hidden rather than dropped, so a
+        // half-written draft and the feed's filters survive it closing exactly as
+        // they survive the rail being minimized.
+        createPortal(
+          <aside
+            aria-label={current.title}
+            aria-hidden={!open}
+            style={box ? { top: box.top, height: box.height } : undefined}
+            className={`fixed left-0 right-0 ${
+              box ? "" : "top-0 bottom-0"
+            } z-[60] flex-col ${current.surface ?? "bg-ground"} ${
+              open ? "flex" : "hidden"
+            }`}
+          >
+            {panel}
+          </aside>,
+          document.body,
+        )
+      ) : (
+        /* The panel. Below a modal's layer on purpose: the modal is the same
+           content on a surface that has taken over, so the panel belongs behind
+           its scrim like everything else. It sits clear of the floating buttons
+           by position rather than by stacking, since they are offset by whatever
+           the rail is taking. */
+        <aside
+          aria-label={current.title}
+          aria-hidden={!open}
+          // Clipped while it is closed, and only then. The panel is narrower
+          // shut than open, and `translate-x-full` moves it by its own width, so
+          // anything inside that is wider than the closed box was left standing
+          // at the edge of the screen: a button, most visibly. Open, the
+          // overflow has to stay visible, because notes and menus inside the
+          // panel rise out of it.
+          className={`hidden lg:flex fixed right-0 top-[calc(var(--nav-h)+1px)] bottom-0 z-40 w-[var(--rail-w)] flex-col ${current.surface ?? "bg-ground"} border-l border-line transition-transform duration-400 ease-out motion-reduce:transition-none ${
+            open ? "translate-x-0" : "translate-x-full overflow-hidden"
+          }`}
+        >
+          {/* The left edge, draggable. Bare for now: no handle, no cursor, no
+              hover state, so the mechanism can be judged before it is dressed.
 
-            Pointer capture rather than window listeners, so the drag survives
-            the pointer leaving the 6px strip, which it does immediately. The
-            page is told the width and decides what to do with it. */}
-        {onResize && (
-          <div
-            onPointerDown={(e) => {
-              e.currentTarget.setPointerCapture(e.pointerId);
-              e.preventDefault();
-              onResize(window.innerWidth - e.clientX);
-            }}
-            onPointerMove={(e) => {
-              if (!e.currentTarget.hasPointerCapture(e.pointerId)) return;
-              onResize(window.innerWidth - e.clientX);
-            }}
-            onPointerUp={(e) => {
-              e.currentTarget.releasePointerCapture(e.pointerId);
-              onResizeEnd?.();
-            }}
-            onPointerCancel={(e) => {
-              e.currentTarget.releasePointerCapture(e.pointerId);
-              onResizeEnd?.();
-            }}
-            className="absolute left-0 top-0 bottom-0 w-[6px] -ml-[3px] z-10 cursor-col-resize"
-          />
-        )}
+              Pointer capture rather than window listeners, so the drag survives
+              the pointer leaving the 6px strip, which it does immediately. The
+              page is told the width and decides what to do with it.
 
-        <div className="flex-1 min-h-0 flex flex-col w-full [--rail-pad:18px]">
-          <header className="shrink-0 flex items-center gap-[12px] px-[var(--rail-pad)] pt-[24px] pb-[4px]">
-            {/* Nunito has a smaller x-height than the Lexend this replaced,
-                so the same size read smaller. A step up puts it back. */}
-            <p className="font-body font-bold text-xl text-ink">
-              {current.title}
-            </p>
-            {current.action}
-            {/* Pushes the panel's own control to the far edge and leaves the
-              space before it free. */}
-            <div className="ml-auto flex items-center gap-[10px]">
-              {isDefault && onAdd && (
-                <button
-                  onClick={onAdd}
-                  aria-label={addLabel}
-                  title={addLabel}
-                  className="shrink-0 p-[6px] rounded-control text-ink-muted hover:text-ink hover:bg-wash cursor-pointer transition-colors"
-                >
-                  <Plus className="w-[18px] h-[18px]" />
-                </button>
-              )}
-              {isDefault ? (
-                <button
-                  onClick={() => onOpenChange(false)}
-                  aria-label={`Collapse ${current.title}`}
-                  title="Collapse"
-                  className="shrink-0 -mr-[6px] p-[6px] rounded-control text-ink-muted hover:text-ink hover:bg-wash cursor-pointer transition-colors"
-                >
-                  <ChevronsRight className="w-[18px] h-[18px]" />
-                </button>
-              ) : (
-                <button
-                  onClick={() =>
-                    onCloseView ? onCloseView() : onViewChange(fallback.id)
-                  }
-                  aria-label={`Close ${current.title}`}
-                  title="Close"
-                  className="shrink-0 -mr-[6px] p-[6px] rounded-control text-ink-muted hover:text-ink hover:bg-wash cursor-pointer transition-colors"
-                >
-                  <X className="w-[18px] h-[18px]" />
-                </button>
-              )}
-            </div>
-          </header>
-
-          {/* All of them, one visible. `hidden` rather than a conditional render,
-            so a view keeps its scroll, its filters, and anything typed into it
-            while another view is in front. */}
-          {views.map((v) => (
+              Not on a sheet, which has no edge to pull and nothing to pull it
+              into. */}
+          {onResize && (
             <div
-              key={v.id}
-              hidden={v.id !== current.id}
-              className="flex-1 min-h-0 flex flex-col"
-            >
-              {v.content}
-            </div>
-          ))}
-        </div>
-      </aside>
+              onPointerDown={(e) => {
+                e.currentTarget.setPointerCapture(e.pointerId);
+                e.preventDefault();
+                onResize(window.innerWidth - e.clientX);
+              }}
+              onPointerMove={(e) => {
+                if (!e.currentTarget.hasPointerCapture(e.pointerId)) return;
+                onResize(window.innerWidth - e.clientX);
+              }}
+              onPointerUp={(e) => {
+                e.currentTarget.releasePointerCapture(e.pointerId);
+                onResizeEnd?.();
+              }}
+              onPointerCancel={(e) => {
+                e.currentTarget.releasePointerCapture(e.pointerId);
+                onResizeEnd?.();
+              }}
+              className="absolute left-0 top-0 bottom-0 w-[6px] -ml-[3px] z-10 cursor-col-resize"
+            />
+          )}
+
+          {panel}
+        </aside>
+      )}
 
       {/* The panel folded to its edge, for a page that rests it there. It never
           moves and never resizes: it sits a layer below the panel, and the
@@ -230,8 +347,13 @@ export function Rail({
           screen, which read as a scramble.
 
           It always names the default view, because minimize is only offered
-          there, so that is always what is behind it. */}
-      {strip && (
+          there, so that is always what is behind it.
+
+          Never on a sheet: there is no page beside the panel for a strip to sit
+          on the edge of, and a vertical word down the side of a phone is not a
+          control anybody would find. A closed sheet leaves nothing behind, so
+          the page's own controls are the way back in. */}
+      {strip && !sheet && (
         <button
           onClick={() => onOpenChange(true)}
           aria-label={`Show ${fallback.title}${

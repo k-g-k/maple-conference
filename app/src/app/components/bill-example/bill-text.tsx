@@ -1,25 +1,72 @@
-// Every document in the lineage, read in full.
+// This bill's text, read in full.
 //
-// The lineage says what each step did to the text; this is the text. The two
-// are one selection: choosing a document here moves the stepper, and choosing a
-// step there moves the picker, so a reader is never looking at one bill's
-// history beside another bill's words.
+// The lineage says what each step did to the text; this is the text. Where a
+// bill has a transcribed lineage the two are one selection: choosing a document
+// here moves the stepper, and choosing a step there moves the picker, so a
+// reader is never looking at one bill's history beside another bill's words.
 
 import { useRef, useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { LINEAGE_TEXTS } from "../../data/bill-lineage/texts";
+import {
+  billDocument,
+  mapleBillUrl,
+  type TextAbsence,
+} from "../../data/bills-194/texts";
+import type { BillRecord } from "../../data/bills-194";
 import { Chapter, Span } from "./spine";
 
+/** What the well can show, whichever set the document came from. */
+interface ViewerDoc {
+  number: string;
+  title: string;
+  text: string;
+  /** Why there is no text, in the record's own terms, where it explains itself. */
+  note?: string;
+  /** Which kind of empty, where the note does not say. */
+  absence?: TextAbsence;
+}
+
 export function BillTextSection({
+  bill,
   number,
   onNumber,
 }: {
+  /** The bill whose page this is. Its own text is what the viewer opens on. */
+  bill: BillRecord;
   /** The document on screen, held by the page and shared with the lineage. */
   number: string;
   onNumber: (n: string) => void;
 }) {
-  const doc =
-    LINEAGE_TEXTS.find((d) => d.number === number) ?? LINEAGE_TEXTS[0];
+  /**
+   * The documents this viewer can offer.
+   *
+   * One bill has a lineage transcribed a dozen documents deep, and on its page
+   * the picker is the point: a reader travels back through what the current text
+   * came out of. Every other bill has one document, its own, so there is nothing
+   * to choose between. Offering the transcribed dozen everywhere was the bug
+   * worth fixing first, because it put one bill's words under another bill's
+   * number, which is the one thing a text viewer must never do.
+   */
+  const docs: ViewerDoc[] = LINEAGE_TEXTS.some((d) => d.number === bill.number)
+    ? LINEAGE_TEXTS
+    : [
+        billDocument(bill.number) ?? {
+          number: bill.number,
+          title: bill.title,
+          text: "",
+          absence: "not-bundled",
+        },
+      ];
+  const doc = docs.find((d) => d.number === number) ?? docs[0];
+  /**
+   * Where a reader goes when there is nothing to show. The General Court
+   * publishes some documents as a PDF and carries no text under the number, so
+   * its own API returns nothing for them and MAPLE has the words. Null on the
+   * consolidated amendments in the lineage, which are not documents MAPLE has a
+   * page for.
+   */
+  const maple = mapleBillUrl(doc.number);
 
   // `focus-visible` is not enough on a select: browsers count a click as a
   // visible focus, so the ring flashed up every time the menu was opened. This
@@ -31,7 +78,14 @@ export function BillTextSection({
   return (
     <Chapter id="text" question="What does it actually say?">
       <div>
-        <div className="flex items-center gap-[10px] flex-wrap">
+        {/* No picker where there is nothing to pick. A menu of one is a control
+            that does nothing, and it tells a reader there are other versions to
+            find when there are not. */}
+        <div
+          className={`items-center gap-[10px] flex-wrap ${
+            docs.length > 1 ? "flex" : "hidden"
+          }`}
+        >
           <label
             htmlFor="bill-text-version"
             className="font-body font-semibold text-sm text-ink"
@@ -61,7 +115,7 @@ export function BillTextSection({
               {/* Newest first, the way the lineage strip reads: a reader arrives
                 at the current text and travels back through what it came
                 out of. */}
-              {[...LINEAGE_TEXTS].reverse().map((d) => (
+              {[...docs].reverse().map((d) => (
                 // The number alone. A select sizes itself to its widest option,
                 // so hanging "(no text published)" off one of them left every
                 // other value floating a long way from the chevron. The document
@@ -111,7 +165,23 @@ export function BillTextSection({
             <div className="mx-auto max-w-[560px] text-center py-[14px]">
               <p className="font-body text-sm text-ink-muted leading-[1.7]">
                 {doc.note ??
-                  `The legislature publishes no text for ${doc.number}.`}
+                  (doc.absence === "none-published"
+                    ? `The legislature's machine-readable record has no text for ${doc.number}.`
+                    : `The text of ${doc.number} is not bundled with this prototype yet.`)}{" "}
+                {/* Only where the record does not already explain itself. A
+                    document whose own note names what it became is answered by
+                    the note and by the picker, and a link away from both would
+                    be the worse answer. */}
+                {!doc.note && maple && (
+                  <a
+                    href={maple}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-semibold underline decoration-dotted underline-offset-[4px] text-link hover:text-brand"
+                  >
+                    Read it on MAPLE
+                  </a>
+                )}
               </p>
             </div>
           )}

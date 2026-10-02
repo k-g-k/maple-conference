@@ -6,10 +6,17 @@
 // testimony is taken, and nothing is published until they report. The conferees
 // are the entire decision surface, which is why they are named here in full.
 //
-// The clock is the other thing. Formal sessions end 31 July in an election
-// year, so the committees still sitting after that date are working on borrowed
-// time: a conference that has not reported is not dead, but it can only report
-// into an informal session, where a single member can block it.
+// The clock is the other thing, though not the way it is usually told. Joint
+// Rule 12A ends formal business on the last day of July in an election year,
+// and the 194th's own amendment to it, adopted 26 June 2025, carves out an
+// exception: both chambers may still convene formally to consider "reports of
+// committees of conference formed on or before the last day of July of the
+// second annual session". Every committee here was formed by 31 July 2026, so
+// every one of them can still be taken up formally. What the date changes is
+// everything else around them, not their own report.
+//
+// Verified against the Joint and House Rules on 1 October 2026, which also
+// corrected the opposite claim this comment used to make.
 //
 // ── Source ────────────────────────────────────────────────────────────────
 //
@@ -20,10 +27,15 @@
 //   Energy            H.5151, not H.5175. This one was wrong, and it is the
 //                     reason the list is worth distrusting: the journal and
 //                     the conference's own meeting notice both name H.5175,
-//                     so the correction has been reversed here.
+//                     so the correction has been reversed here. Confirmed
+//                     again since: notice 5758 names "H5175 and S3166" twice.
 //   Economic dev      S.3228, not S.3178. H.5576 is right; H.5527 is not in it.
 //   Child welfare     H.4646 / S.3121, not H.4644 / S.2659, and it is finished
-//                     rather than active: reported as H.5629 and enacted.
+//                     rather than active: reported as H.5629 and enacted. The
+//                     scorecard was not inventing those numbers: the
+//                     conference's own meeting notice, event 5742, names
+//                     H4644 and S2659 too. The histories win, but the
+//                     legislature's own notice is loose here.
 //   Public records    Called "Legislative records access", H.5469 / S.3244.
 //
 // The economic development number would have pointed a whole page at the wrong
@@ -53,7 +65,12 @@ export interface ConferenceCommittee {
   senate: string;
   conferees: Conferee[];
   sentToConference: string;
-  /** Null where the committee has been appointed but has not met. */
+  /**
+   * Null where the committee has been appointed and has noticed no meeting.
+   *
+   * Not the same as not having met: a conference can meet without filing a
+   * notice, and nothing published would show it.
+   */
   firstMeeting: string | null;
   /**
    * A finished conference reports a single new bill number, and that text is
@@ -91,7 +108,7 @@ export const ACTIVE: ConferenceCommittee[] = [
     house: "H.5630",
     senate: "S.3141",
     sentToConference: "July 31, 2026",
-    firstMeeting: null,
+    firstMeeting: "September 17, 2026",
     conferees: people(
       [
         ["Cindy Friedman", "Arlington"],
@@ -311,7 +328,15 @@ export const ACTIVE: ConferenceCommittee[] = [
     house: "H.4769",
     senate: "S.2993",
     sentToConference: "April 9, 2026",
-    firstMeeting: "April 15, 2026",
+    // No notice, in any month of the session. Two sweeps looked: the April
+    // 2026 calendar in full, and then all 24 months of the 194th, 1,034
+    // events, of which 31 are conference meetings and none is this one. A
+    // title match on the bill numbers and on "higher ed" returns only the
+    // standing Joint Committee on Higher Education's own hearings, the last
+    // of them three weeks before this conference was appointed.
+    //
+    // It is the only one of the nineteen conferences with no notice at all.
+    firstMeeting: null,
     conferees: people(
       [
         ["Jo Comerford", "Northampton"],
@@ -342,9 +367,11 @@ export const COMPLETED: ConferenceCommittee[] = [
     house: "H.4706",
     senate: "S.3183",
     sentToConference: "2026",
-    firstMeeting: null,
+    // Event 5759, 29 July 2026, Room 319.
+    firstMeeting: "July 29, 2026",
     reported: { on: "July 30, 2026", as: "H.5627" },
     enacted: "July 31, 2026",
+    signed: "August 6, 2026",
     conferees: people(
       [
         ["Will Brownsberger", "Belmont"],
@@ -364,9 +391,11 @@ export const COMPLETED: ConferenceCommittee[] = [
     house: "H.4646",
     senate: "S.3121",
     sentToConference: "2026",
-    firstMeeting: null,
+    // Event 5742, 8 July 2026, Room 437. Its notice names H4644 and S2659.
+    firstMeeting: "July 8, 2026",
     reported: { on: "July 30, 2026", as: "H.5629" },
     enacted: "July 31, 2026",
+    signed: "August 6, 2026",
     conferees: people(
       [
         ["Jo Comerford", "Northampton"],
@@ -386,9 +415,11 @@ export const COMPLETED: ConferenceCommittee[] = [
     house: "H.5316",
     senate: "S.3086",
     sentToConference: "2026",
-    firstMeeting: null,
+    // Event 5702, 27 May 2026, Room 210, and again 3 June as 5711.
+    firstMeeting: "May 27, 2026",
     reported: { on: "July 29, 2026", as: "H.5620" },
     enacted: "July 30, 2026",
+    signed: "August 5, 2026",
     conferees: people(
       [
         ["Cindy Friedman", "Arlington"],
@@ -408,9 +439,12 @@ export const COMPLETED: ConferenceCommittee[] = [
     house: "H.5501",
     senate: "S.3100",
     sentToConference: "2026",
-    firstMeeting: null,
-    reported: { on: "June 30, 2026", as: "H.5555" },
+    // Events 5706 and 5736, 3 and 30 June 2026, Room 212.
+    firstMeeting: "June 3, 2026",
+    // Reported 1 July; the conference's last meeting was 30 June.
+    reported: { on: "July 1, 2026", as: "H.5555" },
     enacted: "July 1, 2026",
+    signed: "July 9, 2026",
     conferees: people(
       [
         ["Michael Rodrigues", "Westport"],
@@ -430,9 +464,11 @@ export const COMPLETED: ConferenceCommittee[] = [
     house: "H.4683",
     senate: "S.2940",
     sentToConference: "2026",
-    firstMeeting: null,
+    // Room A-1. Event 5725, the day before it reported, is a press conference rather than a meeting.
+    firstMeeting: "June 16, 2026",
     reported: { on: "June 17, 2026", as: "H.5511" },
     enacted: "June 18, 2026",
+    signed: "June 26, 2026",
     conferees: people(
       [
         ["Sal DiDomenico", "Everett"],
@@ -452,7 +488,8 @@ export const COMPLETED: ConferenceCommittee[] = [
     house: "H.5280",
     senate: "S.3054",
     sentToConference: "2026",
-    firstMeeting: null,
+    // Room 243.
+    firstMeeting: "June 2, 2026",
     reported: { on: "June 2, 2026", as: "H.5470" },
     enacted: "June 4, 2026",
     signed: "June 12, 2026",
@@ -474,8 +511,12 @@ export const COMPLETED: ConferenceCommittee[] = [
     name: "Cannabis overhaul",
     house: "H.4206",
     senate: "S.2749",
-    sentToConference: "2026",
-    firstMeeting: null,
+    // The House non-concurred and appointed on 24 December 2025; the
+    // Senate concurred on the 31st. The only conference here that
+    // crosses a calendar year.
+    sentToConference: "December 24, 2025",
+    // Room B-1. Its second meeting, 6 April at the UMass Center in Springfield, was called to formalise the agreement and is the only one held outside the State House.
+    firstMeeting: "January 14, 2026",
     reported: { on: "April 6, 2026", as: "H.5350" },
     enacted: "April 9, 2026",
     signed: "April 19, 2026",
@@ -626,7 +667,7 @@ const capitalise = (short: string) =>
  * truth for the comparison and should stay as it was ported.
  */
 const NAME: Record<string, string> = {
-  "workplace-violence": "Healthcare Worker Violence",
+  "workplace-violence": "Health Worker Safety",
 };
 
 /**
