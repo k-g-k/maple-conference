@@ -113,6 +113,7 @@ import {
 } from "../../data/conference-committees/geography";
 import { SiteNav } from "../site-nav";
 import { LobbyingDisclosures } from "./lobbying";
+import { orgLobbying } from "../../data/conference-committees/lobbying";
 import { useDeviceViewport } from "../use-device-viewport";
 import { useNarrow } from "../use-narrow";
 // The writing step, the review step and the three containers it is being
@@ -3000,6 +3001,7 @@ function Detail({ c, style }: { c: CommitteeDetail; style: ReviewStyle }) {
     });
   // The tabs a layout offers, and which one is open. Card has no Committee
   // tab: its card sits above the bar rather than in a section you pick.
+  const hasLobbying = orgLobbying(c.senateBill?.n, c.houseBill?.n).length > 0;
   const tabs =
     layout === "stacked"
       ? CONTENTS
@@ -3026,13 +3028,23 @@ function Detail({ c, style }: { c: CommitteeDetail; style: ReviewStyle }) {
    * longer depends on anything that can change height, so nothing downstream
    * has to be told when it does.
    */
+  // The title's own height, so everything resting under it knows where that
+  // is. Measured rather than assumed: a long name wraps to two lines on a
+  // phone, where the title is the one thing on this page that pins.
+  const titleBand = useBandHeight(mode);
+  const onPhone = useNarrow();
+  const oneColumn = useNarrow("(max-width: 1117.98px)");
   const pinned = () => {
     const navH =
       parseFloat(
         getComputedStyle(document.documentElement).getPropertyValue("--nav-h"),
       ) || 0;
-    return navH + BAR_H;
+    return navH + BAR_H + (onPhone ? titleBand.h : 0);
   };
+  /** The same sum as a CSS length, for the things that rest at it. */
+  const pinnedTop = onPhone
+    ? `calc(var(--nav-h) + ${titleBand.h}px + ${BAR_H}px)`
+    : PINNED_H;
   /**
    * Where a section heading comes to rest: under the nav and the bar, which is
    * the same sum `pinned()` uses to land a jump. One value rather than three
@@ -3041,7 +3053,7 @@ function Detail({ c, style }: { c: CommitteeDetail; style: ReviewStyle }) {
    * The scrolling view only. Tabbed shows one section at a time, so a heading
    * that stayed on screen would be naming the only thing there is.
    */
-  const stickyTop = mode === "scroll" ? PINNED_H : undefined;
+  const stickyTop = mode === "scroll" || onPhone ? pinnedTop : undefined;
   /**
    * A section's own chrome, a filter row or a table head, comes to rest under
    * everything above it, which in the scrolling view includes that section's
@@ -3051,7 +3063,7 @@ function Detail({ c, style }: { c: CommitteeDetail; style: ReviewStyle }) {
   const inputBand = useBandHeight(mode);
   const lobbyBand = useBandHeight(mode);
   const underHeading = (h: number) =>
-    mode === "scroll" ? `calc(${PINNED_H} + ${h}px)` : PINNED_H;
+    mode === "scroll" ? `calc(${pinnedTop} + ${h}px)` : pinnedTop;
   const smooth = () =>
     window.matchMedia("(prefers-reduced-motion: reduce)").matches
       ? ("auto" as const)
@@ -3443,67 +3455,56 @@ function Detail({ c, style }: { c: CommitteeDetail; style: ReviewStyle }) {
               the page. The negative margins let the band's own background run
               to the edge of the reading column; the padding gives that width
               back, so the column inside is the one it would have had. */}
+          <div
+            ref={titleBand.ref}
+            className="@container sticky top-[var(--nav-h)] z-[14] -mx-[32px] px-[32px] pt-[26px] pb-[12px] bg-ground md:static md:z-20 md:pb-0"
+          >
+            <div className="flex items-start justify-between gap-[24px]">
+              {/* The picker is the row's flexible half, so the heading can
+                      run the full width before it wraps. */}
+              <TitlePicker slug={c.slug} short={c.short} href={committeeHref} />
+              {/* Follow and Share are parked. Uncomment to restore them.
+                  <div className="shrink-0 flex items-center gap-[18px] mt-[6px]">
+                    <button
+                      onClick={() => setFollowing((f) => !f)}
+                      aria-pressed={following}
+                      // Following, it steps back to gray and only reports a
+                      // state; before, it is asking to be pressed. On hover each
+                      // half swaps to the sign of what a press would do, so the
+                      // outcome shows before it happens.
+                      // Blue in both states. The ballot pages grayed it once
+                      // followed, on the argument that it was then only reporting
+                      // a state; here it stays a control you can press again, and
+                      // the icon and the word already say which way it goes.
+                      className="group inline-flex items-center gap-[6px] font-body font-semibold text-sm text-link hover:text-brand cursor-pointer"
+                    >
+                      {following ? (
+                        <>
+                          <BellRing className="w-[15px] h-[15px] group-hover:hidden" />
+                          <BellOff className="w-[15px] h-[15px] hidden group-hover:block" />
+                          <span className="group-hover:hidden">Following</span>
+                          <span className="hidden group-hover:inline">
+                            Unfollow
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          <Bell className="w-[15px] h-[15px] group-hover:hidden" />
+                          <BellPlus className="w-[15px] h-[15px] hidden group-hover:block" />
+                          Follow
+                        </>
+                      )}
+                    </button>
+                    <button className="inline-flex items-center gap-[6px] font-body font-semibold text-sm text-link hover:text-brand cursor-pointer">
+                      <Share className="w-[15px] h-[15px]" />
+                      Share
+                    </button>
+                  </div>
+                  */}
+            </div>
+          </div>
           <div className="z-20 -mx-[32px] px-[32px] bg-ground/95 backdrop-blur">
-            {/* 26px, so the title's cap sits level with the top of the rail's
-                first pill: a 40px face at 1.2 leaves about 10px above the cap
-                inside its own line box. */}
-            <div className="@container pt-[26px] pb-[24px]">
-              {/* MAPLE's h1 is 3rem bold at line-height 1.2, but it is set in
-                Nunito. Lexend has a far larger x-height and wider letterforms,
-                so the same 48px reads noticeably bigger. 40px is where the two
-                match optically. */}
-              {/* The two page level utilities sit with the title rather than
-                  with the input controls below: these act on the committee as
-                  a record, not on the debate about it. Ported from the ballot
-                  question pages, which put Follow and Share in the same
-                  place. */}
-              <div className="flex items-start justify-between gap-[24px]">
-                {/* The picker is the row's flexible half, so the heading can
-                    run the full width before it wraps. */}
-                <TitlePicker
-                  slug={c.slug}
-                  short={c.short}
-                  href={committeeHref}
-                />
-                {/* Follow and Share are parked. Uncomment to restore them.
-                <div className="shrink-0 flex items-center gap-[18px] mt-[6px]">
-                  <button
-                    onClick={() => setFollowing((f) => !f)}
-                    aria-pressed={following}
-                    // Following, it steps back to gray and only reports a
-                    // state; before, it is asking to be pressed. On hover each
-                    // half swaps to the sign of what a press would do, so the
-                    // outcome shows before it happens.
-                    // Blue in both states. The ballot pages grayed it once
-                    // followed, on the argument that it was then only reporting
-                    // a state; here it stays a control you can press again, and
-                    // the icon and the word already say which way it goes.
-                    className="group inline-flex items-center gap-[6px] font-body font-semibold text-sm text-link hover:text-brand cursor-pointer"
-                  >
-                    {following ? (
-                      <>
-                        <BellRing className="w-[15px] h-[15px] group-hover:hidden" />
-                        <BellOff className="w-[15px] h-[15px] hidden group-hover:block" />
-                        <span className="group-hover:hidden">Following</span>
-                        <span className="hidden group-hover:inline">
-                          Unfollow
-                        </span>
-                      </>
-                    ) : (
-                      <>
-                        <Bell className="w-[15px] h-[15px] group-hover:hidden" />
-                        <BellPlus className="w-[15px] h-[15px] hidden group-hover:block" />
-                        Follow
-                      </>
-                    )}
-                  </button>
-                  <button className="inline-flex items-center gap-[6px] font-body font-semibold text-sm text-link hover:text-brand cursor-pointer">
-                    <Share className="w-[15px] h-[15px]" />
-                    Share
-                  </button>
-                </div>
-                */}
-              </div>
+            <div className="@container pb-[24px]">
               <p className="font-body text-xl @[980px]:text-2xl text-ink-muted leading-[1.4] mt-[10px]">
                 <ConferenceByline
                   slug={c.slug}
@@ -3555,7 +3556,9 @@ function Detail({ c, style }: { c: CommitteeDetail; style: ReviewStyle }) {
               rather than in a section you jump to. */}
           <Contents
             sections={tabs}
-            offset="var(--nav-h)"
+            offset={
+              onPhone ? `calc(var(--nav-h) + ${titleBand.h}px)` : "var(--nav-h)"
+            }
             jumpTo={jumpTo}
             picked={mode === "tabbed" ? tab : undefined}
             onPick={mode === "tabbed" ? pickTab : undefined}
@@ -3631,11 +3634,7 @@ function Detail({ c, style }: { c: CommitteeDetail; style: ReviewStyle }) {
                   id="decided"
                   question="What needs to be resolved?"
                   titleClass={SUB_HEAD}
-                  // This heading does not pin. Its section has no chrome of
-                  // its own to hide, and an opaque pinned band here would
-                  // paint over the settled list's label, which belongs level
-                  // with the heading. Lobbying and Public Input still pin,
-                  // because their controls pin under them.
+                  stickyHeading={oneColumn ? pinnedTop : undefined}
                   flush
                 >
                   <Scan
@@ -3738,12 +3737,14 @@ function Detail({ c, style }: { c: CommitteeDetail; style: ReviewStyle }) {
                   // headings, with one exception: below sm the table becomes a
                   // stack and loses its column heads, and then the section's
                   // own heading is the only thing naming what the rows are.
-                  stickyHeading={stickyTop ?? PINNED_H}
-                  narrowPin={mode === "tabbed"}
+                  stickyHeading={
+                    hasLobbying ? (stickyTop ?? pinnedTop) : undefined
+                  }
+                  narrowPin={hasLobbying && mode === "tabbed"}
                   // The column heads still travel back up the window when they
                   // let go, so the heading needs the band's paint order even
                   // without the pin.
-                  bandHeading={mode === "tabbed"}
+                  bandHeading={hasLobbying && mode === "tabbed"}
                   headingRef={lobbyBand.ref}
                   // The column heads stay over the rows they name, the way
                   // the Public Input filters stay over the list.
@@ -3831,7 +3832,7 @@ function Detail({ c, style }: { c: CommitteeDetail; style: ReviewStyle }) {
                   // underside of the bar and the well takes the window that is
                   // left, which is the same sum every other pinned thing on
                   // this page resolves to rather than a height of its own.
-                  pinTop={PINNED_H}
+                  pinTop={pinnedTop}
                 />
               </Boxed>
             )}

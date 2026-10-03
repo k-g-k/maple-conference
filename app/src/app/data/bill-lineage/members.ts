@@ -275,6 +275,6 @@ export const profileUrl = (code: string) =>
  * lookup and nothing that reads it has to change.
  */
 export const MINE: Record<string, string> = {
-  "Norfolk-14": "Your representative",
-  "S:Creem": "Your senator",
+  "Norfolk-14": "Your Rep",
+  "S:Creem": "Your Senator",
 };

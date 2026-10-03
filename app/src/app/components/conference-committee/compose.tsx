@@ -54,6 +54,10 @@ const COPY = {
   saving: "Saving…",
   saved: "Saved",
   toReview: "Review and Post",
+  /** The one rule the form states, where the posting happens. The link is a
+      placeholder: there is no page behind it in the prototype. */
+  conduct: "All posts are governed by our ",
+  conductLink: "Code of Conduct",
 
   /** The review step, before posting. */
   reviewTitle: "Review and Post",
@@ -358,11 +362,8 @@ export function ConferenceCompose({
     requestAnimationFrame(() => setAsking(true));
   };
   return (
-    // Exactly the panel's height, so the panel itself never scrolls. The
-    // textarea takes what is left, which makes the thing you are writing the
-    // only thing that scrolls.
-    <div className="h-full flex flex-col gap-[16px] min-h-0">
-      <div className="flex-1 min-h-0 flex flex-col overflow-y-auto overscroll-contain">
+    <div className="h-full overflow-y-auto overscroll-contain lg:overflow-visible flex flex-col gap-[16px] lg:min-h-0">
+      <div className="flex flex-col lg:flex-1 lg:min-h-0">
         {/* One a row rather than a wrapping line of chips. Four of these are
             sentences, not one-word stances, and on a panel's width they wrapped
             into a block a reader had to pick apart. */}
@@ -413,7 +414,7 @@ export function ConferenceCompose({
           // merely looked at: focusing an empty field has not answered the
           // thing the red is asking for.
           onFocus={undefined}
-          className={`flex-1 min-h-[150px] max-h-[280px] w-full resize-none bg-surface border rounded-control p-[12px] font-body text-[16px] sm:text-base text-ink leading-[1.55] placeholder:text-base placeholder:text-ink-muted focus:outline-none ${
+          className={`h-[190px] lg:h-auto lg:flex-1 lg:min-h-0 lg:max-h-[280px] w-full resize-none bg-surface border rounded-control p-[12px] font-body text-[16px] sm:text-base text-ink leading-[1.55] placeholder:text-base placeholder:text-ink-muted focus:outline-none ${
             // The border carries the refusal. The placeholder is the field
             // telling you what to write, which is the same sentence whether or
             // not you have just been told off.
@@ -432,7 +433,7 @@ export function ConferenceCompose({
         </div>
       </div>
 
-      <div className="shrink-0 flex items-center justify-end gap-[12px]">
+      <div className="shrink-0 flex items-center justify-end gap-[12px] pb-[4px] lg:pb-0">
         {save !== "none" && (
           // Far left, on the buttons' own line: it reports on the thing the
           // buttons act on, and a line of its own would make it an event.
@@ -780,6 +781,17 @@ export function ReviewContext({
           {COPY.rules.map((r) => (
             <li key={r}>{r}</li>
           ))}
+          <li>
+            {COPY.conduct}
+            <a
+              href="#"
+              onClick={(e) => e.preventDefault()}
+              className="font-semibold text-brand-ink hover:text-brand underline decoration-dotted underline-offset-[3px]"
+            >
+              {COPY.conductLink}
+            </a>
+            .
+          </li>
         </ul>
       </div>
     </div>

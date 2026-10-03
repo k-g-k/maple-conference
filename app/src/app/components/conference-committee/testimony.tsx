@@ -213,7 +213,7 @@ export function SubmissionEntry({
                     words rather than the one word a ballot stance takes, so a
                     chip held on the name's line would leave the name about
                     fifty pixels to be read in. */}
-                <span className="hidden @[360px]:flex shrink-0">
+                <span className="flex shrink-0">
                   <PositionChip position={t.position} />
                 </span>
               </p>
@@ -231,12 +231,9 @@ export function SubmissionEntry({
                 gap beside the name. */}
             <div
               className={`shrink-0 self-start items-center gap-[2px] -mt-[5px] -mr-[6px] ${
-                actions ? "flex" : "hidden @[360px]:flex"
+                actions ? "flex" : "hidden"
               }`}
             >
-              <span className="hidden @[360px]:inline font-body text-xs text-ink-muted whitespace-nowrap mr-[2px]">
-                {t.date}
-              </span>
               {actions && <EntryActions name={user.name} />}
             </div>
           </div>
@@ -268,8 +265,7 @@ export function SubmissionEntry({
           )}
           {/* Narrow, the card closes on what the header could not hold: the
               position on the left, the date on the right, one line. */}
-          <div className="@[360px]:hidden flex items-center justify-between gap-[10px] mt-[12px]">
-            <PositionChip position={t.position} />
+          <div className="flex items-center justify-end mt-[12px]">
             <span className="font-body text-xs text-ink-muted whitespace-nowrap">
               {t.date}
             </span>

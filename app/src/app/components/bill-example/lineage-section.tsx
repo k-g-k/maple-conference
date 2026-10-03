@@ -402,7 +402,7 @@ export function Conferees({
                         back ? "text-ink-faint" : "text-ink-muted"
                       }`}
                     >
-                      {m.district}
+                      {MINE[m.key] ?? m.district}
                     </span>
                   </span>
                 </button>
