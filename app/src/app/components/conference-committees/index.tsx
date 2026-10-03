@@ -48,6 +48,7 @@ import {
 } from "../../data/conference-committees/roster";
 import { VoteMap, shortTitle, surname } from "../bill-example/lineage-section";
 import { SiteNav } from "../site-nav";
+import { useDeviceViewport } from "../use-device-viewport";
 
 /**
  * The dotted leader, as a background rather than a border.
@@ -1348,7 +1349,7 @@ function Rooms({ rowStyle = "band" }: { rowStyle?: RowStyle }) {
               key={p.seat}
               className="-ml-[10px] first:ml-0 rounded-full shadow-[0_0_0_2px_var(--color-surface)]"
             >
-              <RowFace p={p} size={26} tip={false} />
+              <RowFace p={p} size={26} rimScale={0.7} tip={false} />
             </span>
           );
           const inside = (
@@ -2895,6 +2896,7 @@ function WhoSitsOnThem() {
 }
 
 export function ConferenceCommittees() {
+  useDeviceViewport();
   return (
     <div className="bg-ground min-h-screen font-body text-ink">
       <SiteNav inner="w-full px-[20px] sm:px-[32px]" />

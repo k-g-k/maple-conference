@@ -113,6 +113,7 @@ import {
 } from "../../data/conference-committees/geography";
 import { SiteNav } from "../site-nav";
 import { LobbyingDisclosures } from "./lobbying";
+import { useDeviceViewport } from "../use-device-viewport";
 // The writing step, the review step and the three containers it is being
 // compared in. The page decides which container a route asks for; none of them
 // knows about the others.
@@ -4055,6 +4056,7 @@ export function ConferenceCommittee({
 }: {
   style?: ReviewStyle;
 }) {
+  useDeviceViewport();
   const { slug } = useParams();
   const c = slug ? BY_SLUG[slug] : undefined;
   if (!c) return <NoCommittee />;
