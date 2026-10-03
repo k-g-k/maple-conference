@@ -311,8 +311,19 @@ export function ConferenceCompose({
   const [save, setSave] = useState<"none" | "saving" | "saved" | "fading">(
     "none",
   );
+  const [keyboard, setKeyboard] = useState(false);
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const read = () => setKeyboard(window.innerHeight - vv.height > 120);
+    read();
+    vv.addEventListener("resize", read);
+    return () => vv.removeEventListener("resize", read);
+  }, []);
   const [everSaved, setEverSaved] = useState(false);
-  const [showDelete, setShowDelete] = useState(false);
+  const [showDelete, setShowDelete] = useState(
+    () => draft.body.trim().length > 0,
+  );
   useEffect(() => {
     if (save === "none" && everSaved) setShowDelete(true);
     if (save === "saved") setEverSaved(true);
@@ -374,7 +385,7 @@ export function ConferenceCompose({
             sentences, not one-word stances, and on a panel's width they wrapped
             into a block a reader had to pick apart. */}
         <ComposeLabel>{COPY.positionLabel}</ComposeLabel>
-        <div className="flex flex-col gap-[8px] mb-[20px]">
+        <div className="flex flex-col gap-[8px] mb-[32px] lg:mb-[20px]">
           {CONFERENCE_POSITIONS.map((o) => {
             const on = draft.position === o.k;
             return (
@@ -434,7 +445,13 @@ export function ConferenceCompose({
         </div>
       </div>
 
-      <div className="shrink-0 flex items-center justify-end gap-[12px] mt-[8px] pb-[4px] lg:mt-0 lg:pb-0">
+      <div
+        className={`shrink-0 flex items-center justify-end gap-[12px] mt-[8px] pb-[4px] lg:mt-0 lg:pb-0 lg:static lg:bg-transparent lg:pt-0 ${
+          keyboard
+            ? ""
+            : "sticky bottom-0 bg-ground pt-[14px] pb-[env(safe-area-inset-bottom)]"
+        }`}
+      >
         {save !== "none" && (
           // Far left, on the buttons' own line: it reports on the thing the
           // buttons act on, and a line of its own would make it an event.
@@ -460,7 +477,7 @@ export function ConferenceCompose({
               onChange({ body: "", position: STARTING_DRAFT.position });
               onCancel();
             }}
-            className="font-body font-semibold text-sm text-ink-muted hover:text-ink cursor-pointer px-[8px] py-[8px] animate-[tip-in_500ms_ease-out] motion-reduce:animate-none"
+            className="font-body font-semibold text-sm text-ink-muted hover:text-ink cursor-pointer px-[12px] py-[14px] sm:px-[8px] sm:py-[8px]"
           >
             {COPY.cancel}
           </button>
@@ -471,7 +488,7 @@ export function ConferenceCompose({
           // button answers nothing: the press is how the reader finds out what
           // is missing, and the field is where the answer arrives.
           aria-disabled={empty}
-          className={`font-body font-semibold text-sm px-[18px] py-[8px] rounded-control cursor-pointer transition-colors ${
+          className={`font-body font-semibold text-sm px-[24px] py-[14px] sm:px-[18px] sm:py-[8px] rounded-control cursor-pointer transition-colors ${
             empty
               ? "bg-brand/35 text-ink-inverse"
               : "bg-brand text-ink-inverse hover:bg-brand-hover"
@@ -827,12 +844,12 @@ export function ReviewActions({
 }) {
   const empty = draft.body.trim().length === 0;
   const quiet =
-    "font-body font-semibold text-sm text-ink-muted hover:text-ink cursor-pointer px-[8px] py-[8px]";
+    "font-body font-semibold text-sm text-ink-muted hover:text-ink cursor-pointer px-[12px] py-[14px] sm:px-[8px] sm:py-[8px]";
   const primary =
-    "bg-brand text-ink-inverse font-body font-semibold text-sm px-[18px] py-[8px] rounded-control cursor-pointer hover:bg-brand-hover disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-brand";
+    "bg-brand text-ink-inverse font-body font-semibold text-sm px-[24px] py-[14px] sm:px-[18px] sm:py-[8px] rounded-control cursor-pointer hover:bg-brand-hover disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-brand";
 
   return (
-    <div className="flex flex-col gap-[8px]">
+    <div className="flex flex-col gap-[8px] pt-[14px] pb-[env(safe-area-inset-bottom)] sm:pt-0 sm:pb-0">
       {/* Said once, beside the disabled button, rather than as a warning the
           reader meets before they have done anything wrong. */}
       {!draft.posted && empty && (
