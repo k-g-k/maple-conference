@@ -312,9 +312,11 @@ export function ConferenceCompose({
     "none",
   );
   const [everSaved, setEverSaved] = useState(false);
+  const [showDelete, setShowDelete] = useState(false);
   useEffect(() => {
-    if (save === "fading") setEverSaved(true);
-  }, [save]);
+    if (save === "none" && everSaved) setShowDelete(true);
+    if (save === "saved") setEverSaved(true);
+  }, [save, everSaved]);
   const field = useRef<HTMLTextAreaElement>(null);
   useEffect(() => {
     if (!draft.body.trim()) return setSave("none");
@@ -449,7 +451,7 @@ export function ConferenceCompose({
             {save === "saving" ? COPY.saving : COPY.saved}
           </span>
         )}
-        {everSaved && (
+        {showDelete && (
           <button
             // It says delete, so it deletes: the words go and the position
             // goes back to the default, and then the form is put away. Closing
@@ -458,7 +460,7 @@ export function ConferenceCompose({
               onChange({ body: "", position: STARTING_DRAFT.position });
               onCancel();
             }}
-            className="font-body font-semibold text-sm text-ink-muted hover:text-ink cursor-pointer px-[8px] py-[8px]"
+            className="font-body font-semibold text-sm text-ink-muted hover:text-ink cursor-pointer px-[8px] py-[8px] animate-[tip-in_500ms_ease-out] motion-reduce:animate-none"
           >
             {COPY.cancel}
           </button>
