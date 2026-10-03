@@ -311,32 +311,6 @@ export function ConferenceCompose({
   const [save, setSave] = useState<"none" | "saving" | "saved" | "fading">(
     "none",
   );
-  const box = useRef<HTMLDivElement>(null);
-  const [fit, setFit] = useState<number>();
-  useEffect(() => {
-    const vv = window.visualViewport;
-    const wide = window.matchMedia("(min-width: 1024px)");
-    const read = () => {
-      const el = box.current;
-      if (!el || !vv || wide.matches) return setFit(undefined);
-      const next = Math.max(
-        260,
-        Math.round(vv.height - el.getBoundingClientRect().top - 8),
-      );
-      setFit((v) => (v !== undefined && Math.abs(v - next) < 2 ? v : next));
-    };
-    read();
-    vv?.addEventListener("resize", read);
-    vv?.addEventListener("scroll", read);
-    window.addEventListener("resize", read);
-    wide.addEventListener("change", read);
-    return () => {
-      vv?.removeEventListener("resize", read);
-      vv?.removeEventListener("scroll", read);
-      window.removeEventListener("resize", read);
-      wide.removeEventListener("change", read);
-    };
-  }, [active]);
   const [everSaved, setEverSaved] = useState(false);
   useEffect(() => {
     if (save === "saved") setEverSaved(true);
@@ -392,12 +366,8 @@ export function ConferenceCompose({
     requestAnimationFrame(() => setAsking(true));
   };
   return (
-    <div
-      ref={box}
-      style={fit ? { height: fit } : undefined}
-      className="flex-1 min-h-0 overflow-hidden lg:overflow-visible lg:h-auto flex flex-col gap-[16px]"
-    >
-      <div className="min-h-0 overflow-y-auto overscroll-contain lg:overflow-visible flex flex-col shrink lg:shrink-0">
+    <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain lg:overflow-visible flex flex-col gap-[16px]">
+      <div className="flex flex-col lg:flex-1 lg:min-h-0">
         {/* One a row rather than a wrapping line of chips. Four of these are
             sentences, not one-word stances, and on a panel's width they wrapped
             into a block a reader had to pick apart. */}
@@ -428,9 +398,6 @@ export function ConferenceCompose({
             );
           })}
         </div>
-      </div>
-
-      <div className="flex-1 min-h-0 flex flex-col">
         <ComposeLabel>{COPY.bodyLabel}</ComposeLabel>
         <textarea
           ref={field}
@@ -451,7 +418,7 @@ export function ConferenceCompose({
           // merely looked at: focusing an empty field has not answered the
           // thing the red is asking for.
           onFocus={undefined}
-          className={`flex-1 min-h-[52px] lg:min-h-0 lg:max-h-[280px] w-full resize-none bg-surface border rounded-control p-[12px] font-body text-[16px] sm:text-base text-ink leading-[1.55] placeholder:text-base placeholder:text-ink-muted focus:outline-none ${
+          className={`h-[300px] lg:h-auto lg:flex-1 lg:min-h-0 lg:max-h-[280px] w-full resize-none bg-surface border rounded-control p-[12px] font-body text-[16px] sm:text-base text-ink leading-[1.55] placeholder:text-base placeholder:text-ink-muted focus:outline-none ${
             // The border carries the refusal. The placeholder is the field
             // telling you what to write, which is the same sentence whether or
             // not you have just been told off.
@@ -460,15 +427,12 @@ export function ConferenceCompose({
               : "border-line focus:border-brand"
           } ${asking ? "animate-ask motion-reduce:animate-none" : ""}`}
         />
+        <div className="shrink-0 mt-[14px]">
+          <DigestChoice draft={draft} onChange={onChange} six={six} />
+        </div>
       </div>
 
-      {/* The foot: the choice and the two buttons, which stay on screen with a
-          keyboard up because everything above them is what gives way. */}
-      <div className="shrink-0">
-        <DigestChoice draft={draft} onChange={onChange} six={six} />
-      </div>
-
-      <div className="shrink-0 flex items-center justify-end gap-[12px] mt-[36px] pb-[4px] lg:mt-0 lg:pb-0">
+      <div className="shrink-0 flex items-center justify-end gap-[12px] mt-[12px] pb-[4px] lg:mt-0 lg:pb-0">
         {save !== "none" && (
           // Far left, on the buttons' own line: it reports on the thing the
           // buttons act on, and a line of its own would make it an event.
