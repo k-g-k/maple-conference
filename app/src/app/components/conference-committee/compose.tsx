@@ -312,15 +312,18 @@ export function ConferenceCompose({
     "none",
   );
   const box = useRef<HTMLDivElement>(null);
-  const [maxH, setMaxH] = useState<number>();
+  const [fit, setFit] = useState<number>();
   useEffect(() => {
     const vv = window.visualViewport;
     const wide = window.matchMedia("(min-width: 1024px)");
     const read = () => {
       const el = box.current;
-      if (!el || !vv || wide.matches) return setMaxH(undefined);
-      const top = el.getBoundingClientRect().top;
-      setMaxH(Math.max(200, Math.round(vv.height - top - 8)));
+      if (!el || !vv || wide.matches) return setFit(undefined);
+      const next = Math.max(
+        260,
+        Math.round(vv.height - el.getBoundingClientRect().top - 8),
+      );
+      setFit((v) => (v !== undefined && Math.abs(v - next) < 2 ? v : next));
     };
     read();
     vv?.addEventListener("resize", read);
@@ -391,10 +394,10 @@ export function ConferenceCompose({
   return (
     <div
       ref={box}
-      style={maxH ? { maxHeight: maxH } : undefined}
-      className="flex-1 min-h-0 overflow-y-auto overscroll-contain lg:overflow-visible flex flex-col gap-[16px]"
+      style={fit ? { height: fit } : undefined}
+      className="flex-1 min-h-0 overflow-hidden lg:overflow-visible lg:h-auto flex flex-col gap-[16px]"
     >
-      <div className="flex flex-col lg:flex-1 lg:min-h-0">
+      <div className="min-h-0 overflow-y-auto overscroll-contain lg:overflow-visible flex flex-col shrink lg:shrink-0">
         {/* One a row rather than a wrapping line of chips. Four of these are
             sentences, not one-word stances, and on a panel's width they wrapped
             into a block a reader had to pick apart. */}
@@ -425,6 +428,9 @@ export function ConferenceCompose({
             );
           })}
         </div>
+      </div>
+
+      <div className="flex-1 min-h-0 flex flex-col">
         <ComposeLabel>{COPY.bodyLabel}</ComposeLabel>
         <textarea
           ref={field}
@@ -444,21 +450,8 @@ export function ConferenceCompose({
           // The red goes when there is something in the field, not when it is
           // merely looked at: focusing an empty field has not answered the
           // thing the red is asking for.
-          onFocus={() => {
-            if (window.matchMedia("(min-width: 1024px)").matches) return;
-            const el = field.current;
-            const scroller = box.current;
-            if (!el || !scroller) return;
-            // After the keyboard has had a frame to arrive, so the cap above
-            // has been recomputed and there is somewhere to scroll to.
-            setTimeout(() => {
-              scroller.scrollTo({
-                top: el.offsetTop - scroller.offsetTop - 8,
-                behavior: "smooth",
-              });
-            }, 250);
-          }}
-          className={`h-[190px] lg:h-auto lg:flex-1 lg:min-h-0 lg:max-h-[280px] w-full resize-none bg-surface border rounded-control p-[12px] font-body text-[16px] sm:text-base text-ink leading-[1.55] placeholder:text-base placeholder:text-ink-muted focus:outline-none ${
+          onFocus={undefined}
+          className={`flex-1 min-h-[52px] lg:min-h-0 lg:max-h-[280px] w-full resize-none bg-surface border rounded-control p-[12px] font-body text-[16px] sm:text-base text-ink leading-[1.55] placeholder:text-base placeholder:text-ink-muted focus:outline-none ${
             // The border carries the refusal. The placeholder is the field
             // telling you what to write, which is the same sentence whether or
             // not you have just been told off.
@@ -467,14 +460,12 @@ export function ConferenceCompose({
               : "border-line focus:border-brand"
           } ${asking ? "animate-ask motion-reduce:animate-none" : ""}`}
         />
-        {/* Directly under the field rather than at the foot of the panel:
-            the field is capped, so anything pinned to the bottom drifted away
-            from the thing it belongs to and left a hole in the middle. The
-            space now falls under both of them. The review step draws the same
-            block. */}
-        <div className="shrink-0 mt-[14px]">
-          <DigestChoice draft={draft} onChange={onChange} six={six} />
-        </div>
+      </div>
+
+      {/* The foot: the choice and the two buttons, which stay on screen with a
+          keyboard up because everything above them is what gives way. */}
+      <div className="shrink-0">
+        <DigestChoice draft={draft} onChange={onChange} six={six} />
       </div>
 
       <div className="shrink-0 flex items-center justify-end gap-[12px] mt-[36px] pb-[4px] lg:mt-0 lg:pb-0">
@@ -620,7 +611,7 @@ export function DigestChoice({
           the label, so pressing the link does not toggle the thing it is
           explaining. */}
       {draft.digest ? (
-        <p className="px-[12px] mt-[2px]">
+        <p className="px-[12px] -mt-[5px]">
           <button
             type="button"
             className="font-body font-semibold text-xs text-brand-ink hover:text-brand underline decoration-dotted underline-offset-[3px] cursor-pointer"
@@ -634,7 +625,7 @@ export function DigestChoice({
         // negative red either: nothing has gone wrong, the reader has chosen
         // something and is being asked whether they meant it. A step up in
         // weight as well, since italic light is the quietest thing here.
-        <p className="px-[12px] mt-[2px] font-body font-light italic text-xs text-ink-muted leading-[1.5]">
+        <p className="px-[12px] -mt-[5px] font-body font-light italic text-xs text-ink-muted leading-[1.5]">
           {mine.length > 0 ? (
             <>
               {COPY.digestOffLead}{" "}
