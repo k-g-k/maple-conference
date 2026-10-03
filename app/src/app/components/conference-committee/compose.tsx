@@ -316,7 +316,6 @@ export function ConferenceCompose({
     if (save === "saved") setEverSaved(true);
   }, [save]);
   const field = useRef<HTMLTextAreaElement>(null);
-  const box = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!draft.body.trim()) return setSave("none");
     // Nothing while the keys are going, then the answer 1.2s after they stop:
@@ -367,10 +366,7 @@ export function ConferenceCompose({
     requestAnimationFrame(() => setAsking(true));
   };
   return (
-    <div
-      ref={box}
-      className="flex-1 min-h-0 overflow-y-auto overscroll-contain lg:overflow-visible flex flex-col gap-[16px]"
-    >
+    <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain lg:overflow-visible flex flex-col gap-[16px]">
       <div className="flex flex-col lg:flex-1 lg:min-h-0">
         {/* One a row rather than a wrapping line of chips. Four of these are
             sentences, not one-word stances, and on a panel's width they wrapped
@@ -421,21 +417,8 @@ export function ConferenceCompose({
           // The red goes when there is something in the field, not when it is
           // merely looked at: focusing an empty field has not answered the
           // thing the red is asking for.
-          onFocus={() => {
-            if (window.matchMedia("(min-width: 1024px)").matches) return;
-            const up = () => {
-              const el = field.current;
-              const scroller = box.current;
-              if (!el || !scroller) return;
-              scroller.scrollTop +=
-                el.getBoundingClientRect().top -
-                scroller.getBoundingClientRect().top -
-                8;
-            };
-            up();
-            setTimeout(up, 350);
-          }}
-          className={`h-[200px] lg:h-auto lg:flex-1 lg:min-h-0 lg:max-h-[280px] w-full resize-none bg-surface border rounded-control p-[12px] font-body text-[16px] sm:text-base text-ink leading-[1.55] placeholder:text-base placeholder:text-ink-muted focus:outline-none ${
+          onFocus={undefined}
+          className={`h-[150px] lg:h-auto lg:flex-1 lg:min-h-0 lg:max-h-[280px] w-full resize-none bg-surface border rounded-control p-[12px] font-body text-[16px] sm:text-base text-ink leading-[1.55] placeholder:text-base placeholder:text-ink-muted focus:outline-none ${
             // The border carries the refusal. The placeholder is the field
             // telling you what to write, which is the same sentence whether or
             // not you have just been told off.
