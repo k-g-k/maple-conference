@@ -362,6 +362,9 @@ export function LobbyingDisclosures({
   headerTop?: string;
 }) {
   const [page, setPage] = useState(0);
+  const [size] = useState(() =>
+    typeof window !== "undefined" && window.innerWidth < 768 ? 1 : PAGE_SIZE,
+  );
   /**
    * How the table is ordered, or nothing for the order the data came in.
    *
@@ -394,14 +397,11 @@ export function LobbyingDisclosures({
   const senateLabel = c.senateBill?.n ?? "Senate";
   const houseLabel = c.houseBill?.n ?? "House";
 
-  const pageCount = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
+  const pageCount = Math.max(1, Math.ceil(rows.length / size));
   // Clamped as well as reset, because the row count changes with the committee
   // and the reader should never land on a blank page.
   const current = Math.min(page, pageCount - 1);
-  const paged = rows.slice(
-    current * PAGE_SIZE,
-    current * PAGE_SIZE + PAGE_SIZE,
-  );
+  const paged = rows.slice(current * size, current * size + size);
 
   /**
    * Why there is nothing here.

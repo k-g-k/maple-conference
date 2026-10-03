@@ -1465,7 +1465,7 @@ function Scan({
             // line of its own and the control onto a third; inline, the star
             // sits with the first words and the control follows the sentence
             // and wraps only when it has to.
-            <p className="font-body text-base text-ink leading-[1.6] mt-[48px]">
+            <p className="font-body text-base text-ink leading-[1.6] mt-[48px] mb-[32px] @[720px]:mb-0">
               <Star
                 aria-hidden
                 className="inline align-[-2px] mr-[8px] w-[14px] h-[14px] text-caution fill-caution"
@@ -1529,7 +1529,7 @@ function Scan({
             lets the label sit level with it in normal flow. A pinned heading's
             band is opaque and runs the full width of the card, so it would
             paint over the label. */}
-        <div className="@[720px]:-mt-[44px]">
+        <div className="hidden @[720px]:block @[720px]:-mt-[44px]">
           <ScanColumn head="Where bill texts match" count={settled.length}>
             {settled.map((x) => (
               <Row
