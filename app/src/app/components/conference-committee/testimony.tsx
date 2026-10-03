@@ -343,6 +343,26 @@ function PositionPicker({
     };
   }, [open]);
 
+  const [room, setRoom] = useState<number>();
+  useEffect(() => {
+    if (!open) return;
+    const read = () => {
+      const el = ref.current;
+      if (!el) return;
+      if (window.matchMedia("(min-width: 640px)").matches)
+        return setRoom(undefined);
+      setRoom(
+        Math.max(
+          200,
+          Math.round(window.innerWidth - el.getBoundingClientRect().left - 16),
+        ),
+      );
+    };
+    read();
+    window.addEventListener("resize", read);
+    return () => window.removeEventListener("resize", read);
+  }, [open]);
+
   const current = value === "all" ? null : POSITIONS[value];
 
   return (
@@ -354,8 +374,8 @@ function PositionPicker({
           rather than as a hole in it. */}
       <div
         className={`relative flex items-center h-[34px] rounded-pill border border-line hover:bg-wash transition-colors ${
-          current ? "pr-[4px]" : ""
-        }`}
+          open ? "bg-wash" : ""
+        } ${current ? "pr-[4px]" : ""}`}
       >
         <button
           onClick={() => setOpen((o) => !o)}
@@ -367,7 +387,9 @@ function PositionPicker({
               : "Filter by position"
           }
           className={`flex h-full items-center gap-[7px] rounded-l-pill cursor-pointer ${
-            current ? "pl-[9px] pr-[7px]" : "pl-[11px] pr-[10px]"
+            current
+              ? "pl-[14px] pr-[11px] sm:pl-[9px] sm:pr-[7px]"
+              : "pl-[18px] pr-[16px] sm:pl-[11px] sm:pr-[10px]"
           }`}
         >
           {current && (
@@ -411,7 +433,8 @@ function PositionPicker({
       {open && (
         <div
           role="listbox"
-          className="absolute left-0 top-[calc(100%+6px)] z-20 min-w-[236px] bg-surface border border-line rounded-control shadow-popover py-[4px]"
+          style={room ? { maxWidth: room } : undefined}
+          className="absolute left-0 top-[calc(100%+6px)] z-20 w-[min(340px,calc(100vw-32px))] sm:w-max sm:min-w-[236px] bg-surface border border-line rounded-control shadow-popover py-[8px] sm:py-[4px]"
         >
           {/* The sentence rather than the pill's two words: there is room for it
               here, and this is the list of what the four actually are. Labels
@@ -428,7 +451,7 @@ function PositionPicker({
                 onChange(p.k);
                 setOpen(false);
               }}
-              className={`flex items-center w-full text-left font-body text-sm px-[12px] py-[6px] cursor-pointer hover:bg-wash ${
+              className={`flex items-center w-full text-left font-body text-sm px-[16px] sm:px-[12px] py-[16px] sm:py-[6px] leading-[1.35] cursor-pointer hover:bg-wash ${
                 p.k === value ? "font-semibold text-brand" : "text-ink"
               }`}
             >
@@ -469,6 +492,26 @@ function AccountTypePicker({
     };
   }, [open]);
 
+  const [room, setRoom] = useState<number>();
+  useEffect(() => {
+    if (!open) return;
+    const read = () => {
+      const el = ref.current;
+      if (!el) return;
+      if (window.matchMedia("(min-width: 640px)").matches)
+        return setRoom(undefined);
+      setRoom(
+        Math.max(
+          200,
+          Math.round(window.innerWidth - el.getBoundingClientRect().left - 16),
+        ),
+      );
+    };
+    read();
+    window.addEventListener("resize", read);
+    return () => window.removeEventListener("resize", read);
+  }, [open]);
+
   const current = TYPE_FILTERS.find((t) => t.id === value) ?? TYPE_FILTERS[0];
   const label = current.id === "all" ? "All users" : current.label;
   const icon =
@@ -493,7 +536,8 @@ function AccountTypePicker({
       {open && (
         <div
           role="listbox"
-          className="absolute left-0 top-[calc(100%+6px)] z-20 min-w-[200px] bg-surface border border-line rounded-control shadow-popover py-[4px]"
+          style={room ? { maxWidth: room } : undefined}
+          className="absolute left-0 top-[calc(100%+6px)] z-20 min-w-[200px] bg-surface border border-line rounded-control shadow-popover py-[8px] sm:py-[4px]"
         >
           {TYPE_FILTERS.map((t) => (
             <button
@@ -504,7 +548,7 @@ function AccountTypePicker({
                 onChange(t.id);
                 setOpen(false);
               }}
-              className={`flex items-center gap-[8px] w-full text-left font-body text-sm px-[12px] py-[6px] cursor-pointer hover:bg-wash ${
+              className={`flex items-center gap-[8px] w-full text-left font-body text-sm px-[16px] sm:px-[12px] py-[16px] sm:py-[6px] cursor-pointer hover:bg-wash ${
                 t.id === value ? "font-semibold text-brand" : "text-ink"
               }`}
             >
@@ -771,19 +815,9 @@ export function SubmissionFeed({
       if (following && !user?.followedByViewer) return false;
       return true;
     }).length;
-  // Each control commits only if something survives it. Refusing the move is
-  // the same thing as undoing it the instant it empties the list, and it keeps
-  // whatever the reader set before, including Following.
-  const pickPosition = (v: PositionFilter) => {
-    if (countFor(v, typeFilter, followingOnly) > 0) setFilter(v);
-  };
-  const pickType = (v: AccountTypeFilter) => {
-    if (countFor(filter, v, followingOnly) > 0) setTypeFilter(v);
-  };
-  const toggleFollowing = () => {
-    const next = !followingOnly;
-    if (countFor(filter, typeFilter, next) > 0) setFollowingOnly(next);
-  };
+  const pickPosition = (v: PositionFilter) => setFilter(v);
+  const pickType = (v: AccountTypeFilter) => setTypeFilter(v);
+  const toggleFollowing = () => setFollowingOnly((v) => !v);
   const positionMatched =
     !showFilters || filter === "all"
       ? items

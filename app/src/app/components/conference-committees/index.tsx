@@ -125,7 +125,7 @@ function Hint({
           // and a centered bubble put half its width back over the faces.
           <span
             style={{ left: at.x + 12, top: at.y - 10 }}
-            className="pointer-events-none fixed z-[80] w-max max-w-[220px] animate-[tip-in_120ms_linear] opacity-90 -translate-y-full rounded-control bg-black/85 shadow-popover px-[7px] py-[3px] font-body text-2xs leading-[1.35] text-ink-inverse"
+            className="pointer-events-none fixed z-[80] w-max max-w-[220px] animate-[tip-in_120ms_linear] motion-reduce:animate-none opacity-90 -translate-y-full rounded-control bg-black/85 shadow-popover px-[7px] py-[3px] font-body text-2xs leading-[1.35] text-ink-inverse"
           >
             {text}
           </span>,
@@ -315,7 +315,7 @@ function RowFace({
       // card.
       // shrink-0, or a face in a flex row gives up width to a long line of
       // type beside it and stops being a circle.
-      className={`relative shrink-0 transition-[opacity,filter] ease-out ${
+      className={`relative shrink-0 transition-[opacity,filter] ease-out motion-reduce:transition-none ${
         dim ? "duration-150" : "duration-200"
       } ${
         dim ? (soft ? (lift ? "opacity-75" : "opacity-60") : "opacity-35") : ""
@@ -1405,14 +1405,14 @@ function Rooms({ rowStyle = "band" }: { rowStyle?: RowStyle }) {
           mapHint ? (
             <span
               style={{ left: popAt.x + 14, top: popAt.y + 14 }}
-              className="pointer-events-none fixed z-[80] w-max animate-[tip-in_120ms_linear] opacity-90 rounded-control bg-surface border border-line shadow-popover px-[7px] py-[3px] font-body font-semibold text-2xs leading-[1.35] text-ink-muted"
+              className="pointer-events-none fixed z-[80] w-max animate-[tip-in_120ms_linear] motion-reduce:animate-none opacity-90 rounded-control bg-surface border border-line shadow-popover px-[7px] py-[3px] font-body font-semibold text-2xs leading-[1.35] text-ink-muted"
             >
               {mapHint}
             </span>
           ) : (
             <span
               style={{ left: popAt.x + 14, top: popAt.y + 14 }}
-              className="pointer-events-none fixed z-[80] w-max max-w-[300px] animate-[tip-in_120ms_linear] rounded-card bg-surface border border-line shadow-popover px-[13px] py-[10px] font-body text-sm text-ink-muted leading-[1.55]"
+              className="pointer-events-none fixed z-[80] w-max max-w-[300px] animate-[tip-in_120ms_linear] motion-reduce:animate-none rounded-card bg-surface border border-line shadow-popover px-[13px] py-[10px] font-body text-sm text-ink-muted leading-[1.55]"
             >
               {helper()}
             </span>
@@ -1423,7 +1423,7 @@ function Rooms({ rowStyle = "band" }: { rowStyle?: RowStyle }) {
         createPortal(
           <span
             style={{ left: tip.x, top: tip.y - 16 }}
-            className={`pointer-events-none fixed z-[80] w-max animate-[tip-in_120ms_linear] opacity-90 -translate-x-1/2 -translate-y-full rounded-control bg-surface border border-line shadow-popover px-[7px] py-[3px] font-body font-semibold text-2xs leading-[1.35] text-ink-muted`}
+            className={`pointer-events-none fixed z-[80] w-max animate-[tip-in_120ms_linear] motion-reduce:animate-none opacity-90 -translate-x-1/2 -translate-y-full rounded-control bg-surface border border-line shadow-popover px-[7px] py-[3px] font-body font-semibold text-2xs leading-[1.35] text-ink-muted`}
           >
             {tipClear ? "click to unselect" : "click to select"}
           </span>,

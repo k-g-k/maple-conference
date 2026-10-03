@@ -865,7 +865,7 @@ export function ReviewActions({
               {COPY.back}
             </button>
             <button
-              onClick={onPost}
+              onClick={undefined}
               disabled={empty}
               className={`${primary} ${stacked ? "w-full" : ""}`}
             >
