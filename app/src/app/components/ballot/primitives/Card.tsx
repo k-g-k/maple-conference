@@ -44,7 +44,7 @@ export function Card({
           </div>
         ))}
       {subtitle && (
-        <p className="font-body text-sm text-ink-muted mb-[14px]">
+        <p className="font-body text-sm text-ink-mid mb-[14px]">
           {subtitle}
         </p>
       )}

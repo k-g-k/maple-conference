@@ -39,7 +39,7 @@ export function LineageStrip({ bill }: { bill: BillRecord }) {
                 className={
                   here
                     ? "font-body font-semibold text-sm text-ink"
-                    : "font-body text-sm text-ink-muted"
+                    : "font-body text-sm text-ink-mid"
                 }
               >
                 {n}
@@ -71,7 +71,7 @@ export function LineageStrip({ bill }: { bill: BillRecord }) {
           {/* What the chain means, in one line. The numbers alone tell a reader
               who already knows how the legislature works; this is for everyone
               else. */}
-          <span className="font-body text-sm text-ink-muted">
+          <span className="font-body text-sm text-ink-mid">
             {bill.kind === "Amendment" ? (
               <>
                 · {bill.number} is the{" "}

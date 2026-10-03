@@ -36,14 +36,14 @@ export function FinanceLedger({
             <p className="font-body font-semibold text-2xl text-ink mt-[8px]">
               {c.total}
             </p>
-            <p className="font-body text-xs text-ink-muted">
+            <p className="font-body text-xs text-ink-mid">
               total contributions · {c.cash} cash · {c.inKind} in-kind ·{" "}
               {c.spent} spent
             </p>
             <p className="font-body text-sm text-ink mt-[8px] leading-[1.5]">
               {c.note}
             </p>
-            <p className="font-body font-semibold text-2xs text-ink-muted mt-[14px] mb-[6px]">
+            <p className="font-body font-semibold text-2xs text-ink-mid mt-[14px] mb-[6px]">
               Top donors
             </p>
             {c.donors.length ? (
@@ -66,7 +66,7 @@ export function FinanceLedger({
               // filed nothing is a fact, and an empty gap under a heading reads
               // as something that failed to load.
               <div className="flex-1 bg-sunken rounded-panel px-[14px] py-[12px]">
-                <p className="font-body text-sm text-ink-muted leading-[1.5]">
+                <p className="font-body text-sm text-ink-mid leading-[1.5]">
                   None reported in this filing window.
                 </p>
               </div>

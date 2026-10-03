@@ -72,7 +72,7 @@ function EntryActions({ name }: { name: string }) {
         aria-haspopup="menu"
         aria-expanded={open}
         aria-label={`More actions for ${name}`}
-        className="flex items-center justify-center w-[30px] h-[30px] rounded-control text-ink-muted hover:text-ink hover:bg-wash cursor-pointer transition-colors"
+        className="flex items-center justify-center w-[30px] h-[30px] rounded-control text-ink-mid hover:text-ink hover:bg-wash cursor-pointer transition-colors"
       >
         <MoreVertical className="w-[19px] h-[19px]" />
       </button>
@@ -96,7 +96,7 @@ function EntryActions({ name }: { name: string }) {
               onClick={() => setOpen(false)}
               className="flex items-center gap-[9px] w-full text-left font-body text-sm text-ink px-[12px] py-[7px] cursor-pointer hover:bg-wash"
             >
-              <Icon className="w-[15px] h-[15px] shrink-0 text-ink-muted" />
+              <Icon className="w-[15px] h-[15px] shrink-0 text-ink-mid" />
               {label}
             </button>
           ))}
@@ -233,7 +233,7 @@ export function SubmissionEntry({
                 actions ? "flex" : "hidden @[600px]:flex"
               }`}
             >
-              <span className="hidden @[600px]:inline font-body text-xs text-ink-muted whitespace-nowrap mr-[2px]">
+              <span className="hidden @[600px]:inline font-body text-xs text-ink-mid whitespace-nowrap mr-[2px]">
                 {t.date}
               </span>
               {actions && <EntryActions name={user.name} />}
@@ -268,7 +268,7 @@ export function SubmissionEntry({
           {/* Narrow, the card closes on what the header could not hold: the
               position on the left, the date on the right, one line. */}
           <div className="@[600px]:hidden flex items-center justify-end mt-[12px]">
-            <span className="font-body text-xs text-ink-muted whitespace-nowrap">
+            <span className="font-body text-xs text-ink-mid whitespace-nowrap">
               {t.date}
             </span>
           </div>
@@ -415,7 +415,7 @@ function PositionPicker({
           {!current && (
             <ChevronDown
               aria-hidden
-              className="w-[13px] h-[13px] text-ink-muted"
+              className="w-[13px] h-[13px] text-ink-mid"
             />
           )}
         </button>
@@ -425,7 +425,7 @@ function PositionPicker({
           <button
             onClick={() => onChange("all")}
             aria-label={`Clear the ${current.short} filter`}
-            className="relative z-10 flex items-center justify-center w-[26px] h-[26px] rounded-full text-ink-muted hover:text-ink hover:bg-wash-strong cursor-pointer transition-colors"
+            className="relative z-10 flex items-center justify-center w-[26px] h-[26px] rounded-full text-ink-mid hover:text-ink hover:bg-wash-strong cursor-pointer transition-colors"
           >
             <X aria-hidden className="w-[13px] h-[13px]" />
           </button>
@@ -602,7 +602,7 @@ function SubmissionModal({
       headerActions={
         <button
           aria-label="Share this submission"
-          className="text-ink-muted hover:text-ink cursor-pointer"
+          className="text-ink-mid hover:text-ink cursor-pointer"
         >
           <Share className="w-[19px] h-[19px]" />
         </button>
@@ -618,7 +618,7 @@ function SubmissionModal({
       aside={
         // Everything that acts on this submission rather than being part of it.
         <div className="bg-surface rounded-control p-[16px]">
-          <p className="font-body font-semibold text-2xs text-ink-muted mb-[10px]">
+          <p className="font-body font-semibold text-2xs text-ink-mid mb-[10px]">
             Actions
           </p>
           <div className="flex flex-col gap-[8px]">
@@ -923,7 +923,7 @@ export function SubmissionFeed({
                       // The panel's own plus takes a gray wash, because it
                       // sits on the panel's chrome. This one sits in the page,
                       // where the way in should look like the thing it opens.
-                      className="block p-[6px] rounded-control text-ink-muted hover:bg-brand hover:text-ink-inverse cursor-pointer transition-colors"
+                      className="block p-[6px] rounded-control text-ink-mid hover:bg-brand hover:text-ink-inverse cursor-pointer transition-colors"
                     >
                       <Plus className="w-[18px] h-[18px]" />
                     </button>
@@ -974,7 +974,7 @@ export function SubmissionFeed({
               ? "No public input yet"
               : "Nothing matches these filters"}
           </p>
-          <p className="font-body text-sm text-ink-muted leading-[1.5] max-w-[560px] mx-auto">
+          <p className="font-body text-sm text-ink-mid leading-[1.5] max-w-[560px] mx-auto">
             {nothingFiled
               ? "No public input has been submitted yet."
               : "Try widening your selection to see more input on this topic."}

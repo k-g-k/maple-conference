@@ -22,7 +22,7 @@ const PAGE_SIZE = 10;
 const POSITION_TONE: Record<string, string> = {
   Support: "bg-positive-soft text-positive-ink",
   Oppose: "bg-negative-soft text-negative-ink",
-  Neutral: "bg-wash text-ink-muted",
+  Neutral: "bg-wash text-ink-mid",
 };
 
 function Position({ position }: { position: string }) {
@@ -37,7 +37,7 @@ function Position({ position }: { position: string }) {
   return (
     <span
       className={`inline-block font-body font-semibold text-2xs px-[9px] py-[2px] rounded-pill ${
-        POSITION_TONE[position] ?? "bg-wash text-ink-muted"
+        POSITION_TONE[position] ?? "bg-wash text-ink-mid"
       }`}
     >
       {position}
@@ -126,7 +126,7 @@ function Head({
   align?: "left" | "right";
 }) {
   const type =
-    "font-body font-semibold text-2xs uppercase tracking-[0.07em] text-ink-muted";
+    "font-body font-semibold text-2xs uppercase tracking-[0.07em] text-ink-mid";
   if (!sortKey || !onSort) return <span className={type}>{children}</span>;
   const on = sort?.key === sortKey;
   return (
@@ -187,7 +187,7 @@ function Lobbyists({ org }: { org: OrgLobbying }) {
   // lobbyist, and the column beside it says there was nobody behind them.
   if (org.ownFiling || org.lobbyists.length === 1)
     return (
-      <span className="font-body text-sm text-ink-muted">
+      <span className="font-body text-sm text-ink-mid">
         {org.ownFiling ? org.name : org.lobbyists[0]}
       </span>
     );
@@ -199,7 +199,7 @@ function Lobbyists({ org }: { org: OrgLobbying }) {
       // reader some other way: a tooltip hidden with `display: none` is not part
       // of the button's accessible name.
       aria-label={`${org.lobbyists.length} lobbyists: ${org.lobbyists.join(", ")}`}
-      className="group/fn relative inline-flex items-baseline text-left font-body text-sm text-ink-muted cursor-default underline decoration-dotted decoration-line-strong underline-offset-[4px]"
+      className="group/fn relative inline-flex items-baseline text-left font-body text-sm text-ink-mid cursor-default underline decoration-dotted decoration-line-strong underline-offset-[4px]"
     >
       {org.lobbyists.length} lobbyists
       <span
@@ -516,7 +516,7 @@ export function LobbyingDisclosures({
                   about the table rather than a control. */}
               <div className="flex flex-col gap-[6px] pt-[12px] sm:flex-row sm:items-center sm:justify-between sm:gap-[16px]">
                 <p
-                  className={`font-body text-xs text-ink-muted ${
+                  className={`font-body text-xs text-ink-mid ${
                     pageCount > 1 ? "hidden sm:block" : ""
                   }`}
                 >
@@ -535,7 +535,7 @@ export function LobbyingDisclosures({
           </>
         ) : (
           <Span>
-            <p className="font-body text-sm text-ink-muted leading-[1.65] max-w-[74ch] border-l-2 border-line-strong pl-[16px]">
+            <p className="font-body text-sm text-ink-mid leading-[1.65] max-w-[74ch] border-l-2 border-line-strong pl-[16px]">
               {empty}
             </p>
           </Span>

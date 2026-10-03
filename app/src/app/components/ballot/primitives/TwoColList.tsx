@@ -25,7 +25,7 @@ export function TwoColList({
     yes: boolean;
   }) => (
     <div className="flex-1">
-      <p className="font-body font-semibold text-sm text-ink-muted mb-[8px]">
+      <p className="font-body font-semibold text-sm text-ink-mid mb-[8px]">
         {title}
       </p>
       <div className="space-y-[6px]">

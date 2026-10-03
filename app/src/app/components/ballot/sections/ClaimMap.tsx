@@ -23,7 +23,7 @@ export function ClaimMap({ rows }: { rows: ClaimRow[] }) {
             <p className="font-body font-semibold text-lg text-ink leading-[1.45]">
               {r.claim}
             </p>
-            <div className="font-body text-sm text-ink-muted mt-[4px] leading-[1.55]">
+            <div className="font-body text-sm text-ink-mid mt-[4px] leading-[1.55]">
               {verified ? (
                 <ShieldCheck className="w-[14px] h-[14px] text-outside-ink inline-block align-[-2px] mr-[4px]" />
               ) : (

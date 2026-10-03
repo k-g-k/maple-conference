@@ -14,7 +14,7 @@ export function EmptyState({
       <p className="font-body font-semibold text-lg text-ink mb-[4px]">
         {title}
       </p>
-      <p className="font-body text-sm text-ink-muted leading-[1.5] max-w-[560px] mx-auto">
+      <p className="font-body text-sm text-ink-mid leading-[1.5] max-w-[560px] mx-auto">
         {body}
       </p>
       <div className="flex gap-[10px] justify-center mt-[14px] flex-wrap">

@@ -30,7 +30,7 @@ export function ArgColumn({ title, args }: { title: string; args: Arg[] }) {
         {title}
       </p>
       {args.length === 0 && (
-        <p className="font-body text-sm text-ink-muted">
+        <p className="font-body text-sm text-ink-mid">
           No arguments from this source type on file.
         </p>
       )}
@@ -42,7 +42,7 @@ export function ArgColumn({ title, args }: { title: string; args: Arg[] }) {
           <p className="font-body font-semibold text-sm text-ink">
             {a.title}
           </p>
-          <p className="font-body text-sm text-ink-muted leading-[1.5]">
+          <p className="font-body text-sm text-ink-mid leading-[1.5]">
             {a.body}
           </p>
         </div>

@@ -203,7 +203,7 @@ function SubHead({ title, note }: { title: string; note?: string }) {
         {title}
       </h3>
       {note && (
-        <p className="font-body text-sm text-ink-muted mb-[14px] max-w-[74ch]">
+        <p className="font-body text-sm text-ink-mid mb-[14px] max-w-[74ch]">
           {note}
         </p>
       )}
@@ -274,14 +274,14 @@ function StageCard({
       }`}
     >
       <p
-        className={`font-body font-semibold text-2xs uppercase tracking-[0.08em] ${CHAMBER_INK[s.chamber] ?? "text-ink-muted"}`}
+        className={`font-body font-semibold text-2xs uppercase tracking-[0.08em] ${CHAMBER_INK[s.chamber] ?? "text-ink-mid"}`}
       >
         {s.chamber}
       </p>
       <p className="font-display font-medium text-lg text-ink mt-[6px] leading-[1.2]">
         {s.label}
       </p>
-      <p className="font-body text-xs text-ink-muted mt-[4px]">{s.date}</p>
+      <p className="font-body text-xs text-ink-mid mt-[4px]">{s.date}</p>
       {/* The eyebrow already names the chamber, so this says only what kind of
           step it was. "Roll call" was the clerk's word for it. */}
       <p className="font-body text-xs text-ink-faint mt-[8px]">
@@ -335,7 +335,7 @@ export function Conferees({
           showing.length > 0 &&
           !showing.some((k) => k.startsWith("S:") === (ch === "S"))
             ? "text-ink-faint"
-            : "text-ink-muted"
+            : "text-ink-mid"
         }`}
       >
         {ch === "S" ? "Senate" : "House"}
@@ -404,7 +404,7 @@ export function Conferees({
                     </span>
                     <span
                       className={`block font-body text-xs leading-[1.4] ${
-                        back ? "text-ink-faint" : "text-ink-muted"
+                        back ? "text-ink-faint" : "text-ink-mid"
                       }`}
                     >
                       {MINE_FULL[m.key] ?? m.district}
@@ -727,7 +727,7 @@ export function VoteMap({
               which is rarely the whole chamber. */}
       <p
         className={`font-body font-semibold text-2xs uppercase tracking-[0.08em] mb-[8px] [transition:color_120ms_ease] ${
-          aside ? "text-ink-faint" : "text-ink-muted"
+          aside ? "text-ink-faint" : "text-ink-mid"
         }`}
       >
         {label ?? (chamber === "house" ? "House" : "Senate")} ·{" "}
@@ -977,7 +977,7 @@ function ProvisionRow({ p }: { p: Provision }) {
         </span>
         <div className="min-w-0">
           <p className="font-body text-base text-ink leading-[1.5]">{p.t}</p>
-          <p className="font-body text-sm text-ink-muted mt-[4px]">
+          <p className="font-body text-sm text-ink-mid mt-[4px]">
             {p.from.length ? (
               <>
                 traced to{" "}
@@ -993,13 +993,13 @@ function ProvisionRow({ p }: { p: Provision }) {
                     judgement rather than a record. */}
             <span
               className={`ml-[8px] font-semibold text-2xs uppercase tracking-[0.08em] ${
-                p.conf === "documented" ? "text-ink-muted" : "text-user-ink"
+                p.conf === "documented" ? "text-ink-mid" : "text-user-ink"
               }`}
             >
               {p.conf}
             </span>
           </p>
-          <p className="font-body text-sm text-ink-muted leading-[1.6] mt-[6px] max-w-[74ch]">
+          <p className="font-body text-sm text-ink-mid leading-[1.6] mt-[6px] max-w-[74ch]">
             {p.why}
           </p>
         </div>
@@ -1081,7 +1081,7 @@ export function BillLineageSection({
         question="How did it get here?"
         answer={
           <Span>
-            <p className="font-body text-sm text-ink-muted leading-[1.65] max-w-[74ch]">
+            <p className="font-body text-sm text-ink-mid leading-[1.65] max-w-[74ch]">
               This bill&rsquo;s route has not been traced yet. Tracing one means
               following its text back through every draft and amendment it came
               out of, which the legislature&rsquo;s own record does not do for
@@ -1417,7 +1417,7 @@ function TracedLineage({
       question="How did it get here?"
       answer={
         <Span>
-          <p className="font-body text-sm text-ink-muted leading-[1.65] max-w-[74ch]">
+          <p className="font-body text-sm text-ink-mid leading-[1.65] max-w-[74ch]">
             Bills in Massachusetts get renumbered after any modification to
             their text. Newer versions of the same bill often contain missing or
             incomplete information. We made this bill tracker to make it easier
@@ -1516,7 +1516,7 @@ function TracedLineage({
                 )}
 
                 {roll && (
-                  <p className="font-body text-sm text-ink-muted mt-[12px]">
+                  <p className="font-body text-sm text-ink-mid mt-[12px]">
                     <span className="font-semibold text-yea">
                       {
                         Object.values(roll.votes).filter((v) => v === "Y")
@@ -1557,7 +1557,7 @@ function TracedLineage({
                       one of them, so it says so rather than repeating the vote
                       the card has already named twice above. */}
                   {(committee || roll) && (
-                    <p className="font-body font-semibold text-2xs uppercase tracking-[0.08em] text-ink-muted mb-[8px]">
+                    <p className="font-body font-semibold text-2xs uppercase tracking-[0.08em] text-ink-mid mb-[8px]">
                       {committee ? committee.name : "How each voted"}
                     </p>
                   )}
@@ -1579,7 +1579,7 @@ function TracedLineage({
                       disabled={!canStep}
                       onClick={() => step(-1)}
                       aria-label={paged ? "Previous six" : "Previous member"}
-                      className="shrink-0 self-stretch w-[25px] flex items-center justify-center text-ink-muted hover:text-ink hover:bg-wash-strong disabled:text-ink-faint disabled:hover:bg-transparent disabled:cursor-default cursor-pointer opacity-0 transition-opacity duration-150 group-hover:opacity-100 focus-visible:opacity-100"
+                      className="shrink-0 self-stretch w-[25px] flex items-center justify-center text-ink-mid hover:text-ink hover:bg-wash-strong disabled:text-ink-faint disabled:hover:bg-transparent disabled:cursor-default cursor-pointer opacity-0 transition-opacity duration-150 group-hover:opacity-100 focus-visible:opacity-100"
                     >
                       <ChevronLeft className="w-[14px] h-[14px]" />
                     </button>
@@ -1695,7 +1695,7 @@ function TracedLineage({
                                       </span>
                                     )}
                                   </span>
-                                  <span className="block mt-[3px] font-body text-xs text-ink-muted leading-[1.3]">
+                                  <span className="block mt-[3px] font-body text-xs text-ink-mid leading-[1.3]">
                                     {seat?.d}
                                     {/* With the district rather than the name: a
                                       vote is something the seat did, not part of
@@ -1732,7 +1732,7 @@ function TracedLineage({
                         // surface reads as somewhere to look rather than as
                         // something missing.
                         <div className="flex-1">
-                          <p className="font-body text-sm text-ink-muted leading-[1.5]">
+                          <p className="font-body text-sm text-ink-mid leading-[1.5]">
                             {roll
                               ? "Hover or click on a district to see the vote."
                               : "Hover or click on a district to see whose seat it is."}
@@ -1744,7 +1744,7 @@ function TracedLineage({
                       disabled={!canStep}
                       onClick={() => step(1)}
                       aria-label={paged ? "Next six" : "Next member"}
-                      className="shrink-0 self-stretch w-[25px] flex items-center justify-center text-ink-muted hover:text-ink hover:bg-wash-strong disabled:text-ink-faint disabled:hover:bg-transparent disabled:cursor-default cursor-pointer opacity-0 transition-opacity duration-150 group-hover:opacity-100 focus-visible:opacity-100"
+                      className="shrink-0 self-stretch w-[25px] flex items-center justify-center text-ink-mid hover:text-ink hover:bg-wash-strong disabled:text-ink-faint disabled:hover:bg-transparent disabled:cursor-default cursor-pointer opacity-0 transition-opacity duration-150 group-hover:opacity-100 focus-visible:opacity-100"
                     >
                       <ChevronRight className="w-[14px] h-[14px]" />
                     </button>
@@ -1777,7 +1777,7 @@ function TracedLineage({
                 // at a bill lights the district its sponsor represents.
                 <div>
                   <div>
-                    <p className="font-body font-semibold text-2xs uppercase tracking-[0.08em] text-ink-muted mb-[14px]">
+                    <p className="font-body font-semibold text-2xs uppercase tracking-[0.08em] text-ink-mid mb-[14px]">
                       Six bills, six sponsors
                     </p>
                     <ul className="flex flex-wrap gap-x-[24px] gap-y-[10px]">
@@ -1834,7 +1834,7 @@ function TracedLineage({
                                   </a>
                                 </Hint>
                               </span>
-                              <span className="block font-body text-xs text-ink-muted leading-[1.4]">
+                              <span className="block font-body text-xs text-ink-mid leading-[1.4]">
                                 {o.district}
                               </span>
                             </span>
@@ -1949,7 +1949,7 @@ function TracedLineage({
                   <p className="font-body font-semibold text-base text-ink leading-[1.4]">
                     {o.num} · {o.title}
                   </p>
-                  <p className="font-body text-sm text-ink-muted mt-[2px]">
+                  <p className="font-body text-sm text-ink-mid mt-[2px]">
                     {o.sponsor} · {o.district}
                     {o.note ? ` · ${o.note}` : ""}
                   </p>

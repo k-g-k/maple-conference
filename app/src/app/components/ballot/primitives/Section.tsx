@@ -48,7 +48,7 @@ export function Section({
           {title}
         </h2>
         {lede && (
-          <p className="font-body text-lg text-ink-muted max-w-[68ch]">
+          <p className="font-body text-lg text-ink-mid max-w-[68ch]">
             {lede}
           </p>
         )}

@@ -275,7 +275,7 @@ export function Audience({
  */
 function ComposeLabel({ children }: { children: ReactNode }) {
   return (
-    <p className="font-body font-semibold text-sm text-ink-muted mb-[8px]">
+    <p className="font-body font-semibold text-sm text-ink-mid mb-[8px]">
       {children}
     </p>
   );
@@ -437,7 +437,7 @@ export function ConferenceCompose({
           // merely looked at: focusing an empty field has not answered the
           // thing the red is asking for.
           onFocus={undefined}
-          className={`h-[150px] lg:h-auto lg:flex-1 lg:min-h-0 lg:max-h-[280px] w-full resize-none bg-surface border rounded-control p-[12px] font-body text-[16px] sm:text-base text-ink leading-[1.55] placeholder:text-base placeholder:text-ink-muted focus:outline-none ${
+          className={`h-[150px] lg:h-auto lg:flex-1 lg:min-h-0 lg:max-h-[280px] w-full resize-none bg-surface border rounded-control p-[12px] font-body text-[16px] sm:text-base text-ink leading-[1.55] placeholder:text-base placeholder:text-ink-mid focus:outline-none ${
             // The border carries the refusal. The placeholder is the field
             // telling you what to write, which is the same sentence whether or
             // not you have just been told off.
@@ -462,7 +462,7 @@ export function ConferenceCompose({
           // Far left, on the buttons' own line: it reports on the thing the
           // buttons act on, and a line of its own would make it an event.
           <span
-            className={`mr-auto inline-flex items-center gap-[5px] font-body text-xs text-ink-muted transition-opacity duration-500 motion-reduce:transition-none ${
+            className={`mr-auto inline-flex items-center gap-[5px] font-body text-xs text-ink-mid transition-opacity duration-500 motion-reduce:transition-none ${
               save === "fading" ? "opacity-0" : "opacity-100"
             }`}
           >
@@ -483,7 +483,7 @@ export function ConferenceCompose({
               onChange({ body: "", position: STARTING_DRAFT.position });
               onCancel();
             }}
-            className="font-body font-semibold text-sm text-ink-muted hover:text-ink cursor-pointer px-[12px] py-[14px] sm:px-[8px] sm:py-[8px]"
+            className="font-body font-semibold text-sm text-ink-mid hover:text-ink cursor-pointer px-[12px] py-[14px] sm:px-[8px] sm:py-[8px]"
           >
             {COPY.cancel}
           </button>
@@ -510,7 +510,7 @@ export function ConferenceCompose({
 /** A quiet label above a block of the review. The section heads' own voice. */
 function ReviewLabel({ children }: { children: ReactNode }) {
   return (
-    <p className="font-body font-semibold text-2xs uppercase tracking-[0.08em] text-ink-muted mb-[8px]">
+    <p className="font-body font-semibold text-2xs uppercase tracking-[0.08em] text-ink-mid mb-[8px]">
       {children}
     </p>
   );
@@ -614,7 +614,7 @@ export function DigestChoice({
         // negative red either: nothing has gone wrong, the reader has chosen
         // something and is being asked whether they meant it. A step up in
         // weight as well, since italic light is the quietest thing here.
-        <p className="px-[12px] -mt-[5px] font-body font-light italic text-xs text-ink-muted leading-[1.5]">
+        <p className="px-[12px] -mt-[5px] font-body font-light italic text-xs text-ink-mid leading-[1.5]">
           {mine.length > 0 ? (
             <>
               {COPY.digestOffLead}{" "}
@@ -729,7 +729,7 @@ export function ReviewSubmission({
           {/* One line rather than two: the label and the subject were saying
               the same thing in two registers, and the sentence they make
               together is shorter than either of them stacked. */}
-          <p className="font-body font-semibold text-sm text-ink-muted mb-[8px]">
+          <p className="font-body font-semibold text-sm text-ink-mid mb-[8px]">
             {COPY.submissionLabel}{" "}
             <em className="italic">
               {COPY.subjectPrefix.toLowerCase()} {subject}
@@ -790,7 +790,7 @@ export function ReviewContext({
             {COPY.postedDigest}
           </p>
         )}
-        <p className="font-body text-sm text-ink-muted leading-[1.6]">
+        <p className="font-body text-sm text-ink-mid leading-[1.6]">
           {COPY.postedRevise}
         </p>
       </div>
@@ -803,7 +803,7 @@ export function ReviewContext({
           the reader came to write. */}
       <div>
         <ReviewLabel>{COPY.rulesLabel}</ReviewLabel>
-        <ul className="list-disc list-outside pl-[16px] space-y-[8px] font-body text-xs text-ink-muted leading-[1.5] marker:text-ink-faint">
+        <ul className="list-disc list-outside pl-[16px] space-y-[8px] font-body text-xs text-ink-mid leading-[1.5] marker:text-ink-faint">
           {COPY.rules.map((r) => (
             <li key={r}>{r}</li>
           ))}
@@ -850,7 +850,7 @@ export function ReviewActions({
 }) {
   const empty = draft.body.trim().length === 0;
   const quiet =
-    "font-body font-semibold text-sm text-ink-muted hover:text-ink cursor-pointer px-[12px] py-[14px] sm:px-[8px] sm:py-[8px]";
+    "font-body font-semibold text-sm text-ink-mid hover:text-ink cursor-pointer px-[12px] py-[14px] sm:px-[8px] sm:py-[8px]";
   const primary =
     "bg-brand text-ink-inverse font-body font-semibold text-sm px-[24px] py-[14px] sm:px-[18px] sm:py-[8px] rounded-control cursor-pointer hover:bg-brand-hover disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-brand";
 
@@ -859,7 +859,7 @@ export function ReviewActions({
       {/* Said once, beside the disabled button, rather than as a warning the
           reader meets before they have done anything wrong. */}
       {!draft.posted && empty && (
-        <p className="font-body text-xs text-ink-muted text-right">
+        <p className="font-body text-xs text-ink-mid text-right">
           {COPY.emptyHint}
         </p>
       )}

@@ -27,7 +27,7 @@ export function FilterChip({
       className={`font-body font-semibold text-xs px-[10px] py-[4px] rounded-pill border cursor-pointer transition-colors ${
         active
           ? "bg-brand-soft border-brand-edge text-brand-ink"
-          : "border-line-strong text-ink-muted hover:bg-wash"
+          : "border-line-strong text-ink-mid hover:bg-wash"
       } ${className}`}
     >
       {children}

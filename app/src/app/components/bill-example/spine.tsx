@@ -453,7 +453,7 @@ export function Synth({
 /** A quiet label above a block of evidence. */
 export function Label({ children }: { children: ReactNode }) {
   return (
-    <p className="font-body font-semibold text-xs text-ink-muted mb-[10px]">
+    <p className="font-body font-semibold text-xs text-ink-mid mb-[10px]">
       {children}
     </p>
   );
@@ -611,7 +611,7 @@ export function Disclosure({
               ? `font-display font-medium text-ink text-left ${
                   size === "large" ? "text-xl leading-[1.3]" : "text-xl"
                 }`
-              : "font-body font-semibold text-sm text-ink-muted")
+              : "font-body font-semibold text-sm text-ink-mid")
           } ${
             // Never lighter on hover. A label that fades when you reach for
             // it reads as going away rather than as answering. A heading is
@@ -776,7 +776,7 @@ export function Callout({
 }) {
   return (
     <div
-      className={`font-body text-lg sm:text-xl text-ink-muted leading-[1.5] ${
+      className={`font-body text-lg sm:text-xl text-ink-mid leading-[1.5] ${
         variant === "panel"
           ? "mt-[20px] bg-sunken rounded-panel px-[18px] py-[16px]"
           : "mt-[22px] mb-[22px]"

@@ -161,7 +161,7 @@ export function TestimonyEntry({
               )}
             </div>
             <div className="shrink-0 self-start flex items-center gap-[2px] -mt-[5px] -mr-[6px]">
-              <span className="font-body text-xs text-ink-muted whitespace-nowrap mr-[2px]">
+              <span className="font-body text-xs text-ink-mid whitespace-nowrap mr-[2px]">
                 {t.date}
               </span>
               <EntryActions name={user.name} />
@@ -219,7 +219,7 @@ function EntryActions({ name }: { name: string }) {
         aria-haspopup="menu"
         aria-expanded={open}
         aria-label={`More actions for ${name}`}
-        className="flex items-center justify-center w-[30px] h-[30px] rounded-control text-ink-muted hover:text-ink hover:bg-wash cursor-pointer transition-colors"
+        className="flex items-center justify-center w-[30px] h-[30px] rounded-control text-ink-mid hover:text-ink hover:bg-wash cursor-pointer transition-colors"
       >
         <MoreVertical className="w-[19px] h-[19px]" />
       </button>
@@ -243,7 +243,7 @@ function EntryActions({ name }: { name: string }) {
               onClick={() => setOpen(false)}
               className="flex items-center gap-[9px] w-full text-left font-body text-sm text-ink px-[12px] py-[7px] cursor-pointer hover:bg-wash"
             >
-              <Icon className="w-[15px] h-[15px] shrink-0 text-ink-muted" />
+              <Icon className="w-[15px] h-[15px] shrink-0 text-ink-mid" />
               {label}
             </button>
           ))}
@@ -499,7 +499,7 @@ const STANCE_MARK: Record<
 > = {
   endorse: { Icon: EndorseIcon, hex: "var(--color-positive-ink)" },
   oppose: { Icon: OpposeIcon, hex: "var(--color-caution-ink)" },
-  "no-position": { Icon: NeutralIcon, hex: "var(--color-ink-muted)" },
+  "no-position": { Icon: NeutralIcon, hex: "var(--color-ink-mid)" },
 };
 
 // Opens a testimony in place. The body is the same TestimonyEntry the feed
@@ -547,7 +547,7 @@ function TestimonyModal({
       headerActions={
         <button
           aria-label="Share this testimony"
-          className="text-ink-muted hover:text-ink cursor-pointer"
+          className="text-ink-mid hover:text-ink cursor-pointer"
         >
           <Share className="w-[19px] h-[19px]" />
         </button>
@@ -563,7 +563,7 @@ function TestimonyModal({
       aside={
         // Everything that acts on this testimony rather than being part of it.
         <div className="bg-surface rounded-control p-[16px]">
-          <p className="font-body font-semibold text-2xs text-ink-muted mb-[10px]">
+          <p className="font-body font-semibold text-2xs text-ink-mid mb-[10px]">
             Actions
           </p>
           <div className="flex flex-col gap-[8px]">
@@ -619,10 +619,10 @@ export function ComposeGuidance({ compact = false }: { compact?: boolean }) {
   return (
     <div className="flex flex-col gap-[16px]">
       <div className={compact ? "" : "bg-surface rounded-control p-[20px]"}>
-        <p className="font-body font-semibold text-2xs text-ink-muted mb-[8px]">
+        <p className="font-body font-semibold text-2xs text-ink-mid mb-[8px]">
           Before you post
         </p>
-        <ul className="list-disc list-outside pl-[16px] space-y-[8px] font-body text-xs text-ink-muted leading-[1.5] marker:text-ink-faint">
+        <ul className="list-disc list-outside pl-[16px] space-y-[8px] font-body text-xs text-ink-mid leading-[1.5] marker:text-ink-faint">
           <li>
             Write in your own words. MAPLE does not edit or rank what you say.
           </li>
@@ -636,12 +636,12 @@ export function ComposeGuidance({ compact = false }: { compact?: boolean }) {
         href="https://www.mapletestimony.org/learn/writing-effective-testimony"
         target="_blank"
         rel="noopener noreferrer"
-        className={`font-body text-xs text-ink-muted hover:text-brand ${compact ? "" : "px-[16px]"}`}
+        className={`font-body text-xs text-ink-mid hover:text-brand ${compact ? "" : "px-[16px]"}`}
       >
         Testimony writing tips
       </a>
       <button
-        className={`text-left font-body text-xs text-ink-muted hover:text-brand cursor-pointer ${compact ? "" : "px-[16px]"}`}
+        className={`text-left font-body text-xs text-ink-mid hover:text-brand cursor-pointer ${compact ? "" : "px-[16px]"}`}
       >
         View our code of conduct
       </button>
@@ -679,7 +679,7 @@ export function ComposeFields({
         grow ? "flex flex-col flex-1 min-h-0" : ""
       }`}
     >
-      <p className="font-body font-semibold text-2xs text-ink-muted mb-[8px]">
+      <p className="font-body font-semibold text-2xs text-ink-mid mb-[8px]">
         Your position
       </p>
       <div className="flex gap-[8px] flex-wrap mb-[20px]">
@@ -697,7 +697,7 @@ export function ComposeFields({
               className={`inline-flex items-center gap-[8px] rounded-control border px-[14px] py-[8px] font-body font-semibold text-sm cursor-pointer transition-colors ${
                 on
                   ? `${c.bg} border-line-strong ${c.tx}`
-                  : "bg-surface border-line-strong text-ink-muted hover:bg-wash"
+                  : "bg-surface border-line-strong text-ink-mid hover:bg-wash"
               }`}
             >
               <Icon className="h-[16px] w-auto" />
@@ -710,7 +710,7 @@ export function ComposeFields({
       <textarea
         rows={grow ? undefined : rows}
         placeholder={COMPOSE_PROMPT}
-        className={`w-full resize-none border border-line-strong rounded-control p-[12px] font-body text-base text-ink leading-[1.55] placeholder:text-ink-muted focus:outline-none focus:border-brand ${
+        className={`w-full resize-none border border-line-strong rounded-control p-[12px] font-body text-base text-ink leading-[1.55] placeholder:text-ink-mid focus:outline-none focus:border-brand ${
           grow ? "flex-1 min-h-0" : ""
         }`}
       />
@@ -730,7 +730,7 @@ export function ComposeActions({
     <div className="flex items-center justify-end gap-[12px]">
       <button
         onClick={onCancel}
-        className="font-body font-semibold text-sm text-ink-muted hover:text-ink cursor-pointer px-[8px] py-[8px]"
+        className="font-body font-semibold text-sm text-ink-mid hover:text-ink cursor-pointer px-[8px] py-[8px]"
       >
         {cancelLabel}
       </button>
@@ -959,7 +959,7 @@ export function PositionPicker({
         <button
           onClick={() => onChange("all")}
           aria-label={`Clear the ${current.label} filter`}
-          className="relative z-10 flex items-center justify-center w-[26px] h-[26px] rounded-full text-ink-muted hover:text-ink hover:bg-wash-strong cursor-pointer transition-colors"
+          className="relative z-10 flex items-center justify-center w-[26px] h-[26px] rounded-full text-ink-mid hover:text-ink hover:bg-wash-strong cursor-pointer transition-colors"
         >
           <X aria-hidden className="w-[13px] h-[13px]" />
         </button>
@@ -1490,7 +1490,7 @@ export function TestimonyFeed({
                         className={`font-body font-semibold text-xs px-[12px] py-[4px] cursor-pointer transition-colors border-l border-line first:border-l-0 ${
                           filter === id
                             ? "bg-brand-soft text-brand-ink"
-                            : "text-ink-muted hover:bg-wash"
+                            : "text-ink-mid hover:bg-wash"
                         }`}
                       >
                         {glyph ? (
@@ -1567,7 +1567,7 @@ export function TestimonyFeed({
                 ? "No individual testimony yet"
                 : "No testimony matches these filters"}
           </p>
-          <p className="font-body text-sm text-ink-muted leading-[1.5] max-w-[560px] mx-auto">
+          <p className="font-body text-sm text-ink-mid leading-[1.5] max-w-[560px] mx-auto">
             {nothingFiled
               ? "Nobody has written about this yet. Yours would be the first on the record."
               : typeFilter === "individual"

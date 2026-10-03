@@ -88,7 +88,7 @@ export function SectionRail({
           </span>
           {summarising ? "Showing summaries only" : "Show summaries only"}
         </button>
-        <p className="font-body text-xs text-ink-muted">
+        <p className="font-body text-xs text-ink-mid">
           {summarising
             ? "Every section is collapsed to its plain-language answer. Nothing has been removed."
             : "Collapses every section to its plain-language answer, for a short read."}

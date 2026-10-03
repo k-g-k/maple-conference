@@ -128,7 +128,7 @@ export function BillTextSection({
             </select>
             <ChevronDown
               aria-hidden
-              className="pointer-events-none absolute right-[11px] w-[15px] h-[15px] text-ink-muted"
+              className="pointer-events-none absolute right-[11px] w-[15px] h-[15px] text-ink-mid"
             />
           </span>
         </div>
@@ -148,7 +148,7 @@ export function BillTextSection({
         >
           {doc.text ? (
             <div className="mx-auto w-full max-w-[680px] bg-surface shadow-popover rounded-[3px] overflow-y-auto scrollbar-always px-[28px] py-[34px] sm:px-[52px] sm:py-[44px]">
-              <p className="font-body font-semibold text-sm text-ink-muted">
+              <p className="font-body font-semibold text-sm text-ink-mid">
                 {doc.number}
               </p>
               <p className="font-display font-medium text-lg text-ink leading-[1.3] mt-[2px] mb-[24px]">
@@ -163,7 +163,7 @@ export function BillTextSection({
             </div>
           ) : (
             <div className="mx-auto max-w-[560px] text-center py-[14px]">
-              <p className="font-body text-sm text-ink-muted leading-[1.7]">
+              <p className="font-body text-sm text-ink-mid leading-[1.7]">
                 {doc.note ??
                   (doc.absence === "none-published"
                     ? `The legislature's machine-readable record has no text for ${doc.number}.`

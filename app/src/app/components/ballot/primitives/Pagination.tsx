@@ -22,13 +22,13 @@ export function Pagination({
       >
         <ChevronLeft className="w-[22px] h-[22px] sm:w-[16px] sm:h-[16px]" />
       </button>
-      <span className="sm:hidden font-body text-base text-ink-muted tabular-nums">
+      <span className="sm:hidden font-body text-base text-ink-mid tabular-nums">
         {page + 1} of {pageCount}
       </span>
       <span className="hidden sm:contents">
         {pageWindow(page, pageCount).map((item, i) =>
           item === "…" ? (
-            <span key={`gap-${i}`} className="font-body text-sm text-ink-muted">
+            <span key={`gap-${i}`} className="font-body text-sm text-ink-mid">
               …
             </span>
           ) : (

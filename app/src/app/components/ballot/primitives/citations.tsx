@@ -242,7 +242,7 @@ export function SynthSourcesNote({
               {s.title ?? s.label}
             </p>
             {metaLine && (
-              <p className="font-body text-sm text-ink-muted mt-[2px]">
+              <p className="font-body text-sm text-ink-mid mt-[2px]">
                 {metaLine}
               </p>
             )}
@@ -261,7 +261,7 @@ export function SynthSourcesNote({
                 Open source <ArrowUpRight className="w-[13px] h-[13px]" />
               </a>
             ) : (
-              <p className="font-body text-sm text-ink-muted mt-[6px]">
+              <p className="font-body text-sm text-ink-mid mt-[6px]">
                 Link not yet on file
               </p>
             )}

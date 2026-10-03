@@ -8,7 +8,7 @@ const IMPACT_BADGE: Record<
   cost: { bg: "bg-negative-soft", tx: "text-negative-ink", label: "Bears cost" },
   neutral: {
     bg: "bg-sunken",
-    tx: "text-ink-muted",
+    tx: "text-ink-mid",
     label: "Exempt or neutral",
   },
 };

@@ -7,7 +7,7 @@ export function DelibStat({ n, label }: { n: string; label: string }) {
       <p className="font-body font-semibold text-2xl text-ink leading-none">
         {n}
       </p>
-      <p className="font-body text-2xs text-ink-muted mt-[5px] leading-[1.3]">
+      <p className="font-body text-2xs text-ink-mid mt-[5px] leading-[1.3]">
         {label}
       </p>
     </div>
@@ -18,7 +18,7 @@ export function DelibStat({ n, label }: { n: string; label: string }) {
 export function DelibThemeCol({ label, text }: { label: string; text: string }) {
   return (
     <div className="flex-1 min-w-0 border-t-[3px] border-line-strong pt-[10px]">
-      <p className="font-body font-semibold text-2xs text-ink-muted">
+      <p className="font-body font-semibold text-2xs text-ink-mid">
         {label}
       </p>
       <p className="font-body text-sm text-ink leading-[1.55] mt-[6px]">

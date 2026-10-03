@@ -376,7 +376,7 @@ function Term({ label, note }: { label: string; note: string[] }) {
           open ? "block" : "hidden"
         } ${up ? "bottom-full mb-[8px]" : "top-full mt-[8px]"}`}
       >
-        <span className="block font-body font-semibold text-2xs uppercase tracking-[0.07em] text-ink-muted mb-[8px]">
+        <span className="block font-body font-semibold text-2xs uppercase tracking-[0.07em] text-ink-mid mb-[8px]">
           {label}
         </span>
         <span className="block font-body font-normal text-sm text-ink leading-[1.55]">
@@ -486,12 +486,12 @@ function Open({ o, order }: { o: OpenQuestion; order: string[] }) {
                 );
               })}
               {o.why && (
-                <p className="font-body text-sm text-ink-muted leading-[1.65] border-l-2 border-line-strong pl-[14px]">
+                <p className="font-body text-sm text-ink-mid leading-[1.65] border-l-2 border-line-strong pl-[14px]">
                   {o.why}
                 </p>
               )}
               {o.regional && (
-                <p className="font-body text-sm text-ink-muted leading-[1.65] border-l-2 border-official pl-[14px]">
+                <p className="font-body text-sm text-ink-mid leading-[1.65] border-l-2 border-official pl-[14px]">
                   <span className="font-semibold text-ink">Elsewhere. </span>
                   {o.regional.t}
                   <Cite id={o.regional.c} order={order} />
@@ -500,7 +500,7 @@ function Open({ o, order }: { o: OpenQuestion; order: string[] }) {
               {o.ties.map((t) => (
                 <p key={t.n} className="font-body text-sm text-caution-ink">
                   <span className="font-semibold">{t.n}</span>{" "}
-                  <span className="text-ink-muted">{t.w}</span>
+                  <span className="text-ink-mid">{t.w}</span>
                 </p>
               ))}
             </div>
@@ -596,7 +596,7 @@ function Summary({
   who,
   meetings,
   six,
-  className = "font-body text-sm text-ink-muted leading-[1.65]",
+  className = "font-body text-sm text-ink-mid leading-[1.65]",
   onHover = () => {},
   onPin = () => {},
 }: {
@@ -649,7 +649,7 @@ function Hearings({
   return (
     <div>
       {heading && (
-        <p className="font-body font-semibold text-2xs uppercase tracking-[0.08em] text-ink-muted">
+        <p className="font-body font-semibold text-2xs uppercase tracking-[0.08em] text-ink-mid">
           Hearings
         </p>
       )}
@@ -660,7 +660,7 @@ function Hearings({
         // What the record supports is that nothing was noticed, which is not
         // the same claim as that nothing happened. A conference can meet
         // without filing a notice and nothing published would show it.
-        <p className="font-body text-sm text-ink-muted">
+        <p className="font-body text-sm text-ink-mid">
           No meeting has been noticed.
         </p>
       )}
@@ -906,7 +906,7 @@ function Six({
               who={who}
               meetings={meetings}
               six={six}
-              className="font-body text-base text-ink-muted leading-[1.6] mt-[8px]"
+              className="font-body text-base text-ink-mid leading-[1.6] mt-[8px]"
               onHover={setHovered}
               onPin={(k) => setPicked((v) => (v === k ? null : k))}
             />
@@ -1131,7 +1131,7 @@ function PublicMap({ onOpenRail }: { onOpenRail?: () => void }) {
     <div className="@container">
       <div className="grid gap-x-[40px] gap-y-[28px] items-start @[760px]:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
         <div>
-          <p className="font-body font-semibold text-2xs uppercase tracking-[0.08em] text-ink-muted mb-[8px]">
+          <p className="font-body font-semibold text-2xs uppercase tracking-[0.08em] text-ink-mid mb-[8px]">
             Counties heard from · {places.length}
           </p>
           <svg
@@ -1227,7 +1227,7 @@ function PublicMap({ onOpenRail }: { onOpenRail?: () => void }) {
             handed a summary of it. */}
         <div>
           {!selected ? (
-            <p className="font-body text-sm text-ink-muted leading-[1.6]">
+            <p className="font-body text-sm text-ink-mid leading-[1.6]">
               Select a county.
             </p>
           ) : (
@@ -1235,7 +1235,7 @@ function PublicMap({ onOpenRail }: { onOpenRail?: () => void }) {
               <div className="flex items-baseline justify-between gap-[12px] pb-[12px] border-b border-line">
                 <p className="font-display font-medium text-lg text-ink">
                   {shown[0]?.place ?? "This county"}
-                  <span className="font-body font-normal text-sm text-ink-muted">
+                  <span className="font-body font-normal text-sm text-ink-mid">
                     {" · "}
                     {shown.length}
                   </span>
@@ -1316,7 +1316,7 @@ function AddInput({ onClick }: { onClick: () => void }) {
     <button
       onClick={onClick}
       aria-label="Add Public Input"
-      className="group inline-flex items-center p-[6px] rounded-control text-ink-muted hover:text-ink hover:bg-wash cursor-pointer transition-colors"
+      className="group inline-flex items-center p-[6px] rounded-control text-ink-mid hover:text-ink hover:bg-wash cursor-pointer transition-colors"
     >
       <Plus className="w-[18px] h-[18px] shrink-0" />
       {/* The label takes no width until it is wanted: a grid track that goes
@@ -1551,7 +1551,7 @@ function Scan({
                   />
                 }
               >
-                <p className="font-body text-sm text-ink-muted leading-[1.6]">
+                <p className="font-body text-sm text-ink-mid leading-[1.6]">
                   {x.d}
                   <Cite id={x.c} order={[]} />
                 </p>
@@ -1592,7 +1592,7 @@ function ScanColumn({
         // The SENATE and HOUSE labels in the committee card, exactly: the same
         // small caps, so a column label reads the same wherever it appears.
         <p
-          className={`flex items-baseline gap-[8px] font-body font-semibold text-2xs uppercase tracking-[0.08em] text-ink-muted ${
+          className={`flex items-baseline gap-[8px] font-body font-semibold text-2xs uppercase tracking-[0.08em] text-ink-mid ${
             floatHead
               ? // Above the grid, not at its top: the grid starts where the
                 // first row starts, so top-0 put the label on top of it. The
@@ -1708,7 +1708,7 @@ function Rail({
       className="hidden md:block w-[clamp(168px,19vw,236px)] shrink-0 sticky top-[var(--nav-h)] self-start max-h-[calc(100vh-var(--nav-h))] overflow-y-auto pt-[26px] pb-[48px]"
     >
       {label && (
-        <p className="font-body font-semibold text-2xs uppercase tracking-[0.08em] text-ink-muted mb-[14px]">
+        <p className="font-body font-semibold text-2xs uppercase tracking-[0.08em] text-ink-mid mb-[14px]">
           In conference
         </p>
       )}
@@ -1983,7 +1983,7 @@ function RailStrip({
         </select>
         <ChevronDown
           aria-hidden
-          className="pointer-events-none absolute right-[14px] top-1/2 -translate-y-1/2 w-[16px] h-[16px] text-ink-muted"
+          className="pointer-events-none absolute right-[14px] top-1/2 -translate-y-1/2 w-[16px] h-[16px] text-ink-mid"
         />
       </div>
     </nav>
@@ -2173,7 +2173,7 @@ function ConferenceText({
             </select>
             <ChevronDown
               aria-hidden
-              className="pointer-events-none absolute right-[11px] w-[15px] h-[15px] text-ink-muted"
+              className="pointer-events-none absolute right-[11px] w-[15px] h-[15px] text-ink-mid"
             />
           </span>
         </div>
@@ -2201,7 +2201,7 @@ function ConferenceText({
                     <Sheet doc={d} locked={fill && !parked} />
                   ) : (
                     <div className="m-auto max-w-[280px] text-center">
-                      <p className="font-body text-sm text-ink-muted leading-[1.7]">
+                      <p className="font-body text-sm text-ink-mid leading-[1.7]">
                         {(i === 0 ? bill : other)?.n ?? "This side"} is not
                         bundled here.
                       </p>
@@ -2214,7 +2214,7 @@ function ConferenceText({
             <Sheet doc={doc} locked={fill && !parked} />
           ) : (
             <div className="mx-auto max-w-[560px] text-center py-[14px]">
-              <p className="font-body text-sm text-ink-muted leading-[1.7]">
+              <p className="font-body text-sm text-ink-mid leading-[1.7]">
                 {!bill
                   ? "This committee's bills are not recorded yet."
                   : doc?.absence === "none-published"
@@ -2489,7 +2489,7 @@ function Contents({
             className={`shrink-0 whitespace-nowrap font-body text-sm flex items-center border-b-2 transition-colors ${
               active === x.id
                 ? "text-ink border-brand font-semibold"
-                : "text-ink-muted border-transparent hover:text-ink"
+                : "text-ink-mid border-transparent hover:text-ink"
             }`}
           >
             {x.label}
@@ -2571,7 +2571,7 @@ function Pills<T extends string>({
             className={`min-w-[62px] text-center font-body font-semibold text-sm capitalize rounded-pill px-[10px] py-[4px] cursor-pointer transition-colors ${
               value === v
                 ? "bg-ink text-ink-inverse"
-                : "text-ink-muted hover:bg-wash"
+                : "text-ink-mid hover:bg-wash"
             }`}
           >
             {labels?.[v] ?? v}
@@ -2607,7 +2607,7 @@ function Sheet({
     >
       {/* The chamber before the number. Side by side, two numbers alone make
           a reader work out which text they are in from the prefix on them. */}
-      <p className="font-body font-semibold text-sm text-ink-muted">
+      <p className="font-body font-semibold text-sm text-ink-mid">
         {doc.number.startsWith("S") ? "Senate" : "House"} &ndash; {doc.number}
       </p>
       <p className="font-display font-medium text-lg text-ink leading-[1.3] mt-[2px] mb-[24px]">
@@ -3513,7 +3513,7 @@ function Detail({ c, style }: { c: CommitteeDetail; style: ReviewStyle }) {
           </div>
           <div className="z-20 -mx-[32px] px-[32px] bg-ground/95 backdrop-blur">
             <div className="@container pb-[24px]">
-              <p className="font-body text-xl @[980px]:text-2xl text-ink-muted leading-[1.4] mt-[10px]">
+              <p className="font-body text-xl @[980px]:text-2xl text-ink-mid leading-[1.4] mt-[10px]">
                 <ConferenceByline
                   slug={c.slug}
                   house={rec?.house}
@@ -3589,7 +3589,7 @@ function Detail({ c, style }: { c: CommitteeDetail; style: ReviewStyle }) {
                       who={c.who}
                       meetings={meetings}
                       six={sixOf(c)}
-                      className="font-body text-lg text-ink-muted leading-[1.6] max-w-[74ch]"
+                      className="font-body text-lg text-ink-mid leading-[1.6] max-w-[74ch]"
                     />
                   </div>
                 )}
@@ -3691,7 +3691,7 @@ function Detail({ c, style }: { c: CommitteeDetail; style: ReviewStyle }) {
                               </span>
                               <span>
                                 {s.p}
-                                <span className="block font-body text-sm text-ink-muted leading-[1.55] mt-[1px]">
+                                <span className="block font-body text-sm text-ink-mid leading-[1.55] mt-[1px]">
                                   {s.d}
                                   <Cite id={s.c} order={order} />
                                 </span>
@@ -3708,7 +3708,7 @@ function Detail({ c, style }: { c: CommitteeDetail; style: ReviewStyle }) {
                     question="What is still being decided?"
                     answer={
                       <Span>
-                        <p className="font-body text-sm text-ink-muted leading-[1.65] max-w-[74ch]">
+                        <p className="font-body text-sm text-ink-mid leading-[1.65] max-w-[74ch]">
                           {c.open?.length} questions where the two bills differ.
                           The six can take either chamber's answer, or write a
                           third.
@@ -3728,7 +3728,7 @@ function Detail({ c, style }: { c: CommitteeDetail; style: ReviewStyle }) {
               ) : (
                 <Chapter id="settled" question="What is already decided?">
                   <Span>
-                    <p className="font-body text-sm text-ink-muted leading-[1.65] max-w-[74ch] border-l-2 border-line-strong pl-[16px]">
+                    <p className="font-body text-sm text-ink-mid leading-[1.65] max-w-[74ch] border-l-2 border-line-strong pl-[16px]">
                       The comparison for this committee has not been compiled
                       yet. It needs both texts read side by side.
                     </p>
@@ -3856,7 +3856,7 @@ function Detail({ c, style }: { c: CommitteeDetail; style: ReviewStyle }) {
                         <p className="font-display font-medium text-lg text-ink">
                           {x.h}
                         </p>
-                        <p className="font-body text-sm text-ink-muted leading-[1.65] mt-[6px] max-w-[74ch]">
+                        <p className="font-body text-sm text-ink-mid leading-[1.65] mt-[6px] max-w-[74ch]">
                           {x.p}
                           <Cite id={x.c} order={order} />
                         </p>
@@ -4044,7 +4044,7 @@ function NoCommittee() {
     <div className="bg-ground min-h-screen font-body text-ink">
       <SiteNav inner={NAV_COLUMN} />
       <main className="mx-auto max-w-[1180px] px-[20px] sm:px-[32px] pt-[48px]">
-        <p className="font-body text-base text-ink-muted">
+        <p className="font-body text-base text-ink-mid">
           No conference committee at that address.{" "}
           <Link
             to="/conferenceCommittees"
@@ -4113,7 +4113,7 @@ export function ConferenceReview() {
       <main className="mx-auto max-w-[880px] px-[20px] sm:px-[32px] pt-[28px] pb-[80px]">
         <button
           onClick={() => back()}
-          className="inline-flex items-center gap-[4px] -ml-[4px] font-body font-semibold text-sm text-ink-muted hover:text-ink cursor-pointer"
+          className="inline-flex items-center gap-[4px] -ml-[4px] font-body font-semibold text-sm text-ink-mid hover:text-ink cursor-pointer"
         >
           <ChevronLeft className="w-[16px] h-[16px] shrink-0" />
           {REVIEW_PAGE_COPY.back}
@@ -4125,7 +4125,7 @@ export function ConferenceReview() {
             that says what happened, and a lead under it would be telling the
             reader to read it once more. */}
         {!draft.posted && (
-          <p className="font-body text-lg text-ink-muted leading-[1.5] mt-[10px] max-w-[56ch]">
+          <p className="font-body text-lg text-ink-mid leading-[1.5] mt-[10px] max-w-[56ch]">
             {REVIEW_PAGE_COPY.lead}
           </p>
         )}

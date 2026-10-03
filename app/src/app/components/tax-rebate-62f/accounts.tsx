@@ -127,7 +127,7 @@ export function PositionUserGroup({
 }) {
   return (
     <div>
-      <p className="font-body font-semibold text-sm text-ink-muted mb-[10px]">
+      <p className="font-body font-semibold text-sm text-ink-mid mb-[10px]">
         {heading} ({users.length})
       </p>
       <div className="grid grid-cols-2 gap-x-[24px] gap-y-[12px]">
@@ -158,7 +158,7 @@ export const STANCE_CHIP: Record<
   "no-position": {
     bg: "bg-sunken",
     bd: "border-line-strong",
-    tx: "text-ink-muted",
+    tx: "text-ink-mid",
     label: "No Position",
   },
 };

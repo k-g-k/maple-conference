@@ -1,8 +1,8 @@
 /* Design tokens.
  *
  * Everything the pages paint with is declared here and nowhere else. These are
- * real Tailwind v4 theme keys, not a mirror: `--color-ink-muted` generates
- * `text-ink-muted`, `--radius-card` generates `rounded-card`. Components should
+ * real Tailwind v4 theme keys, not a mirror: `--color-ink-mid` generates
+ * `text-ink-mid`, `--radius-card` generates `rounded-card`. Components should
  * reach for those utilities rather than arbitrary values, so changing the palette
  * stays a one-file job.
  *
@@ -84,9 +84,14 @@
 
   --color-inverse: #141413;
 
-  /* ---------- Ink ---------- */
+  /* ---------- Ink ----------
+     Four steps down from the body to the faintest mark a reader is meant to
+     find: ink, mid, muted, faint. `muted` is the midpoint between the two it
+     sits between, for the places where mid is too present and faint reads as
+     disabled. */
   --color-ink: #141413;
-  --color-ink-muted: #73726c;
+  --color-ink-mid: #73726c;
+  --color-ink-muted: #94938d;
   --color-ink-faint: #b5b4ae;
   --color-ink-inverse: #ffffff;
 

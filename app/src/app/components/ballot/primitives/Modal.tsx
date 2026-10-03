@@ -152,7 +152,7 @@ export function Modal({
             <button
               onClick={onClose}
               aria-label="Close"
-              className="text-ink-muted hover:text-ink cursor-pointer"
+              className="text-ink-mid hover:text-ink cursor-pointer"
             >
               <X className="w-[19px] h-[19px]" />
             </button>

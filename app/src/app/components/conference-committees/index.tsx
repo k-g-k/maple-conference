@@ -269,7 +269,7 @@ function DebugWatch() {
 
 /** The small caps label the maps and the member lists already share. */
 const LABEL =
-  "font-body font-semibold text-2xs uppercase tracking-[0.08em] text-ink-muted";
+  "font-body font-semibold text-2xs uppercase tracking-[0.08em] text-ink-mid";
 
 /**
  * A face at the size and the ring the committee pages use.
@@ -597,7 +597,7 @@ function Seat({ committee, chair }: { committee: string; chair: boolean }) {
       className={`shrink-0 font-body text-xs leading-[1.4] px-[7px] py-[2px] rounded-chip border ${
         chair
           ? "bg-caution-soft border-caution text-caution-ink"
-          : "bg-wash border-transparent text-ink-muted"
+          : "bg-wash border-transparent text-ink-mid"
       }`}
     >
       {committee}
@@ -662,7 +662,7 @@ function Panel({
     <div className={wide ? "@[640px]:col-span-2" : ""}>
       <p className={LABEL}>{head}</p>
       <div className="mt-[10px]">{children}</div>
-      <p className="font-body text-xs text-ink-muted leading-[1.5] mt-[8px] max-w-[52ch]">
+      <p className="font-body text-xs text-ink-mid leading-[1.5] mt-[8px] max-w-[52ch]">
         {note}
       </p>
     </div>
@@ -761,7 +761,7 @@ function Figures() {
         >
           {(["seats", "people"] as const).map((of) => (
             <div key={of} className="mb-[12px] last:mb-0">
-              <p className="font-body text-2xs text-ink-muted leading-none mb-[4px]">
+              <p className="font-body text-2xs text-ink-mid leading-none mb-[4px]">
                 {of === "seats"
                   ? `${TALLY.seats} seats`
                   : `${TALLY.people} people`}
@@ -801,7 +801,7 @@ function Figures() {
           {benches.map((b) => (
             <div key={b.key} className="mb-[8px] last:mb-0">
               <div className="flex items-center gap-[6px]">
-                <span className="w-[104px] shrink-0 font-body text-2xs text-ink-muted leading-none">
+                <span className="w-[104px] shrink-0 font-body text-2xs text-ink-mid leading-none">
                   {b.key}
                 </span>
                 <span className="flex flex-wrap gap-[2px]">
@@ -845,7 +845,7 @@ function Figures() {
             <div className="flex flex-col gap-[4px]">
               {sitting.map((r) => (
                 <div key={r.slug} className="flex items-center gap-[10px]">
-                  <span className="w-[160px] shrink-0 text-right font-body text-2xs text-ink-muted leading-[1.3]">
+                  <span className="w-[160px] shrink-0 text-right font-body text-2xs text-ink-mid leading-[1.3]">
                     {r.short}
                   </span>
                   <span className="relative flex-1 h-[14px]">
@@ -916,7 +916,7 @@ function Figures() {
                       month === "2026-07" ? "bg-brand" : "bg-wash-strong"
                     }`}
                   />
-                  <span className="font-body text-2xs text-ink-muted leading-none">
+                  <span className="font-body text-2xs text-ink-mid leading-none">
                     {new Date(`${month}-02`).toLocaleDateString("en-GB", {
                       month: "short",
                     })}
@@ -934,7 +934,7 @@ function Figures() {
           <div className="flex flex-col gap-[6px]">
             {finished.map((f) => (
               <div key={f.as} className="flex items-center gap-[10px]">
-                <span className="w-[160px] shrink-0 text-right font-body text-2xs text-ink-muted leading-[1.3]">
+                <span className="w-[160px] shrink-0 text-right font-body text-2xs text-ink-mid leading-[1.3]">
                   {f.name}
                 </span>
                 <span className="flex-1 h-[10px] rounded-full bg-wash overflow-hidden">
@@ -1014,10 +1014,10 @@ function Rooms({
   const tipEl = useRef<HTMLSpanElement | null>(null);
   const popEl = useRef<HTMLSpanElement | null>(null);
   const shareEl = useRef<HTMLSpanElement | null>(null);
-  const AT = (x: number, y: number) =>
-    `translate3d(${x + 14}px, ${y + 14}px, 0)`;
-  const place = (el: HTMLSpanElement | null, x: number, y: number) => {
-    if (el) el.style.transform = AT(x, y);
+  const AT = (x: number, y: number, dy = 14) =>
+    `translate3d(${x + 14}px, ${y + dy}px, 0)`;
+  const place = (el: HTMLSpanElement | null, x: number, y: number, dy = 14) => {
+    if (el) el.style.transform = AT(x, y, dy);
   };
   // Whether the pointer is on the strip at the end of a row. Held in a ref as
   // well as in state, because the row's move handler reads it in the same
@@ -1077,6 +1077,11 @@ function Rooms({
         justLocked.current = false;
         return;
       }
+      // Copying the sentence is not letting go of the person it is about. A
+      // drag across text ends in a click like any other, so a press that
+      // leaves a selection behind is left alone.
+      const picked = window.getSelection();
+      if (picked && !picked.isCollapsed && picked.toString().trim()) return;
       setLockWho(null);
     };
     window.addEventListener("click", away);
@@ -1399,12 +1404,15 @@ function Rooms({
           // what that room reaches into; a row merely under the pointer does
           // not, so a toggle's people go gray with everyone else and are told
           // apart by standing at full strength instead.
+          // Gray belongs to a committee that has been pressed. A hover is a
+          // pass, not a decision, so passing down the column sends the other
+          // rows back on strength alone and leaves them in colour.
           gray={
-            (!!room || !!hoverRow) &&
+            !!room &&
             slug !== room &&
             slug !== hoverRow &&
             !over &&
-            (room ? !isRead(p.seat) : true)
+            !isRead(p.seat)
           }
           // At rest the whole wall sits at the middle strength rather than
           // the deep one: nothing has been asked about yet, so nothing has
@@ -1412,7 +1420,7 @@ function Rooms({
           // A row under the pointer is lit but not fully: color, at the
           // middle strength, and a step stronger where nothing has been
           // pressed for it to sit under.
-          lift={!room}
+          lift={!room || slug === hoverRow}
           soft={
             (!chosen.size && !reading.length) ||
             (!!room && isRead(p.seat)) ||
@@ -1645,7 +1653,7 @@ function Rooms({
         <span
           className={`font-body text-xs leading-[1.35] whitespace-nowrap ${
             live ? "transition-colors motion-reduce:transition-none" : ""
-          } ${on ? "font-semibold text-ink" : "text-ink-muted"}`}
+          } ${on ? "font-semibold text-ink" : "text-ink-mid"}`}
         >
           {label}
         </span>
@@ -1659,7 +1667,7 @@ function Rooms({
       <span className="flex-1 flex items-center justify-between gap-[18px] pr-[10px] @[1000px]:pl-[10px]">
         {flip("mine", mine, "My legislators", flipMine)}
         {flip("most", most, "Most committees", flipMost)}
-        {flip("top", top, "Highest ranking", flipTop)}
+        {flip("top", top, "Highest ranked", flipTop)}
       </span>
     ) : (
       <Hint
@@ -1717,14 +1725,10 @@ function Rooms({
         onMouseMove={(e) => {
           if (!room) return;
           spot.current = { x: e.clientX, y: e.clientY };
-          if (tipUp.current) place(tipEl.current, e.clientX, e.clientY);
+          if (tipUp.current) place(tipEl.current, e.clientX, e.clientY, 20);
           else showTip(e.clientX, e.clientY, who === p.seat, true);
         }}
-        onMouseLeave={() => {
-          if (!room) return;
-          setHoverPin(null);
-          hideTip();
-        }}
+
         onClick={(e) => {
           if (!room) return;
           e.stopPropagation();
@@ -1789,7 +1793,7 @@ function Rooms({
           </span>
           <span
             className={`block font-body text-xs leading-[1.4] ${
-              back ? "text-ink-faint" : "text-ink-muted"
+              back ? "text-ink-faint" : "text-ink-mid"
             }`}
           >
             {MINE_FULL[p.seat] ?? p.district}
@@ -1799,7 +1803,7 @@ function Rooms({
     );
   };
   return (
-    <div className="@container mt-[20px] bg-surface border border-line rounded-card min-[960px]:px-[18px] min-[960px]:pt-[16px] min-[960px]:pb-[18px]">
+    <div className="@container mt-[12px] bg-surface border border-line rounded-card pt-[4px] pb-[4px] min-[960px]:px-[18px] min-[960px]:pt-[10px] min-[960px]:pb-[18px]">
       {/* Narrow, the card is a list and nothing else: twelve rows that open
           their committee's page, with each chamber's three stacked into one
           mark. The maps, the box and the reading they support all want a
@@ -1812,7 +1816,12 @@ function Rooms({
               // The overlap and the ring are proportions of the face, so a
               // smaller face has to take less of its neighbour and carry a
               // heavier rule between them, or the two read as one blob.
-              className="-ml-[7px] first:ml-0 rounded-full shadow-[0_0_0_2.5px_var(--color-surface)]"
+              // Positioned, so the ring paints with the face it belongs to.
+              // `RowFace` is `relative` inside, and a positioned element
+              // paints above every background in its stacking context: an
+              // unpositioned wrapper had its white ring drawn and then covered
+              // by the portrait to its left, which is why they looked joined.
+              className="relative -ml-[7px] first:ml-0 rounded-full shadow-[0_0_0_2px_var(--color-surface)]"
             >
               <RowFace
                 p={p}
@@ -1825,7 +1834,7 @@ function Rooms({
           );
           const inside = (
             <>
-              <span className="min-w-0 flex-1 flex items-baseline gap-[8px]">
+              <span className="min-w-0 flex-1 flex flex-col items-start gap-[3px] @[560px]:flex-row @[560px]:items-baseline @[560px]:gap-[8px]">
                 <span className="shrink-0 font-body font-semibold text-base text-ink leading-[1.3]">
                   {displayName(c.slug, c.short)}
                 </span>
@@ -1857,7 +1866,13 @@ function Rooms({
           return (
             <li key={c.slug}>
               {NOT_LINKED.has(c.slug) ? (
-                <span aria-disabled className={`${row} opacity-55`}>
+                <span
+                  aria-disabled
+                  // A room that has finished its work keeps its place in the
+                  // list and loses its colour with it: dimmed alone, the six
+                  // faces still read as a committee you can open.
+                  className={`${row} opacity-55 grayscale`}
+                >
                   {inside}
                 </span>
               ) : (
@@ -1887,7 +1902,7 @@ function Rooms({
               opacity: popAt && mapHint ? 0.9 : 0,
               visibility: popAt && mapHint ? "visible" : "hidden",
             }}
-            className="pointer-events-none cursor-pointer fixed left-0 top-0 z-[80] w-max transition-opacity duration-[120ms] motion-reduce:transition-none rounded-control bg-surface border border-line shadow-popover px-[7px] py-[3px] font-body font-semibold text-2xs leading-[1.35] text-ink-muted"
+            className="pointer-events-none cursor-pointer fixed left-0 top-0 z-[80] w-max transition-opacity duration-[120ms] motion-reduce:transition-none rounded-control bg-surface border border-line shadow-popover px-[7px] py-[3px] font-body font-semibold text-2xs leading-[1.35] text-ink-mid"
           >
             {mapHint}
           </span>
@@ -1898,7 +1913,7 @@ function Rooms({
               opacity: popAt && !mapHint ? 1 : 0,
               visibility: popAt && !mapHint ? "visible" : "hidden",
             }}
-            className="pointer-events-none cursor-pointer fixed left-0 top-0 z-[80] w-max max-w-[300px] transition-opacity duration-[120ms] motion-reduce:transition-none rounded-card bg-surface border border-line shadow-popover px-[13px] py-[10px] font-body text-sm text-ink-muted leading-[1.55]"
+            className="pointer-events-none cursor-pointer fixed left-0 top-0 z-[80] w-max max-w-[300px] transition-opacity duration-[120ms] motion-reduce:transition-none rounded-card bg-surface border border-line shadow-popover px-[13px] py-[10px] font-body text-sm text-ink-mid leading-[1.55]"
           >
             {popAt && !mapHint ? shareLine() : null}
           </span>
@@ -1907,11 +1922,11 @@ function Rooms({
             // maps use. One card, one place a tooltip appears.
             ref={tipEl}
             style={{
-              transform: AT(tip?.x ?? -400, tip?.y ?? -400),
+              transform: AT(tip?.x ?? -400, tip?.y ?? -400, 20),
               opacity: tip ? 0.9 : 0,
               visibility: tip ? "visible" : "hidden",
             }}
-            className="pointer-events-none cursor-pointer fixed left-0 top-0 z-[80] w-max transition-opacity duration-[120ms] motion-reduce:transition-none rounded-control bg-surface border border-line shadow-popover px-[7px] py-[3px] font-body font-semibold text-2xs leading-[1.35] text-ink-muted"
+            className="pointer-events-none cursor-pointer fixed left-0 top-0 z-[80] w-max transition-opacity duration-[120ms] motion-reduce:transition-none rounded-control bg-surface border border-line shadow-popover px-[7px] py-[3px] font-body font-semibold text-2xs leading-[1.35] text-ink-mid"
           >
             {tipClear ? "click to unselect" : "click to select"}
           </span>
@@ -2032,7 +2047,7 @@ function Rooms({
                     spot.current = { x: e.clientX, y: e.clientY };
                     if (reads || onStrip.current) hideTip();
                     else if (tipUp.current)
-                      place(tipEl.current, e.clientX, e.clientY);
+                      place(tipEl.current, e.clientX, e.clientY, 20);
                     else showTip(e.clientX, e.clientY, on);
                   }}
                   onMouseLeave={hideTip}
@@ -2099,7 +2114,7 @@ function Rooms({
                       on
                         ? PICKED
                         : c.slug === hoverRow
-                          ? "font-bold text-ink-muted"
+                          ? "font-bold text-ink-mid"
                           : shownRoom
                             ? // A committee is being shown, pressed or hovered:
                               // the rest of the column goes back, and a room
@@ -2114,8 +2129,8 @@ function Rooms({
                                 // is only a pass, so the rest stays readable.
                                 room
                                 ? "font-normal text-ink-faint"
-                                : "font-normal text-ink-muted"
-                              : "font-bold text-ink-muted"
+                                : "font-normal text-ink-mid"
+                              : "font-bold text-ink-mid"
                             : back
                               ? // Somebody is being read, pressed on the map
                                 // or asked for by name: the rooms they are
@@ -2129,7 +2144,7 @@ function Rooms({
                                 // is held and one of its six is pressed. One
                                 // rule for "this room is on their list",
                                 // however the card was asked.
-                                "font-bold text-ink-muted"
+                                "font-bold text-ink-mid"
                     }`}
                   >
                     {rowStyle === "leader" ? (
@@ -2224,7 +2239,7 @@ function Rooms({
                         <X
                           aria-hidden
                           strokeWidth={2.75}
-                          className="w-[13px] h-[13px] text-ink-muted"
+                          className="w-[13px] h-[13px] text-ink-mid"
                         />
                       </button>
                     ) : (
@@ -2297,10 +2312,10 @@ function Rooms({
               as the pointer moves down the rows. Three rows of a name and a
               district is the tallest it gets. */}
           <div
-            // The switches carry their own floor: with nothing held they are
-            // the last thing in the column, and sitting hard on the card's
-            // edge made them look like part of it rather than on it.
-            className={`order-3 ${room ? "" : "pb-[8px]"} ${
+            // Whatever is last in the column carries its own floor, the
+            // switches or the way in alike: sitting hard on the card's edge
+            // made it look like part of the card rather than on it.
+            className={`order-3 pb-[8px] ${
               rowStyle === "leader" ? "mb-[11px]" : "mb-[10px]"
             }`}
           >
@@ -2321,8 +2336,8 @@ function Rooms({
               // carrying the card's sentence. With nothing held the sentence
               // is in the box, so the slot is only the gap between the maps
               // and the switches under them.
-              className={`mt-[18px] font-body text-xs text-ink-muted leading-[1.4] ${
-                room ? "h-[40px] mb-[12px]" : "h-[24px]"
+              className={`mt-[18px] font-body text-xs text-ink-mid leading-[1.4] ${
+                room ? "h-[40px] mb-[4px]" : "h-[20px]"
               }`}
             >
               {/* With nobody's committee held, the box below is already a list
@@ -2344,9 +2359,13 @@ function Rooms({
               {room && !NOT_LINKED.has(room) && (
                 <Link
                   to={`/conferenceCommittees/${room}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   // No leading under the words, so the link's box ends where
                   // the letters do and the row's own floor is what it sits on.
-                  className="inline-flex items-center gap-[5px] font-body font-semibold text-sm leading-none text-brand-ink hover:text-brand"
+                  // The padding is paid back in margin: the target is a good
+                  // deal larger than the words, and the words have not moved.
+                  className="inline-flex items-center gap-[5px] px-[18px] py-[16px] -mx-[18px] -my-[16px] font-body font-semibold text-sm leading-none text-brand-ink hover:text-brand"
                 >
                   Go to conference committee
                   <ArrowRight aria-hidden className="w-[14px] h-[14px]" />
@@ -2362,8 +2381,15 @@ function Rooms({
             // A hair of tracking under the breakpoint, where the type is a
             // size down: small text set at its normal spacing reads tighter
             // than the same face does large.
+            // Leaving one of the six is not leaving the six: the reading
+            // changes when another entry claims it, and is let go of here,
+            // when the pointer leaves the box altogether.
+            onPointerLeave={() => {
+              setHoverPin(null);
+              hideTip();
+            }}
             className={`relative order-1 flex flex-col ${
-              room ? "h-[250px]" : "h-[282px]"
+              room ? "h-[258px]" : "h-[282px]"
             }`}
           >
             {sayIn === "box" && !room && !readers.length && (
@@ -2371,7 +2397,7 @@ function Rooms({
               // than under the maps. It sits on the box's floor, in the
               // padding the box already keeps there, so it reads as a footnote
               // to whatever is above it: six people, one, or nothing yet.
-              <p className="pointer-events-none absolute left-[20px] right-[16px] top-[34px] bottom-[10px] flex items-center justify-center font-body text-sm text-ink-muted leading-[1.55]">
+              <p className="pointer-events-none absolute left-[20px] right-[16px] top-[34px] bottom-[10px] flex items-center justify-center font-body text-sm text-ink-mid leading-[1.55]">
                 <span className="block max-w-[30ch] text-center text-balance">
                   {say()}
                 </span>
@@ -2382,10 +2408,17 @@ function Rooms({
                 look back across the card to find out. The slot holds its line
                 whether or not there is a name in it, so arriving on a row does
                 not shunt the box down the card. */}
-            <div className="mb-[10px] min-h-[24px] flex items-center">
+            <div
+              // The name of a held committee stands further off its box than
+              // the card's own label does: it is a title over an answer, not a
+              // label on an empty frame.
+              className={`min-h-[24px] flex items-center ${
+                room ? "mb-[16px]" : "mb-[10px]"
+              }`}
+            >
               {room ? (
                 NOT_LINKED.has(room) ? (
-                  <h2 className={`font-body text-lg leading-[1.3] ${PICKED}`}>
+                  <h2 className="font-body font-bold text-[18px] leading-[1.3] text-brand">
                     {displayName(
                       room,
                       COMMITTEES.find((c) => c.slug === room)?.short ?? "",
@@ -2394,11 +2427,14 @@ function Rooms({
                 ) : (
                   <Link
                     to={`/conferenceCommittees/${room}`}
-                    className="group/go flex-1 flex items-center gap-[8px] cursor-pointer"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    // The whole line is the target, name to chevron, with
+                    // padding above and below paid back in margin so the row
+                    // itself is the height it always was.
+                    className="group/go flex-1 flex items-center gap-[8px] py-[10px] -my-[10px] px-[6px] -mx-[6px] cursor-pointer"
                   >
-                    <h2
-                      className={`font-body text-lg leading-[1.3] ${PICKED} group-hover/go:text-brand transition-colors`}
-                    >
+                    <h2 className="font-body font-bold text-[18px] leading-[1.3] text-brand group-hover/go:text-brand-hover transition-colors">
                       {displayName(
                         room,
                         COMMITTEES.find((c) => c.slug === room)?.short ?? "",
@@ -2407,7 +2443,7 @@ function Rooms({
                     <ChevronRight
                       aria-hidden
                       strokeWidth={2.5}
-                      className="ml-auto w-[18px] h-[18px] text-ink group-hover/go:text-brand transition-colors"
+                      className="ml-auto w-[20px] h-[20px] text-brand group-hover/go:text-brand-hover transition-colors"
                     />
                   </Link>
                 )
@@ -2417,8 +2453,16 @@ function Rooms({
                 // read: the box below is answering about one person, not
                 // standing in for a room.
                 <>
-                  <h2 className={`font-body text-lg leading-[1.3] ${PICKED}`}>
-                    Conference Committee Explorer
+                  {/* The card's own name, and it sits back until the box
+                      under it is holding something: unasked, it is a label on
+                      an empty box rather than the answer to anything. */}
+                  <h2
+                    // One colour throughout: the card's own name is a label,
+                    // and it has nothing to report. What changes is that a
+                    // chosen committee replaces it with its own name in ink.
+                    className="font-body font-semibold text-[15px] leading-[1.3] text-ink-muted"
+                  >
+                    Committee Explorer
                   </h2>
                   {mineAt === "top" && (
                     <span className="ml-auto pl-[12px]">{mineButton()}</span>
@@ -2468,7 +2512,7 @@ function Rooms({
             ) : room ? (
               // A committee's six read as one thing, so they are drawn as one:
               // a single box holding both chambers' halves.
-              <div className="flex-1 grid content-start gap-x-[20px] gap-y-[10px] @[560px]:grid-cols-2 rounded-card bg-wash pl-[20px] pr-[16px] pt-[14px] pb-[20px]">
+              <div className="flex-1 grid content-start gap-x-[20px] gap-y-[10px] @[560px]:grid-cols-2 rounded-card bg-[#f7f7f7] pl-[20px] pr-[16px] pt-[14px] pb-[20px]">
                 {/* Each half named inside the box, under the committee's own
                     name above it: three faces with no heading leave a reader
                     matching them to the maps by position. */}
@@ -2599,7 +2643,7 @@ function Rooms({
                     sent nobody to a conference this session, which is the
                     ordinary case and worth saying in words. */}
                 {showMine && (
-                  <p className="font-body text-sm text-ink-muted leading-[1.6] text-center text-balance max-w-[34ch]">
+                  <p className="font-body text-sm text-ink-mid leading-[1.6] text-center text-balance max-w-[34ch]">
                     Your legislators are not serving on these conference
                     committees.
                   </p>
@@ -2920,7 +2964,7 @@ function RoomsTwo() {
           </span>
           <span
             className={`block font-body text-xs leading-[1.4] ${
-              back ? "text-ink-faint" : "text-ink-muted"
+              back ? "text-ink-faint" : "text-ink-mid"
             }`}
           >
             {p.district}
@@ -3033,7 +3077,7 @@ function RoomsTwo() {
                               // holding the person being read comes halfway.
                               back
                               ? "font-normal text-ink-faint"
-                              : "font-semibold text-ink-muted"
+                              : "font-semibold text-ink-mid"
                             : // Nothing held: every name is ink and weight
                               // alone says what the pointer is on.
                               back
@@ -3056,7 +3100,7 @@ function RoomsTwo() {
                   <ExternalLink
                     aria-hidden
                     strokeWidth={2.25}
-                    className={`shrink-0 ml-[6px] -translate-x-[10px] w-[13px] h-[13px] text-ink-muted transition-opacity ${
+                    className={`shrink-0 ml-[6px] -translate-x-[10px] w-[13px] h-[13px] text-ink-mid transition-opacity ${
                       c.slug === shownRoom && !NOT_LINKED.has(c.slug)
                         ? "opacity-100"
                         : "opacity-0"
@@ -3118,7 +3162,7 @@ function RoomsTwo() {
                     it. The six arrive when the committee is pressed. */}
                 {!room ? (
                   <div className="rounded-card bg-wash px-[16px] py-[14px] min-h-[104px] flex items-center justify-center">
-                    <p className="font-body text-sm text-ink-muted">
+                    <p className="font-body text-sm text-ink-mid">
                       Click to see{" "}
                       {displayName(
                         shownRoom,
@@ -3349,7 +3393,7 @@ function Readout({ p }: { p: RosterPerson | null }) {
               <span className="font-body font-semibold text-base text-ink">
                 {p.name}
               </span>
-              <span className="ml-[6px] font-body text-xs text-ink-muted">
+              <span className="ml-[6px] font-body text-xs text-ink-mid">
                 {p.party === "R" ? "Republican" : "Democrat"}
               </span>
               {p.title && (
@@ -3358,7 +3402,7 @@ function Readout({ p }: { p: RosterPerson | null }) {
                 </span>
               )}
             </span>
-            <span className="block font-body text-xs text-ink-muted leading-[1.45]">
+            <span className="block font-body text-xs text-ink-mid leading-[1.45]">
               {p.chamber === "senate" ? "Senate" : "House"}, {p.district}
             </span>
             {/* The same chips the rows above use, so a chaired conference is
@@ -3384,7 +3428,7 @@ function Swatch({ fill, label }: { fill: string; label: string }) {
   return (
     <span className="inline-flex items-center gap-[6px]">
       <span aria-hidden className={`w-[10px] h-[10px] rounded-[2px] ${fill}`} />
-      <span className="font-body text-xs text-ink-muted">{label}</span>
+      <span className="font-body text-xs text-ink-mid">{label}</span>
     </span>
   );
 }
@@ -3483,7 +3527,7 @@ function Districts() {
 //   return (
 //     <div className="bg-surface border border-line rounded-card p-[18px]">
 //       <p className={LABEL}>Where they come from</p>
-//       <p className="font-body text-base text-ink-muted leading-[1.6] mt-[8px] max-w-[62ch]">
+//       <p className="font-body text-base text-ink-mid leading-[1.6] mt-[8px] max-w-[62ch]">
 //         Every district with a conferee in it, filled in that member&rsquo;s
 //         party color.
 //         {!SHARED_DISTRICTS && (
@@ -3536,7 +3580,7 @@ function WhoSitsOnThem() {
       <h2 className="font-display font-normal text-xl text-ink text-balance max-w-[720px]">
         Who sits on them
       </h2>
-      <p className="font-body text-base text-ink-muted leading-[1.6] mt-[10px] max-w-[62ch]">
+      <p className="font-body text-base text-ink-mid leading-[1.6] mt-[10px] max-w-[62ch]">
         {TALLY.committees} committees, {TALLY.seats} seats, {TALLY.people}{" "}
         people. No one sits on more than three of them, so there is no single
         figure running the end of the session. What the count shows instead is a
@@ -3582,7 +3626,7 @@ function WhoSitsOnThem() {
           })}
         </ul>
         <div className="px-[18px] py-[14px] border-t border-line bg-wash">
-          <p className="font-body text-xs text-ink-muted leading-[1.6]">
+          <p className="font-body text-xs text-ink-mid leading-[1.6]">
             Amber marks a committee they chair. Chairing spreads further than
             membership does: {TALLY.chairs} different people hold the{" "}
             {TALLY.chairSeats} chairmanships and only {TALLY.chairsTwice} hold
@@ -3602,16 +3646,24 @@ export function ConferenceCommittees() {
   return (
     <div className="bg-ground min-h-screen font-body text-ink">
       <SiteNav inner="w-full px-[20px] sm:px-[32px]" />
-      <main className="mx-auto max-w-[1180px] px-[20px] sm:px-[32px] pt-[26px] pb-[80px]">
-        {/* The detail page's hero, at the same face and weight, so arriving
-            here and arriving there feel like one place. */}
-        <h1 className="font-body font-bold text-[28px] sm:text-[40px] leading-[1.2] text-brand">
-          Conference Committees
-        </h1>
+      <main className="mx-auto max-w-[1180px] px-[20px] sm:px-[32px] pt-[20px]">
+        {/* The detail page's hero, at the same face and weight and stepping
+            at the same window width, so arriving here and arriving there feel
+            like one place.
+
+            The committee page measures its reading column, which is the page
+            less the rail and the gap, and goes to 40px when that reaches 700.
+            This page has no rail, so the same moment is 910 of its own width:
+            min(1180, W - 64) at the window where the other one crosses. */}
+        <div className="@container">
+          <h1 className="font-display font-bold text-[29.7px] @[910px]:text-[36px] leading-[1.2] text-brand text-balance">
+            Conference Committees
+          </h1>
+        </div>
 
         {/* One paragraph. The mechanism, and the half that makes it matter:
             nobody watches, and neither chamber can amend what comes back. */}
-        <p className="font-body text-base sm:text-lg text-ink-muted leading-[1.55] mt-[12px]">
+        <p className="font-body text-base sm:text-lg text-ink-mid leading-[1.55] mt-[2px] mb-[14px] pl-[4px] max-sm:pl-0">
           When the House and the Senate pass different versions of the same
           bill, six legislators, three from each chamber, meet to reconcile them
           into one text. Both chambers then vote on that text and, if passed, it
@@ -3707,7 +3759,7 @@ export function ConferenceCommittees() {
 // <span className="min-w-0 min-h-[36px] flex items-center gap-[10px]">
 // <span
 // className={`font-body text-lg leading-[1.35] ${
-// off ? "text-ink-muted" : "text-ink"
+// off ? "text-ink-mid" : "text-ink"
 // }`}
 // >
 // {displayName(c.slug, c.short)}
@@ -3717,7 +3769,7 @@ export function ConferenceCommittees() {
 // than wrapped, so a long title cannot make one row
 // taller than the eleven around it. */}
 // {act && (
-// <span className="min-w-0 truncate font-body italic text-sm text-ink-muted leading-[1.4]">
+// <span className="min-w-0 truncate font-body italic text-sm text-ink-mid leading-[1.4]">
 // &ldquo;{act}&rdquo;
 // </span>
 // )}
@@ -3758,7 +3810,7 @@ export function ConferenceCommittees() {
 // className={`${row} group transition-colors hover:bg-wash`}
 // >
 // {inside}
-// <ChevronRight className="w-[16px] h-[16px] shrink-0 text-ink-muted group-hover:text-ink" />
+// <ChevronRight className="w-[16px] h-[16px] shrink-0 text-ink-mid group-hover:text-ink" />
 // </Link>
 // )}
 // </li>

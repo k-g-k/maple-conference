@@ -29,7 +29,7 @@ export function RefGroup({ title, ids }: { title?: string; ids: string[] }) {
                 {s.title ?? s.label}
               </span>
               {metaLine && (
-                <span className="italic text-ink-muted"> — {metaLine}</span>
+                <span className="italic text-ink-mid"> — {metaLine}</span>
               )}
               {s.note && <> — {s.note}</>}
               {s.url && (

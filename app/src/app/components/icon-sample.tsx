@@ -73,7 +73,7 @@ export default function IconSample() {
         <h1 className="font-display font-medium text-2xl text-ink">
           Marks for a committee you have filed on
         </h1>
-        <p className="font-body text-sm text-ink-muted leading-[1.6] mt-[8px] max-w-[60ch]">
+        <p className="font-body text-sm text-ink-mid leading-[1.6] mt-[8px] max-w-[60ch]">
           Each one at 13px in the page&rsquo;s faint ink, in the row it would
           sit in, beside the word treatment for comparison. The name is under
           each row rather than beside it so the glyph is what you look at.

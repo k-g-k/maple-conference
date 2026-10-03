@@ -87,7 +87,7 @@ function Contents({ active }: { active: string }) {
               className={`shrink-0 whitespace-nowrap font-body text-sm flex items-center border-b-2 transition-colors ${
                 active === c.id
                   ? "text-ink border-brand font-semibold"
-                  : "text-ink-muted border-transparent hover:text-ink"
+                  : "text-ink-mid border-transparent hover:text-ink"
               }`}
             >
               {c.label}
@@ -192,7 +192,7 @@ function Brief({ bill }: { bill: BillRecord }) {
           out, which this page had none of. */}
       <nav
         aria-label="Where this page sits"
-        className="font-body text-sm text-ink-muted flex items-center gap-[7px] flex-wrap"
+        className="font-body text-sm text-ink-mid flex items-center gap-[7px] flex-wrap"
       >
         <span>Bills</span>
         <span aria-hidden className="text-ink-faint">
@@ -218,7 +218,7 @@ function Brief({ bill }: { bill: BillRecord }) {
         const status = statusOf(bill);
         if (!status) return null;
         return (
-          <p className="font-body text-base text-ink-muted leading-[1.5] mt-[18px] max-w-[62ch]">
+          <p className="font-body text-base text-ink-mid leading-[1.5] mt-[18px] max-w-[62ch]">
             <span className="font-semibold text-brand">Current status: </span>
             <span title={status.action}>{plainStatus(status.action)}</span>
             {/* The bill this came off, as a link rather than a phrase. It only
@@ -248,7 +248,7 @@ function Brief({ bill }: { bill: BillRecord }) {
             <li key={`${t.category}-${t.topic}`}>
               <span
                 title={t.category}
-                className="inline-block font-body text-xs text-ink-muted bg-surface border border-line rounded-pill px-[11px] py-[4px]"
+                className="inline-block font-body text-xs text-ink-mid bg-surface border border-line rounded-pill px-[11px] py-[4px]"
               >
                 {t.topic}
               </span>
@@ -274,7 +274,7 @@ function NoBill({ number }: { number?: string }) {
         <h1 className="font-display font-semibold text-2xl text-ink">
           {shown ?? "That bill"} is not in this prototype
         </h1>
-        <p className="font-body text-base text-ink-muted leading-[1.6] mt-[12px]">
+        <p className="font-body text-base text-ink-mid leading-[1.6] mt-[12px]">
           Only some of the 194th General Court's bills are bundled here.{" "}
           {shown && (
             <a
@@ -518,7 +518,7 @@ function BillPage({ bill }: { bill: BillRecord }) {
                       </div>
                     </>
                   ) : (
-                    <p className="font-body text-lg text-ink-muted leading-[1.65] text-pretty">
+                    <p className="font-body text-lg text-ink-mid leading-[1.65] text-pretty">
                       No plain-language summary yet. MAPLE generates these from
                       the bill text; the legislature publishes none.
                     </p>

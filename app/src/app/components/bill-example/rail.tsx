@@ -204,7 +204,7 @@ export function Rail({
               onClick={onAdd}
               aria-label={addLabel}
               title={addLabel}
-              className="shrink-0 p-[6px] rounded-control text-ink-muted hover:text-ink hover:bg-wash cursor-pointer transition-colors"
+              className="shrink-0 p-[6px] rounded-control text-ink-mid hover:text-ink hover:bg-wash cursor-pointer transition-colors"
             >
               <Plus className="w-[18px] h-[18px]" />
             </button>
@@ -217,7 +217,7 @@ export function Rail({
               onClick={() => onOpenChange(false)}
               aria-label={`${sheet ? "Close" : "Collapse"} ${current.title}`}
               title={sheet ? "Close" : "Collapse"}
-              className="shrink-0 -mr-[6px] p-[6px] rounded-control text-ink-muted hover:text-ink hover:bg-wash cursor-pointer transition-colors"
+              className="shrink-0 -mr-[6px] p-[6px] rounded-control text-ink-mid hover:text-ink hover:bg-wash cursor-pointer transition-colors"
             >
               {sheet ? (
                 <X className="w-[18px] h-[18px]" />
@@ -232,7 +232,7 @@ export function Rail({
               }
               aria-label={`Close ${current.title}`}
               title="Close"
-              className="shrink-0 -mr-[6px] p-[6px] rounded-control text-ink-muted hover:text-ink hover:bg-wash cursor-pointer transition-colors"
+              className="shrink-0 -mr-[6px] p-[6px] rounded-control text-ink-mid hover:text-ink hover:bg-wash cursor-pointer transition-colors"
             >
               <X className="w-[18px] h-[18px]" />
             </button>
@@ -362,14 +362,14 @@ export function Rail({
           title={`Show ${fallback.title}`}
           aria-hidden={open}
           tabIndex={open ? -1 : 0}
-          className="hidden lg:flex fixed right-0 top-[calc(var(--nav-h)+1px)] bottom-0 z-30 w-[var(--rail-tab-w)] flex-col items-center gap-[14px] pt-[13px] bg-ground border-l border-line text-ink-muted hover:text-ink hover:bg-wash cursor-pointer transition-colors"
+          className="hidden lg:flex fixed right-0 top-[calc(var(--nav-h)+1px)] bottom-0 z-30 w-[var(--rail-tab-w)] flex-col items-center gap-[14px] pt-[13px] bg-ground border-l border-line text-ink-mid hover:text-ink hover:bg-wash cursor-pointer transition-colors"
         >
           <ChevronsLeft className="shrink-0 w-[18px] h-[18px]" />
           <span className="font-body font-semibold text-sm tracking-[0.02em] text-ink [writing-mode:vertical-rl]">
             {fallback.title}
           </span>
           {count !== undefined && (
-            <span className="font-body font-semibold text-xs text-ink-muted [writing-mode:vertical-rl]">
+            <span className="font-body font-semibold text-xs text-ink-mid [writing-mode:vertical-rl]">
               {count}
             </span>
           )}

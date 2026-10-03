@@ -21,7 +21,7 @@ function SubHead({ title, note }: { title: string; note?: string }) {
         {title}
       </h3>
       {note && (
-        <p className="font-body text-sm text-ink-muted mb-[14px] max-w-[74ch]">
+        <p className="font-body text-sm text-ink-mid mb-[14px] max-w-[74ch]">
           {note}
         </p>
       )}
@@ -39,7 +39,7 @@ function Mark({ name }: { name: string }) {
     .join("")
     .slice(0, 2);
   return (
-    <span className="shrink-0 w-[36px] h-[36px] rounded-full bg-sunken border border-line flex items-center justify-center font-body font-semibold text-sm text-ink-muted">
+    <span className="shrink-0 w-[36px] h-[36px] rounded-full bg-sunken border border-line flex items-center justify-center font-body font-semibold text-sm text-ink-mid">
       {initials}
     </span>
   );
@@ -120,7 +120,7 @@ function Person({ name }: { name: string }) {
 /** The page's own note about a piece of the record that is not there. */
 function Missing({ children }: { children: React.ReactNode }) {
   return (
-    <p className="font-body text-sm text-ink-muted leading-[1.65] border-l-2 border-line-strong pl-[16px] max-w-[74ch]">
+    <p className="font-body text-sm text-ink-mid leading-[1.65] border-l-2 border-line-strong pl-[16px] max-w-[74ch]">
       {children}
     </p>
   );
@@ -140,7 +140,7 @@ export function WhatItDoes({ bill }: { bill: BillRecord }) {
               document is, and on a redrafted document it is the only place
               that says which bill it came out of. */}
           {bill.pinslip && (
-            <p className="font-body text-sm text-ink-muted leading-[1.65] mt-[14px] max-w-[74ch]">
+            <p className="font-body text-sm text-ink-mid leading-[1.65] mt-[14px] max-w-[74ch]">
               {bill.pinslip}
             </p>
           )}
@@ -150,7 +150,7 @@ export function WhatItDoes({ bill }: { bill: BillRecord }) {
       <Span>
         <SubHead title="Bill text" />
         {bill.textLength > 0 ? (
-          <p className="font-body text-sm text-ink-muted leading-[1.65] max-w-[74ch]">
+          <p className="font-body text-sm text-ink-mid leading-[1.65] max-w-[74ch]">
             {bill.textLength.toLocaleString()} characters on file, roughly{" "}
             {Math.round(bill.textLength / 5400)} pages.
           </p>
@@ -199,7 +199,7 @@ export function WhoFiledIt({ bill }: { bill: BillRecord }) {
       question="Who filed it?"
       answer={
         <Span>
-          <p className="font-body text-sm text-ink-muted leading-[1.65] max-w-[74ch]">
+          <p className="font-body text-sm text-ink-mid leading-[1.65] max-w-[74ch]">
             A bill is filed by one member and co-signed by others. Signing is
             not a vote: it says a member wants the bill considered.
           </p>
@@ -267,7 +267,7 @@ export function History({ bill }: { bill: BillRecord }) {
       question="What has happened to it?"
       answer={
         <Span>
-          <p className="font-body text-sm text-ink-muted leading-[1.65] max-w-[74ch]">
+          <p className="font-body text-sm text-ink-mid leading-[1.65] max-w-[74ch]">
             {bill.history.length
               ? `${bill.history.length} recorded ${bill.history.length === 1 ? "action" : "actions"}, from ${first.date} to ${last.date}. Most of a bill's history is procedural, and the gaps between entries are usually the substance.`
               : "No actions recorded against this document."}
@@ -279,7 +279,7 @@ export function History({ bill }: { bill: BillRecord }) {
         <SubHead title="Latest" />
         {last ? (
           <div className="border-l-2 border-official pl-[16px] sm:pl-[20px]">
-            <p className="font-body font-semibold text-sm text-ink-muted tabular-nums">
+            <p className="font-body font-semibold text-sm text-ink-mid tabular-nums">
               {last.date} · {last.branch}
             </p>
             <p className="font-body text-lg text-ink leading-[1.5] mt-[4px] max-w-[62ch]">
@@ -303,7 +303,7 @@ export function History({ bill }: { bill: BillRecord }) {
                   key={`${h.date}-${i}`}
                   className="grid grid-cols-[104px_1fr] sm:grid-cols-[130px_1fr] gap-x-[16px] sm:gap-x-[22px] items-baseline py-[7px] border-b border-line last:border-0"
                 >
-                  <p className="font-body font-semibold text-sm text-ink-muted tabular-nums">
+                  <p className="font-body font-semibold text-sm text-ink-mid tabular-nums">
                     {h.date}
                   </p>
                   <p className="font-body text-sm text-ink leading-[1.55]">

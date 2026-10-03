@@ -23,7 +23,7 @@ export function ResearchGroup({
           >
             <span className="font-semibold text-ink">{s.citation}</span>
             {s.affiliation && s.affiliation !== "peer-reviewed" && (
-              <span className="italic text-ink-muted"> — {s.affiliation}</span>
+              <span className="italic text-ink-mid"> — {s.affiliation}</span>
             )}
             {" — "}
             {s.finding}

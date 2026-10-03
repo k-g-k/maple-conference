@@ -15,13 +15,13 @@ export function MediaPhase({
       <p className="font-body font-semibold text-lg text-ink">
         {phase}
       </p>
-      <p className="font-body font-semibold text-2xs text-ink-muted mt-[2px] mb-[8px]">
+      <p className="font-body font-semibold text-2xs text-ink-mid mt-[2px] mb-[8px]">
         {when}
       </p>
       <div className="space-y-[8px]">
         {articles.map((a) => (
           <div key={a.title} className="flex gap-[12px] items-baseline flex-wrap">
-            <span className="font-body font-semibold text-2xs text-ink-muted min-w-[130px]">
+            <span className="font-body font-semibold text-2xs text-ink-mid min-w-[130px]">
               {a.outlet}
             </span>
             <a

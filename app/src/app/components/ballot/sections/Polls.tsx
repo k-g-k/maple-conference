@@ -22,7 +22,7 @@ export function Polls({ rows }: { rows: PollRow[] }) {
               {p.support}%
             </div>
             <div
-              className="bg-ink-muted flex items-center pl-[9px]"
+              className="bg-ink-mid flex items-center pl-[9px]"
               style={{ width: `${p.oppose}%` }}
             >
               {p.oppose}%
@@ -34,7 +34,7 @@ export function Polls({ rows }: { rows: PollRow[] }) {
               {p.undecided}%
             </div>
           </div>
-          <p className="font-body text-xs text-ink-muted">
+          <p className="font-body text-xs text-ink-mid">
             Support {p.support}% · Oppose {p.oppose}% · Undecided {p.undecided}%
             · {p.dates} · {p.sample} · MoE {p.moe}
           </p>
