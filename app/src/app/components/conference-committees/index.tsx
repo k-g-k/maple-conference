@@ -49,6 +49,7 @@ import {
 import { VoteMap, shortTitle, surname } from "../bill-example/lineage-section";
 import { SiteNav } from "../site-nav";
 import { useDeviceViewport } from "../use-device-viewport";
+import { useNarrow } from "../use-narrow";
 
 /**
  * The dotted leader, as a background rather than a border.
@@ -869,6 +870,7 @@ function Rooms({ rowStyle = "band" }: { rowStyle?: RowStyle }) {
   // right hand side while the pointer goes elsewhere, which is the only way
   // to read what is written about them without holding the mouse still.
   const [lockWho, setLockWho] = useState<string | null>(null);
+  const touch = useNarrow("(pointer: coarse)");
   // The press that sets the lock also reaches the window, where every other
   // press clears it. The flag lets that one through.
   const justLocked = useRef(false);
@@ -911,6 +913,7 @@ function Rooms({ rowStyle = "band" }: { rowStyle?: RowStyle }) {
   // flicker the whole right hand side; blank map is not a gap, and resting on
   // it should read as nothing being pointed at.
   const readDistrict = (k: string | null) => {
+    if (touch) return;
     if (offCell.current) window.clearTimeout(offCell.current);
     if (k) setHoverWho(k);
     else offCell.current = window.setTimeout(() => setHoverWho(null), 60);
@@ -925,7 +928,7 @@ function Rooms({ rowStyle = "band" }: { rowStyle?: RowStyle }) {
   // Held beats hovered, and a row beats both: running down the twelve is a
   // question about rooms, and the card answers that one for as long as the
   // pointer is on them. Coming off the rows gives the held district back.
-  const who = hoverRow ? null : (lockWho ?? hoverWho);
+  const who = hoverRow ? null : (lockWho ?? (touch ? null : hoverWho));
   // A district under the pointer while another is held. It is not what the
   // card is reading, so it is not painted; it is outlined, to say it can be.
   const peek = lockWho && hoverWho !== lockWho ? hoverWho : null;

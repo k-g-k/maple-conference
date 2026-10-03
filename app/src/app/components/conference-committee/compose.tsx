@@ -311,6 +311,29 @@ export function ConferenceCompose({
   const [save, setSave] = useState<"none" | "saving" | "saved" | "fading">(
     "none",
   );
+  const box = useRef<HTMLDivElement>(null);
+  const [maxH, setMaxH] = useState<number>();
+  useEffect(() => {
+    const vv = window.visualViewport;
+    const wide = window.matchMedia("(min-width: 1024px)");
+    const read = () => {
+      const el = box.current;
+      if (!el || !vv || wide.matches) return setMaxH(undefined);
+      const top = el.getBoundingClientRect().top;
+      setMaxH(Math.max(200, Math.round(vv.height - top - 8)));
+    };
+    read();
+    vv?.addEventListener("resize", read);
+    vv?.addEventListener("scroll", read);
+    window.addEventListener("resize", read);
+    wide.addEventListener("change", read);
+    return () => {
+      vv?.removeEventListener("resize", read);
+      vv?.removeEventListener("scroll", read);
+      window.removeEventListener("resize", read);
+      wide.removeEventListener("change", read);
+    };
+  }, [active]);
   const [everSaved, setEverSaved] = useState(false);
   useEffect(() => {
     if (save === "saved") setEverSaved(true);
@@ -366,7 +389,11 @@ export function ConferenceCompose({
     requestAnimationFrame(() => setAsking(true));
   };
   return (
-    <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain lg:overflow-visible flex flex-col gap-[16px]">
+    <div
+      ref={box}
+      style={maxH ? { maxHeight: maxH } : undefined}
+      className="flex-1 min-h-0 overflow-y-auto overscroll-contain lg:overflow-visible flex flex-col gap-[16px]"
+    >
       <div className="flex flex-col lg:flex-1 lg:min-h-0">
         {/* One a row rather than a wrapping line of chips. Four of these are
             sentences, not one-word stances, and on a panel's width they wrapped
@@ -417,7 +444,20 @@ export function ConferenceCompose({
           // The red goes when there is something in the field, not when it is
           // merely looked at: focusing an empty field has not answered the
           // thing the red is asking for.
-          onFocus={undefined}
+          onFocus={() => {
+            if (window.matchMedia("(min-width: 1024px)").matches) return;
+            const el = field.current;
+            const scroller = box.current;
+            if (!el || !scroller) return;
+            // After the keyboard has had a frame to arrive, so the cap above
+            // has been recomputed and there is somewhere to scroll to.
+            setTimeout(() => {
+              scroller.scrollTo({
+                top: el.offsetTop - scroller.offsetTop - 8,
+                behavior: "smooth",
+              });
+            }, 250);
+          }}
           className={`h-[190px] lg:h-auto lg:flex-1 lg:min-h-0 lg:max-h-[280px] w-full resize-none bg-surface border rounded-control p-[12px] font-body text-[16px] sm:text-base text-ink leading-[1.55] placeholder:text-base placeholder:text-ink-muted focus:outline-none ${
             // The border carries the refusal. The placeholder is the field
             // telling you what to write, which is the same sentence whether or
@@ -437,7 +477,7 @@ export function ConferenceCompose({
         </div>
       </div>
 
-      <div className="shrink-0 flex items-center justify-end gap-[12px] mt-[12px] pb-[4px] lg:mt-0 lg:pb-0">
+      <div className="shrink-0 flex items-center justify-end gap-[12px] mt-[36px] pb-[4px] lg:mt-0 lg:pb-0">
         {save !== "none" && (
           // Far left, on the buttons' own line: it reports on the thing the
           // buttons act on, and a line of its own would make it an event.
