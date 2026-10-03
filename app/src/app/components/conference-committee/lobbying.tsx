@@ -1,6 +1,7 @@
 import { useMemo, useState, type Ref } from "react";
 import { ChevronUp } from "lucide-react";
 import { Pagination } from "../ballot";
+import { useNarrow } from "../use-narrow";
 import { Chapter, Span } from "../bill-example/spine";
 import type { CommitteeDetail } from "../../data/conference-committees/committees";
 import {
@@ -362,9 +363,8 @@ export function LobbyingDisclosures({
   headerTop?: string;
 }) {
   const [page, setPage] = useState(0);
-  const [size] = useState(() =>
-    typeof window !== "undefined" && window.innerWidth < 768 ? 1 : PAGE_SIZE,
-  );
+  // One at a time on a phone, where each row is a stack of its own.
+  const size = useNarrow() ? 1 : PAGE_SIZE;
   /**
    * How the table is ordered, or nothing for the order the data came in.
    *

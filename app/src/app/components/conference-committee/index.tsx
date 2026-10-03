@@ -114,6 +114,7 @@ import {
 import { SiteNav } from "../site-nav";
 import { LobbyingDisclosures } from "./lobbying";
 import { useDeviceViewport } from "../use-device-viewport";
+import { useNarrow } from "../use-narrow";
 // The writing step, the review step and the three containers it is being
 // compared in. The page decides which container a route asks for; none of them
 // knows about the others.
@@ -2010,11 +2011,9 @@ function ConferenceText({
    */
   pinTop?: string;
 }) {
-  const [side, setSide] = useState<"house" | "senate" | "both">(() =>
-    typeof window !== "undefined" && window.innerWidth < 768
-      ? "senate"
-      : "both",
-  );
+  const [picked, setSide] = useState<"house" | "senate" | "both" | null>(null);
+  const narrow = useNarrow();
+  const side = picked ?? (narrow ? "senate" : "both");
   const bill = side === "house" ? c.houseBill : c.senateBill;
   const doc = billDocument(bill?.n);
   // Both, side by side in the same well. A conference is two texts being
@@ -3294,7 +3293,7 @@ function Detail({ c, style }: { c: CommitteeDetail; style: ReviewStyle }) {
           another floating button competing with the two on the right. Open, the
           same corner holds a white panel with the way to shut it at the top,
           above the switches it controls. */}
-      <div className="fixed bottom-0 left-0 z-50">
+      <div className="hidden md:block fixed bottom-0 left-0 z-50">
         {!showControls ? (
           <button
             onClick={() => openControls(true)}
