@@ -362,7 +362,7 @@ export function ConferenceCompose({
     // textarea takes what is left, which makes the thing you are writing the
     // only thing that scrolls.
     <div className="h-full flex flex-col gap-[16px] min-h-0">
-      <div className="flex-1 min-h-0 flex flex-col">
+      <div className="flex-1 min-h-0 flex flex-col overflow-y-auto overscroll-contain">
         {/* One a row rather than a wrapping line of chips. Four of these are
             sentences, not one-word stances, and on a panel's width they wrapped
             into a block a reader had to pick apart. */}
@@ -413,7 +413,7 @@ export function ConferenceCompose({
           // merely looked at: focusing an empty field has not answered the
           // thing the red is asking for.
           onFocus={undefined}
-          className={`flex-1 min-h-0 max-h-[280px] w-full resize-none bg-surface border rounded-control p-[12px] font-body text-[16px] sm:text-base text-ink leading-[1.55] placeholder:text-base placeholder:text-ink-muted focus:outline-none ${
+          className={`flex-1 min-h-[150px] max-h-[280px] w-full resize-none bg-surface border rounded-control p-[12px] font-body text-[16px] sm:text-base text-ink leading-[1.55] placeholder:text-base placeholder:text-ink-muted focus:outline-none ${
             // The border carries the refusal. The placeholder is the field
             // telling you what to write, which is the same sentence whether or
             // not you have just been told off.
