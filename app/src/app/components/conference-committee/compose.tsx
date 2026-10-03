@@ -313,7 +313,7 @@ export function ConferenceCompose({
   );
   const [everSaved, setEverSaved] = useState(false);
   useEffect(() => {
-    if (save === "saved") setEverSaved(true);
+    if (save === "fading") setEverSaved(true);
   }, [save]);
   const field = useRef<HTMLTextAreaElement>(null);
   useEffect(() => {
