@@ -192,6 +192,7 @@ function RowFace({
   gray = false,
   tip = true,
   rimScale = 1,
+  star = true,
 }: {
   p: RosterPerson;
   dim?: boolean;
@@ -224,6 +225,8 @@ function RowFace({
   /** Off where the card answers the pointer itself and a tooltip would be a
    *  second answer to the same gesture. */
   tip?: boolean;
+  /** Off where faces overlap and the badge would land on a neighbour. */
+  star?: boolean;
   /**
    * Thin the party ring past what the face's size asks for.
    *
@@ -366,7 +369,7 @@ function RowFace({
           />
         </span>
       )}
-      {role && (
+      {role && star && (
         <span
           style={{ width: part(0.36), height: part(0.36) }}
           className="absolute -bottom-[1px] -right-[1px] rounded-full bg-surface flex items-center justify-center"
@@ -1349,7 +1352,13 @@ function Rooms({ rowStyle = "band" }: { rowStyle?: RowStyle }) {
               key={p.seat}
               className="-ml-[10px] first:ml-0 rounded-full shadow-[0_0_0_2px_var(--color-surface)]"
             >
-              <RowFace p={p} size={26} rimScale={0.7} tip={false} />
+              <RowFace
+                p={p}
+                size={26}
+                rimScale={0.7}
+                tip={false}
+                star={false}
+              />
             </span>
           );
           const inside = (

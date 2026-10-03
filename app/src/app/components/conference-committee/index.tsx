@@ -739,11 +739,10 @@ function PeopleAndMaps({
       key={chamber}
       className="flex-1 min-w-0"
       chamber={chamber}
-      // No veil and nothing sat back: reading one of the six is marked by a
-      // rim on that person's face, here and in the list beside it, and the
-      // rest of the committee stays painted. The committees index dims
-      // instead, and does it with its own opt-in props, so the two pages can
-      // answer the pointer differently.
+      dim={!!showing}
+      veil
+      veilAt={0.35}
+      paired
       highlight={six
         .filter((m) => m.key.startsWith("S:") === (chamber === "senate"))
         .map((m) => m.key)}
@@ -1860,7 +1859,7 @@ function TitlePicker({
     };
   }, [open]);
   return (
-    <div ref={box} className="relative">
+    <div ref={box} className="relative min-w-0 flex-1">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
@@ -1868,9 +1867,9 @@ function TitlePicker({
         aria-haspopup="listbox"
         // Inert once the rail is back: above the breakpoint the heading is a
         // heading and the list is a column down the left.
-        className="md:pointer-events-none inline-flex items-start gap-[8px] text-left cursor-pointer"
+        className="md:pointer-events-none flex w-full items-start gap-[8px] text-left cursor-pointer"
       >
-        <h1 className="font-body font-bold text-[28px] @[700px]:text-[40px] leading-[1.2] text-[#0b1a4d]">
+        <h1 className="min-w-0 font-body font-bold text-[28px] @[700px]:text-[40px] leading-[1.2] text-[#0b1a4d] text-balance">
           {displayName(slug, short)}
         </h1>
         <ChevronDown
@@ -2011,7 +2010,11 @@ function ConferenceText({
    */
   pinTop?: string;
 }) {
-  const [side, setSide] = useState<"house" | "senate" | "both">("both");
+  const [side, setSide] = useState<"house" | "senate" | "both">(() =>
+    typeof window !== "undefined" && window.innerWidth < 768
+      ? "senate"
+      : "both",
+  );
   const bill = side === "house" ? c.houseBill : c.senateBill;
   const doc = billDocument(bill?.n);
   // Both, side by side in the same well. A conference is two texts being
@@ -3456,11 +3459,14 @@ function Detail({ c, style }: { c: CommitteeDetail; style: ReviewStyle }) {
                   question pages, which put Follow and Share in the same
                   place. */}
               <div className="flex items-start justify-between gap-[24px]">
+                {/* The picker is the row's flexible half, so the heading can
+                    run the full width before it wraps. */}
                 <TitlePicker
                   slug={c.slug}
                   short={c.short}
                   href={committeeHref}
                 />
+                {/* Follow and Share are parked. Uncomment to restore them.
                 <div className="shrink-0 flex items-center gap-[18px] mt-[6px]">
                   <button
                     onClick={() => setFollowing((f) => !f)}
@@ -3497,6 +3503,7 @@ function Detail({ c, style }: { c: CommitteeDetail; style: ReviewStyle }) {
                     Share
                   </button>
                 </div>
+                */}
               </div>
               <p className="font-body text-xl @[980px]:text-2xl text-ink-muted leading-[1.4] mt-[10px]">
                 <ConferenceByline
