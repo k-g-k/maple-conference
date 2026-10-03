@@ -194,7 +194,7 @@ export const MEMBER_BY_SEAT: Record<string, SeatMember> = {
   "S:Oliveira": { name: "Jacob R. Oliveira", code: "JRO0", portrait: file("JRO0") },
   "S:Payano": { name: "Pavel M. Payano", code: "PMP0", portrait: file("PMP0") },
   "S:Rausch": { name: "Rebecca L. Rausch", code: "RLR0", portrait: file("RLR0") },
-  "S:Rodrigues": { name: "Michael J. Rodrigues", code: "MJR0", portrait: file("MJR0") },
+  "S:Rodrigues": { name: "Michael J. Rodrigues", code: "MJR0", portrait: file("MJR0"), title: "Senate Ways and Means Chair" },
   "S:Rush": { name: "Michael F. Rush", code: "MFR0", portrait: file("MFR0"), title: "Senate Majority Whip" },
   "S:Spilka": { name: "Karen E. Spilka", code: "KES0", portrait: file("KES0"), title: "President of the Senate" },
   "S:Tarr": { name: "Bruce E. Tarr", code: "BET0", portrait: file("BET0"), title: "Minority Leader" },
@@ -275,6 +275,17 @@ export const profileUrl = (code: string) =>
  * lookup and nothing that reads it has to change.
  */
 export const MINE: Record<string, string> = {
-  "Norfolk-14": "Your Rep",
+  "Norfolk-14": "My Rep",
+  "S:Creem": "My Senator",
+};
+
+/**
+ * The same two, written out, for anywhere the line has room for it.
+ *
+ * A district reads "Third Bristol and Plymouth", so a label standing in for
+ * one can afford the whole word. Where it cannot, `MINE` is the short form.
+ */
+export const MINE_FULL: Record<string, string> = {
+  "Norfolk-14": "Your Representative",
   "S:Creem": "Your Senator",
 };

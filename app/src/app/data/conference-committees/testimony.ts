@@ -14,7 +14,7 @@
 // by invented positions they might take for real ones.
 //
 // Positions follow the one rule we already know will hold: an organisation, a
-// legislator or an agency filing on a conference is on the record as having
+// an agency writing on a conference is on the record as having
 // filed, not as having taken a side. None of the four is "no side", so the rule
 // lands on the least loaded of them: all three kinds carry "Please pass
 // something", which asks the conference to do its job without choosing a
@@ -34,12 +34,11 @@
 import type { ConferencePosition } from "./positions";
 
 /**
- * "organization" for accounts filing under an organisation's name,
- * "legislator" for members of the General Court, "government" for executive
- * offices, "individual" for a person.
+ * "organization" for accounts writing under an organisation's name,
+ * "government" for public offices, "individual" for a person.
  */
 export type ConferenceAccountType =
-  "organization" | "legislator" | "government" | "individual";
+  "organization" | "government" | "individual";
 
 export interface ConferenceAccount {
   id: string;
@@ -66,7 +65,7 @@ export interface ConferenceSubmission {
 
 /**
  * The four account types MAPLE has, so the account-type filter has something in
- * every position: individuals, organizations, legislators, government offices.
+ * every position: individuals, organizations, government offices.
  *
  * No avatars. Initials are all a placeholder account should carry, and a logo
  * would have to belong to somebody.
@@ -158,22 +157,20 @@ export const DEMO_ACCOUNTS: ConferenceAccount[] = [
     initials: "PW",
   },
 
-  // ── Legislators ───────────────────────────────────────────────────────────
-  // Not conferees, and not named after any sitting member. A legislator account
-  // is its own type in the feed, so the filter needs one to find.
+  // ── More government offices ───────────────────────────────────────────────
   {
-    id: "cc-leg-rep",
-    name: "Rep. Sample Member",
-    userType: "legislator",
-    descriptor: "State Representative, placeholder district",
-    initials: "SM",
+    id: "cc-gov-dept",
+    name: "Office of a Placeholder Department",
+    userType: "government",
+    descriptor: "Government account, placeholder department",
+    initials: "PD",
   },
   {
-    id: "cc-leg-sen",
-    name: "Sen. Example Member",
-    userType: "legislator",
-    descriptor: "State Senator, placeholder district",
-    initials: "EM",
+    id: "cc-gov-board",
+    name: "Example Regional Board",
+    userType: "government",
+    descriptor: "Government account, placeholder board",
+    initials: "RB",
   },
 
   // ── Government offices ────────────────────────────────────────────────────
@@ -254,10 +251,10 @@ export const DEMO_TESTIMONY: ConferenceSubmission[] = [
   },
   {
     id: "cc-t-rep",
-    userId: "cc-leg-rep",
+    userId: "cc-gov-dept",
     position: "pass",
     date: "September 14, 2026",
-    body: "A legislator account files the same way everyone else does. The account type sits beside the name, so a reader can tell at a glance who is speaking.",
+    body: "A public office writes under its own name. The account type sits beside the name, so a reader can tell at a glance who is speaking.",
   },
   {
     id: "cc-t-terry-agree",
@@ -317,10 +314,10 @@ export const DEMO_TESTIMONY: ConferenceSubmission[] = [
   },
   {
     id: "cc-t-sen",
-    userId: "cc-leg-sen",
+    userId: "cc-gov-board",
     position: "pass",
     date: "September 3, 2026",
-    body: "A second legislator account, so the type reads as a category rather than as one odd entry. What a member actually writes would name the two texts and the difference between them. This does not, because it has to sit on every page.",
+    body: "A second government account, so the type reads as a category rather than as one odd entry. What an office actually writes would name the two texts and the difference between them. This does not, because it has to sit on every page.",
   },
   {
     id: "cc-t-nadia",

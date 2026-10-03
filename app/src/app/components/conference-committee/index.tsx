@@ -66,10 +66,12 @@ import {
   MEMBER_BY_NAME,
   MEMBER_BY_SEAT,
   MINE,
+  MINE_FULL,
   profileUrl,
 } from "../../data/bill-lineage/members";
 import {
   ClampedText,
+  Hint,
   Pagination,
   holdPlace,
   holdPress,
@@ -431,7 +433,7 @@ function Answer({
         {chamber}
       </p>
       <p
-        className={`font-body text-base leading-[1.4] mt-[2px] ${
+        className={`font-body text-sm min-[390px]:text-base leading-[1.4] mt-[2px] ${
           text ? "text-ink" : "text-ink-faint italic"
         }`}
       >
@@ -647,7 +649,7 @@ function Hearings({
   return (
     <div>
       {heading && (
-        <p className="font-body font-semibold text-2xs uppercase tracking-[0.08em] text-ink-muted mb-[10px]">
+        <p className="font-body font-semibold text-2xs uppercase tracking-[0.08em] text-ink-muted">
           Hearings
         </p>
       )}
@@ -712,7 +714,11 @@ function PeopleAndMaps({
 }) {
   const [hovered, setHovered] = useState<string | null>(null);
   const [picked, setPicked] = useState<string | null>(null);
-  const showing = hovered ?? picked;
+  // A finger has no hover, but iOS sends one on the way to a tap, so the
+  // section was told to read one person and hold another in the same gesture
+  // and took turns between them. On a coarse pointer only the tap counts.
+  const touch = useNarrow("(pointer: coarse)");
+  const showing = (touch ? null : hovered) ?? picked;
   if (!six.length) return null;
   const pin = (k: string) => setPicked((v) => (v === k ? null : k));
   const people = Object.fromEntries(
@@ -754,7 +760,7 @@ function PeopleAndMaps({
       // section flicker between every one of them. The reading changes when
       // something else claims it, and is let go of when the pointer leaves
       // the block altogether.
-      onHover={(k) => k && setHovered(k)}
+      onHover={(k) => !touch && k && setHovered(k)}
       onPin={pin}
       people={people}
     />
@@ -764,7 +770,7 @@ function PeopleAndMaps({
       ch={ch}
       people={six}
       showing={showing ? [showing] : []}
-      onHover={(k) => k && setHovered(k)}
+      onHover={(k) => !touch && k && setHovered(k)}
       onPin={pin}
     />
   );
@@ -807,7 +813,7 @@ function PeopleAndMaps({
         // The names and the maps are one area to the pointer: moving between a
         // conferee and their district, or between the two chambers, holds the
         // reading, and leaving the block is what lets it go.
-        onPointerLeave={() => setHovered(null)}
+        onPointerLeave={() => !touch && setHovered(null)}
         className={`grid grid-cols-2 gap-y-[32px] gap-x-[20px] @[600px]:grid-cols-[max-content_max-content_minmax(0,1fr)_minmax(0,1fr)] ${
           // The gap belongs to whatever sits above, the section heading or the
           // card's own title, and it is the same gap a chapter leaves under
@@ -1168,7 +1174,7 @@ function PublicMap({ onOpenRail }: { onOpenRail?: () => void }) {
                   role="button"
                   tabIndex={0}
                   aria-pressed={active}
-                  aria-label={`${m.label}, ${m.count} on file`}
+                  aria-label={`${m.label}, ${m.count}`}
                   className="cursor-pointer outline-none"
                   onClick={() => toggle(m.seat)}
                   onKeyDown={(e) => {
@@ -1423,6 +1429,7 @@ function Scan({
                     key={card ? "tabbed" : "scroll"}
                     variant="heading"
                     size="large"
+                    contentClass="pl-0 min-[390px]:pl-[27px]"
                     // Tabbed shows the questions and nothing else, so there is
                     // room to answer them where they stand. Scroll keeps them
                     // folded, since they sit among everything else.
@@ -1487,7 +1494,7 @@ function Scan({
                   </>
                 ) : (
                   <>
-                    {MINE[mine[0].key]} is on this committee,{" "}
+                    {MINE_FULL[mine[0].key]} is on this committee,{" "}
                     <span className="font-semibold">
                       {shortName(mine[0].name)}
                     </span>
@@ -3307,13 +3314,14 @@ function Detail({ c, style }: { c: CommitteeDetail; style: ReviewStyle }) {
           above the switches it controls. */}
       <div className="hidden md:block fixed bottom-0 left-0 z-50">
         {!showControls ? (
-          <button
-            onClick={() => openControls(true)}
-            title="Prototype controls"
-            className="flex items-center gap-[8px] rounded-tr-card bg-ink px-[16px] py-[11px] font-body font-semibold text-2xs uppercase tracking-[0.09em] text-ink-inverse hover:bg-ink/90 cursor-pointer transition-colors"
-          >
-            Toggles
-          </button>
+          <Hint text="Prototype controls" className="block">
+            <button
+              onClick={() => openControls(true)}
+              className="flex items-center gap-[8px] rounded-tr-card bg-ink px-[16px] py-[11px] font-body font-semibold text-2xs uppercase tracking-[0.09em] text-ink-inverse hover:bg-ink/90 cursor-pointer transition-colors"
+            >
+              Toggles
+            </button>
+          </Hint>
         ) : (
           // Clipped, so the black head takes the panel's own rounded corner
           // rather than sitting square inside it.

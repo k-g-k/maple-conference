@@ -27,7 +27,7 @@ import {
   Users,
   Share,
 } from "lucide-react";
-import { ClampedText, FilterChip, Modal, Pagination } from "../ballot";
+import { ClampedText, FilterChip, Hint, Modal, Pagination } from "../ballot";
 import { AccountAvatar, AccountTypeIcon, PositionChip } from "./accounts";
 import type {
   ConferenceAccount,
@@ -116,7 +116,7 @@ function EntryActions({ name }: { name: string }) {
  * inside either of those, and the panel opening does not move the window. So the
  * card declares itself a container and every rule below is a query on it.
  *
- * One threshold, 360px of card:
+ * One threshold, 600px of card:
  *
  *   under it   the header is held to one line and the name gives way with an
  *              ellipsis; the position chip and the date leave the header for a
@@ -127,11 +127,10 @@ function EntryActions({ name }: { name: string }) {
  *              icon and chip beside it, the date holds the top-right corner
  *              beside the kebab, and the body is indented past the avatar.
  *
- * Why 360: the panel's own narrowest card is 364px, its 400px resting width less
- * the 18px of padding on each side, so every width the panel can be dragged to
- * keeps the layout that ships today. A phone puts the card between about 300 and
- * 355 and gets the compact header. If DRAWER_MIN or --rail-pad in the page ever
- * move, this number has to be checked against them again.
+ * Why 600: a phone's card is about 300 to 355 and the panel's is 364 to 484, so
+ * both take the compact header at every width they can be, and the full one
+ * belongs to the page's own feed, which is the only place with room for a
+ * header holding a name, an icon, a chip and a date on one line.
  */
 export function SubmissionEntry({
   t,
@@ -169,7 +168,7 @@ export function SubmissionEntry({
       {/* Narrow, the avatar sits against the top of the name block rather than
           centred on it: there is a truncated name and a descriptor there, and
           centring a 40px disc on two lines of text leaves it floating. */}
-      <div className="relative flex items-start @[360px]:items-center gap-[14px] @[360px]:gap-[18px]">
+      <div className="relative flex items-start @[600px]:items-center gap-[14px] @[600px]:gap-[18px]">
         <AccountAvatar account={user} />
         <div className="flex-1 min-w-0">
           {/* Name, type and position wrap inside their own box; the date sits
@@ -179,7 +178,7 @@ export function SubmissionEntry({
               {/* One line while the card is narrow, where a name, an icon and a
                   chip wrapping into three rows costs more height than the body
                   they sit above. Over the threshold it wraps as it always has. */}
-              <p className="flex items-end gap-[6px] @[360px]:flex-wrap font-body font-semibold text-base text-ink leading-none">
+              <p className="flex items-end gap-[6px] @[600px]:flex-wrap font-body font-semibold text-base text-ink leading-none">
                 {/* Plain text for now. The name should be a link to the
                   submission's own page, and it will be an anchor when that page
                   exists; a button that opens a modal is not that, and dressing
@@ -189,16 +188,16 @@ export function SubmissionEntry({
                 {/* The name is what gives way, so the icon and the chip beside it
                     never land on a line of their own. The whole name is in the
                     title while it is cut. */}
-                <span
-                  title={user.name}
+                <Hint
+                  text={user.name}
                   // No leading under the letters, so the name's box ends where
                   // the letters do and everything on this line can share one
                   // bottom edge. Descenders still paint; they simply do not
                   // reserve space that pushes the glyph and the chip up.
-                  className="min-w-0 truncate leading-none @[360px]:overflow-visible @[360px]:whitespace-normal"
+                  className="min-w-0 truncate leading-none @[600px]:overflow-visible @[600px]:whitespace-normal"
                 >
                   {user.name}
-                </span>
+                </Hint>
                 {/* Flush with the name and the chip: one bottom edge for the
                     three of them, with the space under it coming from the
                     line below rather than from the name's own leading. */}
@@ -231,9 +230,12 @@ export function SubmissionEntry({
                 gap beside the name. */}
             <div
               className={`shrink-0 self-start items-center gap-[2px] -mt-[5px] -mr-[6px] ${
-                actions ? "flex" : "hidden"
+                actions ? "flex" : "hidden @[600px]:flex"
               }`}
             >
+              <span className="hidden @[600px]:inline font-body text-xs text-ink-muted whitespace-nowrap mr-[2px]">
+                {t.date}
+              </span>
               {actions && <EntryActions name={user.name} />}
             </div>
           </div>
@@ -247,8 +249,8 @@ export function SubmissionEntry({
       {/* Narrow, the spacer goes and the body takes the card's full width: a
           column of empty space under the avatar costs too much there. */}
       <div className="flex gap-[18px]">
-        <div aria-hidden className="hidden @[360px]:block w-[40px] shrink-0" />
-        <div className="flex-1 min-w-0 pt-[12px] @[360px]:pt-[8px] @[360px]:pr-[12px] pb-[4px] @[360px]:pb-[8px]">
+        <div aria-hidden className="hidden @[600px]:block w-[40px] shrink-0" />
+        <div className="flex-1 min-w-0 pt-[12px] @[600px]:pt-[8px] @[600px]:pr-[12px] pb-[4px] @[600px]:pb-[8px]">
           {fullBody ? (
             <p className="font-body text-base text-ink leading-[1.55] whitespace-pre-line">
               {t.body}
@@ -260,12 +262,12 @@ export function SubmissionEntry({
             // what somebody wrote, not to re-set it as one paragraph.
             <ClampedText
               text={t.body}
-              className="font-body text-sm @[360px]:text-base text-ink leading-[1.55] whitespace-pre-line"
+              className="font-body text-sm @[600px]:text-base text-ink leading-[1.55] whitespace-pre-line"
             />
           )}
           {/* Narrow, the card closes on what the header could not hold: the
               position on the left, the date on the right, one line. */}
-          <div className="flex items-center justify-end mt-[12px]">
+          <div className="@[600px]:hidden flex items-center justify-end mt-[12px]">
             <span className="font-body text-xs text-ink-muted whitespace-nowrap">
               {t.date}
             </span>
@@ -289,7 +291,6 @@ const TYPE_FILTERS: { id: AccountTypeFilter; label: string }[] = [
   { id: "individual", label: "Individuals" },
   { id: "organization", label: "Organizations" },
   { id: "government", label: "Gov Officials" },
-  { id: "legislator", label: "Legislators" },
 ];
 
 /**
@@ -915,17 +916,18 @@ export function SubmissionFeed({
                 )}
                 */}
                 {onAdd && (
-                  <button
-                    onClick={onAdd}
-                    aria-label={addLabel}
-                    title={addLabel}
-                    // The panel's own plus takes a gray wash, because it sits
-                    // on the panel's chrome. This one sits in the page, where
-                    // the way in should look like the thing it opens.
-                    className="shrink-0 p-[6px] rounded-control text-ink-muted hover:bg-brand hover:text-ink-inverse cursor-pointer transition-colors"
-                  >
-                    <Plus className="w-[18px] h-[18px]" />
-                  </button>
+                  <Hint text={addLabel} className="shrink-0 inline-block">
+                    <button
+                      onClick={onAdd}
+                      aria-label={addLabel}
+                      // The panel's own plus takes a gray wash, because it
+                      // sits on the panel's chrome. This one sits in the page,
+                      // where the way in should look like the thing it opens.
+                      className="block p-[6px] rounded-control text-ink-muted hover:bg-brand hover:text-ink-inverse cursor-pointer transition-colors"
+                    >
+                      <Plus className="w-[18px] h-[18px]" />
+                    </button>
+                  </Hint>
                 )}
               </div>
             )}
@@ -970,12 +972,12 @@ export function SubmissionFeed({
           <p className="font-body font-semibold text-lg text-ink mb-[4px]">
             {nothingFiled
               ? "No public input yet"
-              : "Nothing filed matches these filters"}
+              : "Nothing matches these filters"}
           </p>
           <p className="font-body text-sm text-ink-muted leading-[1.5] max-w-[560px] mx-auto">
             {nothingFiled
-              ? "Nothing has been filed on this conference yet."
-              : "Try widening your selection to see what has been filed."}
+              ? "No public input has been submitted yet."
+              : "Try widening your selection to see more input on this topic."}
           </p>
           {/* Nothing to clear when nothing was filed: the filters are not why
               the feed is empty. */}

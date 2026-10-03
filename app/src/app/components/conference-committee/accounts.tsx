@@ -5,10 +5,11 @@
 // the chip is the conference's four positions rather than support, oppose and no
 // position, so the two are not the same component with a wider type.
 
-import { Megaphone, Scale, Lectern, UserRound } from "lucide-react";
+import { Megaphone, Lectern, UserRound } from "lucide-react";
 import type { ConferenceAccount } from "../../data/conference-committees/testimony";
 import type { ConferencePosition } from "../../data/conference-committees/positions";
 import { POSITIONS } from "../../data/conference-committees/positions";
+import { Hint } from "../ballot";
 
 /**
  * Initials in a disc. No uploaded images: nothing filed here is real, and a
@@ -41,8 +42,7 @@ const ACCOUNT_TYPE_ICON: Record<
   { Icon: typeof Megaphone; label: string }
 > = {
   organization: { Icon: Megaphone, label: "Organization" },
-  legislator: { Icon: Scale, label: "Legislator" },
-  government: { Icon: Lectern, label: "Executive office" },
+  government: { Icon: Lectern, label: "Government office" },
   individual: { Icon: UserRound, label: "Individual" },
 };
 
@@ -55,9 +55,9 @@ export function AccountTypeIcon({
 }) {
   const { Icon, label } = ACCOUNT_TYPE_ICON[type];
   return (
-    <span title={label} aria-label={label} className="shrink-0 leading-none">
+    <Hint text={label} ariaLabel={label} className="shrink-0 leading-none">
       <Icon style={{ width: size, height: size }} />
-    </span>
+    </Hint>
   );
 }
 

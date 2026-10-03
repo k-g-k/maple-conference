@@ -36,7 +36,11 @@ import {
   HOUSE_WAYS_AND_MEANS,
   type CommitteeMember,
 } from "../../data/bill-lineage/committees";
-import { MINE, MEMBER_BY_SEAT } from "../../data/bill-lineage/members";
+import {
+  MINE,
+  MINE_FULL,
+  MEMBER_BY_SEAT,
+} from "../../data/bill-lineage/members";
 import { EDUCATION_HEARING, hearingUrl } from "../../data/bill-lineage/hearing";
 import {
   HOUSE_EARLY_STAGES,
@@ -44,6 +48,7 @@ import {
   VEHICLE_SWAP_BEFORE,
 } from "../../data/bill-lineage/house-branch";
 import { Chapter, Span, Disclosure } from "./spine";
+import { Hint } from "../ballot";
 
 // Purple is the AI provenance color on these pages, so a chamber cannot wear
 // it. The conference takes the brand navy: blue, like the Senate's, but darker,
@@ -367,15 +372,15 @@ export function Conferees({
                       what a reader scans down this column, and the star has to
                       be on the thing being scanned. */}
                     {MINE[m.key] && (
-                      <span
-                        title={MINE[m.key]}
+                      <Hint
+                        text={MINE_FULL[m.key]}
                         className="absolute -bottom-[2px] -right-[2px] w-[16px] h-[16px] rounded-full bg-ground flex items-center justify-center"
                       >
                         <Star
-                          aria-label={MINE[m.key]}
+                          aria-label={MINE_FULL[m.key]}
                           className="w-[11px] h-[11px] text-caution fill-caution"
                         />
-                      </span>
+                      </Hint>
                     )}
                   </span>
                   <span className="min-w-0">
@@ -402,7 +407,7 @@ export function Conferees({
                         back ? "text-ink-faint" : "text-ink-muted"
                       }`}
                     >
-                      {MINE[m.key] ?? m.district}
+                      {MINE_FULL[m.key] ?? m.district}
                     </span>
                   </span>
                 </button>
@@ -1818,15 +1823,16 @@ function TracedLineage({
                                 <span className="font-body font-semibold text-sm text-ink">
                                   {surname(o.sponsor)}
                                 </span>
-                                <a
-                                  href={`https://www.mapletestimony.org/bills/194/${o.num.replace(".", "")}`}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  title={o.title}
-                                  className="ml-[6px] font-body text-xs text-caution-ink underline decoration-dotted underline-offset-[3px] hover:text-ink"
-                                >
-                                  {o.num}
-                                </a>
+                                <Hint text={o.title} className="ml-[6px]">
+                                  <a
+                                    href={`https://www.mapletestimony.org/bills/194/${o.num.replace(".", "")}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="font-body text-xs text-caution-ink underline decoration-dotted underline-offset-[3px] hover:text-ink"
+                                  >
+                                    {o.num}
+                                  </a>
+                                </Hint>
                               </span>
                               <span className="block font-body text-xs text-ink-muted leading-[1.4]">
                                 {o.district}

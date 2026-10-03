@@ -23,7 +23,11 @@ import { Modal } from "../ballot";
 import { SubmissionEntry } from "./testimony";
 import type { Draft } from "./draft";
 import type { CommitteeMember } from "../../data/bill-lineage/committees";
-import { MEMBER_BY_SEAT, MINE } from "../../data/bill-lineage/members";
+import {
+  MEMBER_BY_SEAT,
+  MINE,
+  MINE_FULL,
+} from "../../data/bill-lineage/members";
 import { CONFERENCE_POSITIONS } from "../../data/conference-committees/positions";
 import type { ConferencePosition } from "../../data/conference-committees/positions";
 import type { ConferenceSubmission } from "../../data/conference-committees/testimony";
@@ -120,7 +124,7 @@ const COPY = {
   postedDigest: "It will go in this week’s update to the conferees.",
   postedRevise: "You can revise it later. Earlier versions stay on the record.",
   close: "Close",
-  seeOthers: "Read what others filed",
+  seeOthers: "Read what others are saying",
 
   /** The page style only, which is the one place there is room for a sentence. */
   pageLead:
@@ -217,18 +221,20 @@ export function Audience({
               <img
                 src={f.portrait}
                 alt=""
-                // Two rings. The outer one is the row's own background, which is
-                // what cuts each face out of the one behind it; the inner one is
-                // a hairline of black, drawn inside the image so a pale portrait
-                // still ends somewhere definite.
-                className={`block w-[23px] h-[23px] rounded-full object-cover bg-sunken border-2 border-ground shadow-[inset_0_0_0_1px_rgba(0,0,0,0.18)] transition-all duration-200 motion-reduce:transition-none ${
+                // Two rings. The outer one is white rather than the page's own
+                // ground, so the faces are cut out of each other wherever the
+                // row sits: on a panel the ground-coloured ring disappeared
+                // and the six read as one shape. The inner one is a hairline
+                // of black, drawn inside the image so a pale portrait still
+                // ends somewhere definite.
+                className={`block w-[23px] h-[23px] rounded-full object-cover bg-sunken border-2 border-surface shadow-[inset_0_0_0_1px_rgba(0,0,0,0.18)] transition-all duration-200 motion-reduce:transition-none ${
                   off ? "opacity-40 grayscale" : ""
                 }`}
               />
               {MINE[f.key] && (
-                <span className="absolute -bottom-[1px] -right-[1px] w-[12px] h-[12px] rounded-full bg-ground flex items-center justify-center">
+                <span className="absolute -bottom-[1px] -right-[1px] w-[12px] h-[12px] rounded-full bg-surface flex items-center justify-center">
                   <Star
-                    aria-label={MINE[f.key]}
+                    aria-label={MINE_FULL[f.key]}
                     className="w-[8px] h-[8px] text-caution fill-caution"
                   />
                 </span>

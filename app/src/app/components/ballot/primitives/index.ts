@@ -17,6 +17,7 @@ export {
   ContentItem,
 } from "./synthesis";
 export { FilterChip } from "./FilterChip";
+export { Hint } from "./Hint";
 export { Pagination } from "./Pagination";
 export { ScaleFloor } from "./ScaleFloor";
 export { DepthProvider, useDepth } from "./depth";
