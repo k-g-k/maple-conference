@@ -311,6 +311,10 @@ export function ConferenceCompose({
   const [save, setSave] = useState<"none" | "saving" | "saved" | "fading">(
     "none",
   );
+  const [everSaved, setEverSaved] = useState(false);
+  useEffect(() => {
+    if (save === "saved") setEverSaved(true);
+  }, [save]);
   const field = useRef<HTMLTextAreaElement>(null);
   useEffect(() => {
     if (!draft.body.trim()) return setSave("none");
@@ -362,7 +366,7 @@ export function ConferenceCompose({
     requestAnimationFrame(() => setAsking(true));
   };
   return (
-    <div className="h-full overflow-y-auto overscroll-contain lg:overflow-visible flex flex-col gap-[16px] lg:min-h-0">
+    <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain lg:overflow-visible flex flex-col gap-[16px]">
       <div className="flex flex-col lg:flex-1 lg:min-h-0">
         {/* One a row rather than a wrapping line of chips. Four of these are
             sentences, not one-word stances, and on a panel's width they wrapped
@@ -433,7 +437,7 @@ export function ConferenceCompose({
         </div>
       </div>
 
-      <div className="shrink-0 flex items-center justify-end gap-[12px] pb-[4px] lg:pb-0">
+      <div className="shrink-0 flex items-center justify-end gap-[12px] mt-[12px] pb-[4px] lg:mt-0 lg:pb-0">
         {save !== "none" && (
           // Far left, on the buttons' own line: it reports on the thing the
           // buttons act on, and a line of its own would make it an event.
@@ -450,18 +454,20 @@ export function ConferenceCompose({
             {save === "saving" ? COPY.saving : COPY.saved}
           </span>
         )}
-        <button
-          // It says delete, so it deletes: the words go and the position goes
-          // back to the default, and then the form is put away. Closing
-          // without deleting is what the panel's own control does.
-          onClick={() => {
-            onChange({ body: "", position: STARTING_DRAFT.position });
-            onCancel();
-          }}
-          className="font-body font-semibold text-sm text-ink-muted hover:text-ink cursor-pointer px-[8px] py-[8px]"
-        >
-          {COPY.cancel}
-        </button>
+        {everSaved && (
+          <button
+            // It says delete, so it deletes: the words go and the position
+            // goes back to the default, and then the form is put away. Closing
+            // without deleting is what the panel's own control does.
+            onClick={() => {
+              onChange({ body: "", position: STARTING_DRAFT.position });
+              onCancel();
+            }}
+            className="font-body font-semibold text-sm text-ink-muted hover:text-ink cursor-pointer px-[8px] py-[8px]"
+          >
+            {COPY.cancel}
+          </button>
+        )}
         <button
           onClick={review}
           // Dressed as disabled but still pressable, because a truly disabled
