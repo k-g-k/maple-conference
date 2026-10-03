@@ -864,8 +864,9 @@ export function SubmissionFeed({
                 narrows nothing at all, so it sits past the control that does,
                 and that puts it in the same corner of the same row the panel's
                 own header keeps it in. */}
-            {((includeFollowingFilter && anyFollowed) || onAdd) && (
+            {onAdd && (
               <div className="ml-auto shrink-0 flex items-center gap-[10px]">
+                {/*
                 {includeFollowingFilter && anyFollowed && (
                   <FilterChip
                     active={followingOnly}
@@ -882,6 +883,7 @@ export function SubmissionFeed({
                     {followingOnly && <X className="w-[12px] h-[12px]" />}
                   </FilterChip>
                 )}
+                */}
                 {onAdd && (
                   <button
                     onClick={onAdd}

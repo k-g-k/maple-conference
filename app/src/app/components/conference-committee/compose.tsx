@@ -127,17 +127,17 @@ const COPY = {
 /**
  * What the draft holds before anybody types.
  *
- * Filled in rather than empty so the flow can be walked through without writing
- * anything: press the plus, press Review and Post, and there is a real card to
- * look at. Emptying it later is one line, `body: ""`.
+ * Empty, so the box is what a reader actually meets: their own blank page. It
+ * carried a sentence for a while, which let the flow be walked through without
+ * typing, but a demo that starts with somebody else's words in the box is
+ * showing the wrong thing. Putting one back is one line.
  *
- * The position and the words have to agree, or the review step is showing a
- * card that argues with its own chip. "pass" is the one of the five that says
- * the version does not matter, which is what the last sentence says.
+ * The position and the words have to agree, or the review step shows a card
+ * that argues with its own chip.
  */
 export const STARTING_DRAFT = {
   position: "pass",
-  body: "I am not concerned about the topics that are unresolved. What I care about already exists in both bills. I care most that this law passes as soon as possible. ",
+  body: "",
 } as const;
 
 /** Where a not-yet-posted card says its date. */

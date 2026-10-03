@@ -4079,6 +4079,7 @@ export function ConferenceCommittee({
  * pane and the modal are a flag.
  */
 export function ConferenceReview() {
+  useDeviceViewport();
   const { slug } = useParams();
   const c = slug ? BY_SLUG[slug] : undefined;
   const navigate = useNavigate();

@@ -18,12 +18,12 @@ export function Pagination({
         onClick={() => onPage(page - 1)}
         disabled={page === 0}
         aria-label="Previous page"
-        className="flex items-center justify-center w-[44px] h-[44px] sm:w-auto sm:h-auto text-ink hover:text-alert cursor-pointer disabled:text-ink-faint disabled:cursor-default"
+        className="flex items-center justify-center w-[52px] h-[52px] sm:w-auto sm:h-auto text-ink hover:text-alert cursor-pointer disabled:text-ink-faint disabled:cursor-default"
       >
-        <ChevronLeft className="w-[18px] h-[18px] sm:w-[16px] sm:h-[16px]" />
+        <ChevronLeft className="w-[22px] h-[22px] sm:w-[16px] sm:h-[16px]" />
       </button>
-      <span className="sm:hidden font-body text-sm text-ink-muted tabular-nums">
-        Page {page + 1} of {pageCount}
+      <span className="sm:hidden font-body text-base text-ink-muted tabular-nums">
+        {page + 1} of {pageCount}
       </span>
       <span className="hidden sm:contents">
         {pageWindow(page, pageCount).map((item, i) =>
@@ -51,9 +51,9 @@ export function Pagination({
         onClick={() => onPage(page + 1)}
         disabled={page >= pageCount - 1}
         aria-label="Next page"
-        className="flex items-center justify-center w-[44px] h-[44px] sm:w-auto sm:h-auto text-ink hover:text-alert cursor-pointer disabled:text-ink-faint disabled:cursor-default"
+        className="flex items-center justify-center w-[52px] h-[52px] sm:w-auto sm:h-auto text-ink hover:text-alert cursor-pointer disabled:text-ink-faint disabled:cursor-default"
       >
-        <ChevronRight className="w-[18px] h-[18px] sm:w-[16px] sm:h-[16px]" />
+        <ChevronRight className="w-[22px] h-[22px] sm:w-[16px] sm:h-[16px]" />
       </button>
     </div>
   );

@@ -364,7 +364,8 @@ export function LobbyingDisclosures({
 }) {
   const [page, setPage] = useState(0);
   // One at a time on a phone, where each row is a stack of its own.
-  const size = useNarrow() ? 1 : PAGE_SIZE;
+  const narrow = useNarrow();
+  const size = narrow ? 1 : PAGE_SIZE;
   /**
    * How the table is ordered, or nothing for the order the data came in.
    *
@@ -375,12 +376,19 @@ export function LobbyingDisclosures({
   const [sort, setSort] = useState<{ key: SortKey; dir: 1 | -1 } | null>(null);
   const unsorted = orgLobbying(c.senateBill?.n, c.houseBill?.n);
   const rows = useMemo(() => {
-    if (!sort) return unsorted;
-    return [...unsorted].sort((a, b) => COMPARE[sort.key](a, b) * sort.dir);
+    if (sort)
+      return [...unsorted].sort((a, b) => COMPARE[sort.key](a, b) * sort.dir);
+    if (!narrow) return unsorted;
+    const a = [...unsorted];
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
     // The list is rebuilt from the committee's two bill numbers on every
     // render, so it is those, not the array, that say when this is stale.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [c.senateBill?.n, c.houseBill?.n, sort]);
+  }, [c.senateBill?.n, c.houseBill?.n, sort, narrow]);
   const onSort = (key: SortKey) =>
     setSort((v) => {
       setPage(0);
@@ -506,8 +514,12 @@ export function LobbyingDisclosures({
                   at on the left, how to see the rest on the right. The count
                   stays when there is only one page, because it is a fact
                   about the table rather than a control. */}
-              <div className="flex items-center justify-between gap-[16px] flex-wrap pt-[12px]">
-                <p className="font-body text-xs text-ink-muted">
+              <div className="flex flex-col gap-[6px] pt-[12px] sm:flex-row sm:items-center sm:justify-between sm:gap-[16px]">
+                <p
+                  className={`font-body text-xs text-ink-muted ${
+                    pageCount > 1 ? "hidden sm:block" : ""
+                  }`}
+                >
                   {rows.length} organization{rows.length === 1 ? "" : "s"},{" "}
                   {filings} filing{filings === 1 ? "" : "s"}
                 </p>
