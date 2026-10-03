@@ -87,11 +87,25 @@ export function Modal({
       if (e.key === "Escape") onClose();
     };
     document.addEventListener("keydown", onKey);
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    const body = document.body;
+    const was = {
+      overflow: body.style.overflow,
+      position: body.style.position,
+      top: body.style.top,
+      width: body.style.width,
+    };
+    const y = window.scrollY;
+    body.style.overflow = "hidden";
+    body.style.position = "fixed";
+    body.style.top = `-${y}px`;
+    body.style.width = "100%";
     return () => {
       document.removeEventListener("keydown", onKey);
-      document.body.style.overflow = prev;
+      body.style.overflow = was.overflow;
+      body.style.position = was.position;
+      body.style.top = was.top;
+      body.style.width = was.width;
+      window.scrollTo(0, y);
     };
   }, [onClose]);
 
