@@ -1322,7 +1322,11 @@ function Rooms({
           slug === room
           ? false
           : who
-            ? !isRead(p.seat) && !(COUNT_MODE === 3 && over)
+            ? hoverRow
+              ? // A row under the pointer is the question now, so the person
+                // being read goes back with everybody outside it.
+                slug !== hoverRow
+              : !isRead(p.seat) && !(COUNT_MODE === 3 && over)
             : hoverRow && hoverRow !== room
               ? slug !== hoverRow || !sharedHover.includes(p.seat)
               : !over
@@ -1412,7 +1416,7 @@ function Rooms({
             slug !== room &&
             slug !== hoverRow &&
             !over &&
-            !isRead(p.seat)
+            (!!hoverRow || !isRead(p.seat))
           }
           // At rest the whole wall sits at the middle strength rather than
           // the deep one: nothing has been asked about yet, so nothing has
@@ -1423,7 +1427,10 @@ function Rooms({
           lift={!room || slug === hoverRow}
           soft={
             (!chosen.size && !reading.length) ||
-            (!!room && isRead(p.seat)) ||
+            // The person being read sits back less than the rest, but not
+            // while a row is under the pointer: there the question is the row,
+            // and they go back as far as everybody else outside it.
+            (!!room && !hoverRow && isRead(p.seat)) ||
             (slug === hoverRow && slug !== room)
           }
         />
@@ -2013,10 +2020,9 @@ function Rooms({
               // A row under the pointer with nothing pressed is a question
               // about that row alone, so the column reads as it would with no
               // toggle on: one name forward, the rest at rest.
-              const holds =
-                hoverRow && !room
-                  ? false
-                  : readers.some((p) => p.on.some((x) => x.slug === c.slug));
+              const holds = hoverRow
+                ? false
+                : readers.some((p) => p.on.some((x) => x.slug === c.slug));
               // At rest every name is back too: the card opens as a wall
               // nobody has asked about, and a row of full-strength names over
               // dimmed faces was half the card still at full strength.
@@ -2462,7 +2468,7 @@ function Rooms({
                     // chosen committee replaces it with its own name in ink.
                     className="font-body font-semibold text-[15px] leading-[1.3] text-ink-muted"
                   >
-                    Committee Explorer
+                    Conference Committee Explorer
                   </h2>
                   {mineAt === "top" && (
                     <span className="ml-auto pl-[12px]">{mineButton()}</span>
@@ -3656,7 +3662,7 @@ export function ConferenceCommittees() {
             This page has no rail, so the same moment is 910 of its own width:
             min(1180, W - 64) at the window where the other one crosses. */}
         <div className="@container">
-          <h1 className="font-display font-bold text-[29.7px] @[910px]:text-[36px] leading-[1.2] text-brand text-balance">
+          <h1 className="font-display font-bold text-[29.7px] @[800px]:text-[36px] leading-[1.2] text-brand text-balance">
             Conference Committees
           </h1>
         </div>
