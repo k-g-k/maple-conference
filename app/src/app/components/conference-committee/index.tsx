@@ -82,11 +82,17 @@ import {
   Span,
   Disclosure,
   StickyBand,
-  CARD_PX,
-  CARD_PT,
-  CARD_PB,
   HEAD_GAP,
 } from "../bill-example/spine";
+
+/**
+ * What a card on this page is padded by. Held here rather than taken from the
+ * bill page's spine, so this page can change its own without reaching into
+ * another page's module.
+ */
+const CARD_PX = "px-[32px]";
+const CARD_PT = "pt-[24px]";
+const CARD_PB = "pb-[32px]";
 import {
   Conferees,
   VoteMap,
@@ -232,31 +238,21 @@ function ConferenceByline({
   const phrase =
     SUBJECT[slug] ??
     (house ? BILL_TITLES[house]?.replace(/^An Act\s+/i, "") : undefined);
-  // Only the bills this prototype actually carries get an internal link. The
-  // rest go to the General Court, because the alternative was worse than a
-  // dead link: an unknown number redirected to the first bill, so a reader who
-  // pressed H.5175 arrived on a different committee's bill with nothing
-  // saying so.
+  // Drawn as links and going nowhere, for now.
+  //
+  // The two numbers are part of the sentence and the page reads wrong without
+  // them marked, but neither destination is right yet: the bill pages this
+  // prototype carries are a different prototype's, and sending a reader out to
+  // the General Court mid-sentence ends the visit. They stay inert until there
+  // is somewhere of our own to send them.
+  //
+  // To restore: a number in `BILL_BY_SLUG` goes to `/bills/${slugFor(n)}`, and
+  // anything else to `https://malegislature.gov/Bills/194/` with the dot
+  // stripped out of the number.
   const linkClass =
     "font-semibold underline decoration-dotted underline-offset-[3px] text-link hover:text-brand";
-  const bill = (n?: string) => {
-    if (!n) return null;
-    const here = BILL_BY_SLUG[slugFor(n)];
-    return here ? (
-      <Link to={`/bills/${slugFor(n)}`} className={linkClass}>
-        {n}
-      </Link>
-    ) : (
-      <a
-        href={`https://malegislature.gov/Bills/194/${n.replace(".", "")}`}
-        target="_blank"
-        rel="noreferrer"
-        className={linkClass}
-      >
-        {n}
-      </a>
-    );
-  };
+  const bill = (n?: string) =>
+    n ? <span className={linkClass}>{n}</span> : null;
   // One sentence with the resolving as the means rather than the purpose:
   // what the committee is for is passing the act, and reconciling the two
   // texts is how.
@@ -814,7 +810,7 @@ function PeopleAndMaps({
         // conferee and their district, or between the two chambers, holds the
         // reading, and leaving the block is what lets it go.
         onPointerLeave={() => !touch && setHovered(null)}
-        className={`grid grid-cols-2 gap-y-[32px] gap-x-[20px] @[600px]:grid-cols-[max-content_max-content_minmax(0,1fr)_minmax(0,1fr)] ${
+        className={`grid grid-cols-2 gap-y-[32px] gap-x-[20px] @[720px]:grid-cols-[max-content_max-content_minmax(0,1fr)_minmax(0,1fr)] ${
           // The gap belongs to whatever sits above, the section heading or the
           // card's own title, and it is the same gap a chapter leaves under
           // its heading. With neither, the block around this already carries
@@ -826,24 +822,28 @@ function PeopleAndMaps({
             aligned, and sits at the top of the row rather than the middle of
             it: centred vertically, its chamber heading fell half a map below
             the map's own, and the two headings are a pair. */}
-        <div className="justify-self-center @[600px]:justify-self-start @[600px]:col-start-1 @[600px]:row-start-1">
+        {/* The Senate list sits on the block's left edge in both layouts: it
+            is the first thing read, and centring it in a half-width cell put
+            it adrift of everything above it. The House list keeps its own
+            placement, mirrored against the map beside it. */}
+        <div className="justify-self-start @[720px]:col-start-1 @[720px]:row-start-1">
           {names("S")}
         </div>
-        <div className="min-w-0 @[600px]:col-start-3 @[600px]:row-start-1">
+        <div className="min-w-0 max-w-[300px] @[720px]:max-w-none @[720px]:col-start-3 @[720px]:row-start-1">
           {map("senate")}
         </div>
         {/* Mirrored below the breakpoint: the map on the left so the two maps
             sit together, the names on the right. Above it, both name lists are
             together instead. */}
-        <div className="min-w-0 @[600px]:col-start-4 @[600px]:row-start-1">
+        <div className="min-w-0 max-w-[300px] @[720px]:max-w-none @[720px]:col-start-4 @[720px]:row-start-1">
           {map("house")}
         </div>
-        <div className="justify-self-center @[600px]:justify-self-start @[600px]:col-start-2 @[600px]:row-start-1 @[600px]:pr-[28px]">
+        <div className="justify-self-center @[720px]:justify-self-start @[720px]:col-start-2 @[720px]:row-start-1 @[720px]:pr-[28px]">
           {names("H")}
         </div>
         {/* The hearings close the block, so the space under them is what
             separates this section from the next. */}
-        <div className="col-span-2 @[600px]:col-start-1 @[600px]:col-span-2 @[600px]:row-start-2">
+        <div className="col-span-2 @[720px]:col-start-1 @[720px]:col-span-2 @[720px]:row-start-2">
           <Hearings meetings={meetings} />
         </div>
       </div>
@@ -1676,9 +1676,14 @@ function Row({
 function Rail({
   current,
   composing = false,
+  hidden = false,
   label,
   href,
 }: {
+  /** Out of the way while the panel is taking a share of the window: with
+   *  both open the reading column is narrower than either, and the list is
+   *  the one of the three a reader is not working in. */
+  hidden?: boolean;
   /** Whether the composer is open on the current committee. The mark is for
    *  a draft you are not looking at, so it comes back the moment the form is
    *  put away, even without leaving the page. */
@@ -1705,7 +1710,9 @@ function Rail({
       // column that gives up a few pixels at a time keeps the list where a
       // reader already found it. 236 down to 168, and the names wrap rather
       // than being cut.
-      className="hidden md:block w-[clamp(168px,19vw,236px)] shrink-0 sticky top-[var(--nav-h)] self-start max-h-[calc(100vh-var(--nav-h))] overflow-y-auto pt-[26px] pb-[48px]"
+      className={`hidden w-[clamp(168px,19vw,236px)] shrink-0 sticky top-[var(--nav-h)] self-start max-h-[calc(100vh-var(--nav-h))] overflow-y-auto pt-[26px] pb-[48px] ${
+        hidden ? "min-[1480px]:block" : "md:block"
+      }`}
     >
       {label && (
         <p className="font-body font-semibold text-2xs uppercase tracking-[0.08em] text-ink-mid mb-[14px]">
@@ -2376,9 +2383,13 @@ function Boxed({
       // markup.
       className={`flow-root ${
         on
-          ? `border rounded-card ${CARD_PX} ${CARD_PT} ${
-              filled ? "bg-surface" : ""
-            } ${plain || bleed ? "border-transparent" : "border-line"} ${
+          ? `border rounded-card ${
+              // A white card is padded two pixels past the usual 32, and its
+              // heading is drawn four back from that: the body sits at 34
+              // and the heading at 30, which is the four pixels the first
+              // capital of a heading asks for and the body does not.
+              filled ? "on-surface bg-surface pl-[34px] pr-[32px]" : CARD_PX
+            } ${CARD_PT} ${plain || bleed ? "border-transparent" : "border-line"} ${
               bleed ? "-mx-[32px]" : ""
             } ${flushBottom ? "" : CARD_PB}`
           : ""
@@ -2513,7 +2524,7 @@ function Contents({
  * empty. The balance stays, for the ones that do wrap on a narrow window.
  */
 const SUB_HEAD =
-  "font-display font-normal text-xl lg:text-[22px] text-ink text-balance";
+  "relative [.on-surface_&]:left-[-4px] font-display font-normal text-xl lg:text-[22px] text-ink text-balance";
 
 const CONTENTS = [
   { id: "committee", label: "Committee" },
@@ -3450,6 +3461,7 @@ function Detail({ c, style }: { c: CommitteeDetail; style: ReviewStyle }) {
           label={false}
           href={committeeHref}
           composing={composing}
+          hidden={panelOpen}
         />
 
         <div className="min-w-0 flex-1">

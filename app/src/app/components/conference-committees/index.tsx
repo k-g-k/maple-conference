@@ -17,11 +17,13 @@ import { Fragment, useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { Link } from "react-router-dom";
+import { PHONE_FREE_LINEAGE } from "../../data/bill-lineage";
 import { MINE, MINE_FULL } from "../../data/bill-lineage/members";
 import { FilterChip, Hint } from "../ballot";
 import {
   ArrowRight,
   ArrowUpRight,
+  ChevronLeft,
   ChevronRight,
   ExternalLink,
   Star,
@@ -95,21 +97,29 @@ const CHAMBER_GAP = { width: "var(--chamber)" };
 const MY = ROSTER.filter((p) => MINE[p.seat]);
 
 /**
- * What the count at the end of a row does while a legislator is held.
+ * The fifty in the order the maps lay them out: west to east, Senate first.
  *
- * 1. Nothing. The overlap is not drawn, the popover does not come up, and the
- *    card goes on saying how to let go of the person being held.
- * 2. Reaching the strip lets go of them, and the count then answers the way it
- *    does with nobody held.
- * 3. Both at once. The held legislator keeps every mark, and the overlap takes
- *    the same marks beside them for as long as the pointer is on the strip:
- *    lit in the box, ringed in the row, painted on the maps, with the count's
- *    own sentence at the pointer. Leaving the strip puts the overlap back and
- *    leaves the held person untouched.
+ * What the arrows under a held district walk. The map is the picture being
+ * read, so a step is a step across it: alphabetical order would send a reader
+ * from the Berkshires to Boston and back on consecutive presses, and the
+ * roster's own order, which is by how many rooms a person sits in, would be a
+ * ranking rather than a journey. Each chamber runs from its western edge out
+ * to the water, and the press after the last district on the Cape starts the
+ * other chamber back in the Berkshires.
  *
- * One number, so any of them can be tried without unpicking the others.
+ * The coordinates are the seeds each map cell was grown from, so this is the
+ * order of the drawing itself rather than a second guess at it.
  */
-const COUNT_MODE: 1 | 2 | 3 = 3;
+const WALK: string[] = (["senate", "house"] as const).flatMap((chamber) =>
+  ROSTER.filter((p) => p.chamber === chamber)
+    .map((p) => ({ seat: p.seat, at: PHONE_FREE_LINEAGE.geo.seeds[p.seat] }))
+    .sort(
+      (a, b) =>
+        (a.at?.[0] ?? 0) - (b.at?.[0] ?? 0) ||
+        (a.at?.[1] ?? 0) - (b.at?.[1] ?? 0),
+    )
+    .map((p) => p.seat),
+);
 
 /**
  * The three highest standing conferees in each chamber.
@@ -163,109 +173,6 @@ const MOST: Record<"senate" | "house", RosterPerson[]> = {
 };
 const seatsOf = (g: Record<"senate" | "house", RosterPerson[]>) =>
   [...g.senate, ...g.house].map((p) => p.seat);
-
-/**
- * Temporary: isolating the cursor blinking over the twelve rows.
- *
- * The computed cursor is `pointer` the whole way down the block, so nothing in
- * the cascade is wrong and Chrome is drawing a stale cursor for a frame. Two
- * things happen under the pointer that could cause that, and this turns them
- * off one at a time so we can see which one it is.
- *
- * Add to the address: `?debug=notip`, `?debug=nohover`, or `?debug=none`.
- *
- * - `notip`    the row and entry tooltip never appears. Nothing is added to or
- *              removed from the document as the pointer crosses a row.
- * - `nohover`  the rows stop reacting to the pointer at all: no band, no
- *              weights, no faces dimming. Nothing is repainted on a crossing.
- * - `nofaces`  the portraits are replaced by plain discs of the same size.
- *              Nothing in the block is an image any more.
- * - `nocount`  the strip at the end of each row comes out. It is the one
- *              invisible overlay in the block: absolutely positioned, six
- *              pixels proud of the row top and bottom, and carrying the
- *              regular cursor on purpose.
- * - `none`     all four.
- * - `watch`    changes nothing, and puts a counter in the bottom right: how
- *              many times the document changed in the last second, and what
- *              changed last. If that reads 0 while the cursor is blinking,
- *              nothing on the page is doing it.
- *
- * Whichever one stops the blinking is the mechanism to rebuild. Take this out
- * once we know.
- */
-const DEBUG =
-  typeof window === "undefined"
-    ? null
-    : new URLSearchParams(window.location.search).get("debug");
-const NO_TIP = DEBUG === "notip" || DEBUG === "none";
-const NO_HOVER = DEBUG === "nohover" || DEBUG === "none";
-const NO_FACES = DEBUG === "nofaces" || DEBUG === "none";
-const NO_COUNT = DEBUG === "nocount" || DEBUG === "none";
-const WATCH = DEBUG === "watch";
-
-/**
- * Temporary: a count of how much the document is changing, per second.
- *
- * The cursor blinks over the rows while its computed value stays `pointer`
- * throughout, which means the browser is drawing a stale cursor rather than
- * reading a wrong rule. The usual reason is that something under the pointer
- * keeps changing. This says whether anything is.
- */
-function DebugWatch() {
-  const [seen, setSeen] = useState({
-    attrs: 0,
-    kids: 0,
-    text: 0,
-    body: "none",
-  });
-  useEffect(() => {
-    let attrs = 0;
-    let kids = 0;
-    let text = 0;
-    let body = "none";
-    const name = (n: Node) =>
-      n.nodeType === 1
-        ? `${(n as HTMLElement).tagName}.${String((n as HTMLElement).className ?? "").slice(0, 36)}`
-        : n.nodeName;
-    const mo = new MutationObserver((recs) => {
-      for (const r of recs) {
-        if (r.type === "attributes") attrs++;
-        else if (r.type === "characterData") text++;
-        else {
-          kids++;
-          // The one we are hunting: a direct child of body going in and out.
-          if (r.target === document.body)
-            body = `${r.addedNodes.length ? "+" + name(r.addedNodes[0]) : ""}${
-              r.removedNodes.length ? " -" + name(r.removedNodes[0]) : ""
-            }`;
-        }
-      }
-    });
-    mo.observe(document.documentElement, {
-      attributes: true,
-      childList: true,
-      subtree: true,
-      characterData: true,
-    });
-    const t = window.setInterval(() => {
-      setSeen({ attrs, kids, text, body });
-      attrs = 0;
-      kids = 0;
-      text = 0;
-    }, 1000);
-    return () => {
-      mo.disconnect();
-      window.clearInterval(t);
-    };
-  }, []);
-  return (
-    <div className="fixed bottom-[12px] right-[12px] z-[999] max-w-[520px] rounded-control bg-ink px-[10px] py-[6px] font-mono text-xs text-ink-inverse">
-      attrs {seen.attrs}/s · children {seen.kids}/s · text {seen.text}/s
-      <br />
-      body: {seen.body}
-    </div>
-  );
-}
 
 /** The small caps label the maps and the member lists already share. */
 const LABEL =
@@ -321,6 +228,7 @@ function RowFace({
   ring = false,
   clear = false,
   soft = false,
+  softer = false,
   lift = false,
   gray = false,
   tip = true,
@@ -338,6 +246,13 @@ function RowFace({
   clear?: boolean;
   /** Sit back, but not as far: for a face that is the answer somewhere else. */
   soft?: boolean;
+  /**
+   * Half a step further back than `soft`.
+   *
+   * For a face in a list short enough that the whole list is read at once:
+   * six faces beside each other need less separating than six among seventy.
+   */
+  softer?: boolean;
   /**
    * A touch stronger again than `soft`.
    *
@@ -450,40 +365,34 @@ function RowFace({
       className={`relative shrink-0 transition-[opacity,filter] ease-out motion-reduce:transition-none ${
         dim ? "duration-150" : "duration-200"
       } ${
-        dim ? (soft ? (lift ? "opacity-75" : "opacity-60") : "opacity-35") : ""
+        dim
+          ? soft
+            ? lift
+              ? "opacity-75"
+              : "opacity-60"
+            : softer
+              ? "opacity-50"
+              : "opacity-35"
+          : ""
       } ${gray ? "grayscale" : ""}`}
       onMouseEnter={(e) => show(e.currentTarget)}
       onMouseLeave={hide}
       onFocus={(e) => show(e.currentTarget)}
       onBlur={hide}
     >
-      {NO_FACES ? (
-        <span
-          style={{
-            width: size,
-            height: size,
-            borderWidth: rim,
-            boxShadow: readRing ?? chairRing,
-          }}
-          className={`block rounded-full bg-sunken border-solid ${
-            p.party === "R" ? "border-negative" : "border-official"
-          }`}
-        />
-      ) : (
-        <img
-          src={p.portrait}
-          alt=""
-          style={{
-            width: size,
-            height: size,
-            borderWidth: rim,
-            boxShadow: readRing ?? chairRing,
-          }}
-          className={`block rounded-full object-cover bg-sunken border-solid transition-[box-shadow] duration-100 ease-out ${
-            p.party === "R" ? "border-negative" : "border-official"
-          }`}
-        />
-      )}
+      <img
+        src={p.portrait}
+        alt=""
+        style={{
+          width: size,
+          height: size,
+          borderWidth: rim,
+          boxShadow: readRing ?? chairRing,
+        }}
+        className={`block rounded-full object-cover bg-sunken border-solid transition-[box-shadow] duration-100 ease-out ${
+          p.party === "R" ? "border-negative" : "border-official"
+        }`}
+      />
       {/* The way out, on a face that is being held. The click target is the
           whole face, as it was before; this only says so, because a pinned
           face that looks exactly like a hovered one gives a reader nothing to
@@ -605,388 +514,7 @@ function Seat({ committee, chair }: { committee: string; chair: boolean }) {
   );
 }
 
-function RepeaterRow({ p }: { p: RosterPerson }) {
-  return (
-    <li className="flex items-start gap-[12px] px-[18px] py-[11px] border-t border-line-ghost">
-      <Face p={p} />
-      {/* Name left, conferences right: the same arrangement the twelve rows
-          above use for their bill numbers. Under the break the two stack, since
-          three chips and a name cannot share a phone's width. */}
-      <span className="min-w-0 flex-1 flex flex-col @[560px]:flex-row @[560px]:items-baseline @[560px]:gap-[16px]">
-        <span className="min-w-0">
-          <span className="block leading-[1.35]">
-            <span className="font-body font-semibold text-base text-ink">
-              {p.name}
-            </span>
-            {p.title && (
-              <span className="ml-[6px] font-body text-xs text-caution-ink">
-                {shortTitle(p.title)}
-              </span>
-            )}
-          </span>
-          <span className="block font-body text-xs text-ink-faint leading-[1.4]">
-            {p.chamber === "senate" ? "Senate" : "House"}, {p.district}
-          </span>
-        </span>
-        <span className="flex flex-wrap gap-[5px] mt-[7px] @[560px]:mt-0 @[560px]:ml-auto @[560px]:justify-end">
-          {p.on.map((s) => (
-            <Seat key={s.slug} committee={s.committee} chair={s.chair} />
-          ))}
-        </span>
-      </span>
-    </li>
-  );
-}
-
-/**
- * Everyone, in one card.
- *
- * The card under it answers a question about the appointments; this one just
- * says who they are. Fifty people, House first and then Senate, alphabetical
- * inside each, with the same row the repeaters use so the two cards read as
- * one list seen two ways.
- */
-/** A tenth of a card: a heading, a drawing, and one line saying what it is. */
-function Panel({
-  head,
-  note,
-  wide = false,
-  children,
-}: {
-  head: string;
-  note: string;
-  wide?: boolean;
-  children: ReactNode;
-}) {
-  return (
-    <div className={wide ? "@[640px]:col-span-2" : ""}>
-      <p className={LABEL}>{head}</p>
-      <div className="mt-[10px]">{children}</div>
-      <p className="font-body text-xs text-ink-mid leading-[1.5] mt-[8px] max-w-[52ch]">
-        {note}
-      </p>
-    </div>
-  );
-}
-
-/**
- * Five readings of the same fifty people.
- *
- * Deliberately not five charts of one number each. Each panel answers a
- * question the list cannot: how concentrated the bench is, how the two parties
- * hold their seats, whether chairing repeats the way membership does, whether
- * the rooms are built alike, and which of them share the same people.
- */
-function Figures() {
-  const tiers = [3, 2, 1].map((n) => {
-    const people = ROSTER.filter((p) => p.on.length === n);
-    return { n, people: people.length, seats: people.length * n };
-  });
-  const benches = [
-    { key: "Senate Democrats", side: SIDES.senateD, party: "D" },
-    { key: "Senate Republicans", side: SIDES.senateR, party: "R" },
-    { key: "House Democrats", side: SIDES.houseD, party: "D" },
-    { key: "House Republicans", side: SIDES.houseR, party: "R" },
-  ];
-  // Seats held by someone who holds more than one, against chairmanships held
-  // by someone who holds more than one. The question is whether the second
-  // repeats the way the first does.
-  const twiceChairSeats = ROSTER.filter(
-    (p) => p.on.filter((x) => x.chair).length > 1,
-  ).reduce((n, p) => n + p.on.filter((x) => x.chair).length, 0);
-  const rooms = COMMITTEES.map((c) => ({
-    slug: c.slug,
-    short: displayName(c.slug, c.short),
-    seats: (["senate", "house"] as const).flatMap((chamber) =>
-      ROSTER.filter(
-        (p) => p.chamber === chamber && p.on.some((x) => x.slug === c.slug),
-      )
-        .sort((a, b) => (a.party === "R" ? 1 : 0) - (b.party === "R" ? 1 : 0))
-        .map((p) => p.party),
-    ),
-  }));
-  const shared = rooms.map((a) =>
-    rooms.map((b) =>
-      a.slug === b.slug
-        ? -1
-        : ROSTER.filter(
-            (p) =>
-              p.on.some((x) => x.slug === a.slug) &&
-              p.on.some((x) => x.slug === b.slug),
-          ).length,
-    ),
-  );
-  // At least one, so an empty matrix cannot divide by zero.
-  const most = Math.max(1, ...shared.flat());
-  const bar = (v: number, total: number) => `${(v / total) * 100}%`;
-  // The session's own clock. Formal business ended 31 July, but Joint Rule 12A
-  // lets both chambers meet formally to take up a conference report where the
-  // conference was formed on or before that date, which all twelve were.
-  const DEADLINE = new Date("2026-07-31").getTime();
-  const today = Date.now();
-  const sitting = COMMITTEES.map((c) => {
-    const rec = recordForSlug(c.slug);
-    const sent = rec?.sentToConference
-      ? new Date(rec.sentToConference).getTime()
-      : null;
-    const met = (MEETINGS[c.slug] ?? []).map((m) => new Date(m.date).getTime());
-    return { slug: c.slug, short: displayName(c.slug, c.short), sent, met };
-  }).filter((r) => r.sent);
-  const first = Math.min(...sitting.map((r) => r.sent!));
-  const span = today - first;
-  const at = (t: number) => `${((t - first) / span) * 100}%`;
-  const days = (a: number, b: number) => Math.round((b - a) / 86400000);
-  const notices = sitting.flatMap((r) => r.met);
-  const onDeadline = notices.filter((t) => t === DEADLINE).length;
-  const sinceDeadline = notices.filter((t) => t > DEADLINE).length;
-  // A finished conference, from the day it reported to the day both chambers
-  // enacted what it wrote.
-  const finished = COMPLETED.filter((c) => c.reported && c.enacted).map(
-    (c) => ({
-      name: c.name,
-      gap: days(
-        new Date(c.reported!.on).getTime(),
-        new Date(c.enacted!).getTime(),
-      ),
-      as: c.reported!.as,
-    }),
-  );
-  const slowest = Math.max(...finished.map((f) => f.gap));
-  return (
-    <div className="@container mt-[20px] bg-surface border border-line rounded-card px-[18px] pt-[16px] pb-[18px]">
-      <div className="grid gap-x-[28px] gap-y-[24px] @[640px]:grid-cols-2">
-        <Panel
-          head="Concentration"
-          note={`Both bars hold the same three groups: the ${tiers[0].people} people who sit on three conferences, the ${tiers[1].people} who sit on two, and the ${tiers[2].people} who sit on one. They are different shapes because the first group is ${Math.round((tiers[0].people / TALLY.people) * 100)} per cent of the bench and ${Math.round((tiers[0].seats / TALLY.seats) * 100)} per cent of the seats.`}
-        >
-          {(["seats", "people"] as const).map((of) => (
-            <div key={of} className="mb-[12px] last:mb-0">
-              <p className="font-body text-2xs text-ink-mid leading-none mb-[4px]">
-                {of === "seats"
-                  ? `${TALLY.seats} seats`
-                  : `${TALLY.people} people`}
-              </p>
-              <div className="flex h-[22px] w-full overflow-hidden rounded-[4px]">
-                {tiers.map((t, i) => {
-                  const v = of === "seats" ? t.seats : t.people;
-                  return (
-                    <Hint
-                      key={t.n}
-                      text={`${t.people} on ${t.n} · ${t.seats} seats`}
-                      style={{
-                        width: bar(
-                          v,
-                          of === "seats" ? TALLY.seats : TALLY.people,
-                        ),
-                        opacity: 1 - i * 0.3,
-                      }}
-                      className="bg-brand flex items-center justify-center font-body text-2xs text-ink-inverse"
-                    >
-                      {v}
-                    </Hint>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
-          <p className="font-body text-2xs text-ink-faint leading-none">
-            Darkest: on three conferences. Lightest: on one.
-          </p>
-        </Panel>
-
-        <Panel
-          head="Seats per bench"
-          note={`Every square is a seat, grouped by the person holding it. ${SIDES.senateR.people} Senate Republicans hold all ${SIDES.senateR.seats} of the Senate's Republican places, which is the narrowest bench in the set.`}
-        >
-          {benches.map((b) => (
-            <div key={b.key} className="mb-[8px] last:mb-0">
-              <div className="flex items-center gap-[6px]">
-                <span className="w-[104px] shrink-0 font-body text-2xs text-ink-mid leading-none">
-                  {b.key}
-                </span>
-                <span className="flex flex-wrap gap-[2px]">
-                  {ROSTER.filter(
-                    (p) =>
-                      (b.key.startsWith("House") ? "house" : "senate") ===
-                        p.chamber && p.party === b.party,
-                  )
-                    .sort((x, y) => y.on.length - x.on.length)
-                    .map((p) => (
-                      // One group per person, one square per seat.
-                      <span key={p.seat} className="flex gap-[1px] mr-[5px]">
-                        {p.on.map((x) => (
-                          <span
-                            key={x.slug}
-                            className={`block w-[8px] h-[14px] rounded-[1px] ${
-                              p.party === "R" ? "bg-negative" : "bg-official"
-                            }`}
-                          />
-                        ))}
-                      </span>
-                    ))}
-                </span>
-              </div>
-            </div>
-          ))}
-        </Panel>
-
-        <Panel
-          wide
-          head="Still sitting, against the clock"
-          note={`Every bar starts the day the bill went to conference and runs to today. The line is 31 July, the end of formal business. All ${sitting.length} were formed before it, which under Joint Rule 12A keeps their reports eligible for a formal session, so the deadline has not shut them. What has happened instead is nothing: ${sinceDeadline} meetings in the ${days(DEADLINE, today)} days since. Dots are noticed meetings.`}
-        >
-          <div className="relative">
-            {/* The deadline, drawn behind the bars rather than beside them. */}
-            <span
-              style={{ left: at(DEADLINE) }}
-              className="absolute top-0 bottom-0 w-px bg-negative/60"
-              aria-hidden
-            />
-            <div className="flex flex-col gap-[4px]">
-              {sitting.map((r) => (
-                <div key={r.slug} className="flex items-center gap-[10px]">
-                  <span className="w-[160px] shrink-0 text-right font-body text-2xs text-ink-mid leading-[1.3]">
-                    {r.short}
-                  </span>
-                  <span className="relative flex-1 h-[14px]">
-                    <span
-                      style={{ left: at(r.sent!), right: 0 }}
-                      className="absolute top-[4px] h-[6px] rounded-full bg-wash-strong"
-                    />
-                    {r.met.map((t) => (
-                      <Hint
-                        key={t}
-                        text={new Date(t).toDateString()}
-                        style={{ left: at(t) }}
-                        className="absolute top-[2px] -ml-[5px] w-[10px] h-[10px] rounded-full bg-brand border-2 border-surface"
-                      />
-                    ))}
-                  </span>
-                  <span className="w-[54px] shrink-0 font-body text-2xs text-ink-faint leading-none">
-                    {days(r.sent!, today)}d
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </Panel>
-
-        <Panel
-          head="Meetings, and when they happened"
-          note={`${notices.length} meetings have been noticed across the ${sitting.length} conferences since April. ${onDeadline} of them were on 31 July itself, the last day of formal session, and only ${sinceDeadline} have happened in the ${days(DEADLINE, today)} days since.`}
-        >
-          <div className="flex items-end gap-[8px] h-[110px]">
-            {[
-              "2026-04",
-              "2026-05",
-              "2026-06",
-              "2026-07",
-              "2026-08",
-              "2026-09",
-            ].map((month) => {
-              const n = notices.filter(
-                (t) => new Date(t).toISOString().slice(0, 7) === month,
-              ).length;
-              const tall = Math.max(
-                ...[
-                  "2026-04",
-                  "2026-05",
-                  "2026-06",
-                  "2026-07",
-                  "2026-08",
-                  "2026-09",
-                ].map(
-                  (m) =>
-                    notices.filter(
-                      (t) => new Date(t).toISOString().slice(0, 7) === m,
-                    ).length,
-                ),
-              );
-              return (
-                <span
-                  key={month}
-                  className="flex-1 flex flex-col items-center gap-[4px]"
-                >
-                  <span className="font-body text-2xs text-ink-faint leading-none">
-                    {n || ""}
-                  </span>
-                  <span
-                    style={{ height: `${(n / tall) * 78}px` }}
-                    className={`w-full rounded-t-[3px] ${
-                      month === "2026-07" ? "bg-brand" : "bg-wash-strong"
-                    }`}
-                  />
-                  <span className="font-body text-2xs text-ink-mid leading-none">
-                    {new Date(`${month}-02`).toLocaleDateString("en-GB", {
-                      month: "short",
-                    })}
-                  </span>
-                </span>
-              );
-            })}
-          </div>
-        </Panel>
-
-        <Panel
-          head="Report to enactment"
-          note={`The ${finished.length} conferences that have finished took between one and ${slowest} days to go from reporting their text to both chambers enacting it. The negotiation is the whole of the delay; the votes that follow it are not where the time goes.`}
-        >
-          <div className="flex flex-col gap-[6px]">
-            {finished.map((f) => (
-              <div key={f.as} className="flex items-center gap-[10px]">
-                <span className="w-[160px] shrink-0 text-right font-body text-2xs text-ink-mid leading-[1.3]">
-                  {f.name}
-                </span>
-                <span className="flex-1 h-[10px] rounded-full bg-wash overflow-hidden">
-                  <span
-                    style={{ width: `${(f.gap / slowest) * 100}%` }}
-                    className="block h-full rounded-full bg-brand"
-                  />
-                </span>
-                <span className="w-[54px] shrink-0 font-body text-2xs text-ink-faint leading-none">
-                  {f.gap}d
-                </span>
-              </div>
-            ))}
-          </div>
-        </Panel>
-      </div>
-    </div>
-  );
-}
-
-/**
- * Twelve rooms, six seats each, against the districts they come from.
- *
- * The grid answers who is in the room; the maps answer where the room comes
- * from. They are one card because the two questions are asked in one gesture:
- * run the pointer down the rows and the maps fall to that committee's six
- * districts, stop on a face and that person is ringed in every room they sit
- * in, which is the only way to see the overlap without counting.
- *
- * Nothing is lost at rest. With no pointer on it the maps carry all fifty and
- * the card reads as the two cards it replaced.
- */
-/**
- * How a row is told apart from the rows above and below it.
- *
- * Three answers to the same question, so they can be looked at side by side:
- * a band under every other row, a dotted leader carrying the name across to
- * the faces, or a rule between one row and the next.
- */
-type RowStyle = "band" | "leader" | "rule";
-
-function Rooms({
-  rowStyle = "band",
-  mineAt = "top",
-  sayIn = "tail",
-}: {
-  rowStyle?: RowStyle;
-  /** The chip on the title line, or the switch under the maps. */
-  mineAt?: "top" | "bottom";
-  /** Whether the card says what it is doing under the maps or in the box. */
-  sayIn?: "tail" | "box";
-}) {
+function Rooms() {
   // The one thing the card can be asked that is not about a room or a face:
   // where the reader's own two sit in all of this. It is a question about the
   // whole wall, so it is only there while no committee is held.
@@ -1037,7 +565,6 @@ function Rooms({
   // of them on the way somewhere. The six in the box are a destination, so
   // they answer the moment they are reached, the way the districts do.
   const showTip = (x: number, y: number, clear = false, now = false) => {
-    if (NO_TIP) return;
     setTipClear(clear);
     if (tipAt.current) window.clearTimeout(tipAt.current);
     spot.current = { x, y };
@@ -1176,7 +703,7 @@ function Rooms({
   // there can be more than one of them, and that the rest of the column is
   // left alone.
   const sharedHover =
-    room && hoverShare && hoverShare !== room && (COUNT_MODE !== 1 || !lockWho)
+    room && hoverShare && hoverShare !== room
       ? inRoom(hoverShare)
           .filter((q) => chosen.has(q.seat))
           .map((q) => q.seat)
@@ -1189,6 +716,32 @@ function Rooms({
         ? [who]
         : [];
   const isRead = (key: string) => reading.includes(key);
+  /**
+   * Whether the box is holding one district that was pressed on a map.
+   *
+   * The arrows belong to that state and no other: a committee's six and a
+   * toggle's group were not stepped to, so there is nothing for a step to
+   * mean in them.
+   */
+  const walking = Boolean(who) && !room && !picks && !showMine;
+  /** Whether the card is holding anything a reader might want to put down. */
+  const anything = Boolean(who) || showMine || !!picks;
+  /** Everything down at once: the district, and whichever switch is on. */
+  const clearAll = () => {
+    setLockWho(null);
+    setPressed(null);
+    setMine(false);
+    setTop(false);
+    setMost(false);
+  };
+  /** One district along the map, wrapping into the other chamber and round. */
+  const walk = (dir: 1 | -1) => {
+    if (!who) return;
+    const i = WALK.indexOf(who);
+    if (i < 0) return;
+    setHoverPin(null);
+    setLockWho(WALK[(i + dir + WALK.length) % WALK.length]);
+  };
   const readers = reading
     .map((k) => ROSTER.find((p) => p.seat === k))
     .filter((p): p is RosterPerson => !!p);
@@ -1196,12 +749,11 @@ function Rooms({
    * Whoever the card is pointing at: one person read, or the shared few, or in
    * mode 3 both at once.
    */
-  const marked =
-    COUNT_MODE === 3 && sharedHover.length
-      ? [...new Set([...reading, ...sharedHover])]
-      : sharedHover.length
-        ? sharedHover
-        : reading;
+  const marked = sharedHover.length
+    ? [...new Set([...reading, ...sharedHover])]
+    : sharedHover.length
+      ? sharedHover
+      : reading;
   /** The same, as the maps see it: a hovered district counts there. */
   const mapMarked = sharedHover.length
     ? marked
@@ -1326,7 +878,7 @@ function Rooms({
               ? // A row under the pointer is the question now, so the person
                 // being read goes back with everybody outside it.
                 slug !== hoverRow
-              : !isRead(p.seat) && !(COUNT_MODE === 3 && over)
+              : !isRead(p.seat) && !over
             : hoverRow && hoverRow !== room
               ? slug !== hoverRow || !sharedHover.includes(p.seat)
               : !over
@@ -1477,12 +1029,20 @@ function Rooms({
         ));
   const reads = !!hoverShare && sharedHover.length > 0;
   const [onRight, setOnRight] = useState(false);
+  /**
+   * The pointer is inside the box that holds one pressed district.
+   *
+   * That box is the only part of the card that answers the arrows, so it is
+   * the one place a press is a step rather than a way out: letting go there
+   * would take the district away mid-walk, between one chevron and the next.
+   */
+  const [inBox, setInBox] = useState(false);
   const [onMap, setOnMap] = useState(false);
   // Which of the six in the box the pointer is on. Those carry their own
   // word, so the card's standing one stands down.
   const [hoverPin, setHoverPin] = useState<string | null>(null);
   const mapHint =
-    hoverPin || (COUNT_MODE === 3 && hoverShare)
+    hoverPin || hoverShare || (walking && inBox)
       ? null
       : onMap && hoverWho
         ? hoverWho === lockWho
@@ -1649,7 +1209,7 @@ function Rooms({
         <span
           className={`relative shrink-0 w-[28px] h-[16px] rounded-full ${
             live ? "transition-colors motion-reduce:transition-none" : ""
-          } ${on ? "bg-brand" : "bg-line-strong group-hover/sw:bg-ink-faint"}`}
+          } ${on ? "bg-[#3d9922]" : "bg-line-strong group-hover/sw:bg-ink-faint"}`}
         >
           <span
             className={`absolute top-[2px] left-[2px] w-[12px] h-[12px] rounded-full bg-surface shadow-popover ${
@@ -1667,39 +1227,13 @@ function Rooms({
       </button>
     );
   };
-  const mineButton = () =>
-    mineAt === "bottom" ? (
-      // Narrow, the row needs every pixel it has: the inset comes off the left
-      // at the same width the faces step down, so the three stay on one line.
-      <span className="flex-1 flex items-center justify-between gap-[18px] pr-[10px] @[1000px]:pl-[10px]">
-        {flip("mine", mine, "My legislators", flipMine)}
-        {flip("most", most, "Most committees", flipMost)}
-        {flip("top", top, "Highest ranked", flipTop)}
-      </span>
-    ) : (
-      <Hint
-        text={
-          mine ? "Stop marking your legislators" : "Mark your own legislators"
-        }
-        className="shrink-0 inline-block"
-      >
-        <FilterChip
-          active={mine}
-          ariaPressed={mine}
-          onClick={flipMine}
-          className="inline-flex items-center gap-[5px] !py-[2px]"
-        >
-          {/* The mark their faces wear on the wall, on the control that
-              lights those faces up. */}
-          <Star
-            aria-hidden
-            className="w-[12px] h-[12px] text-caution fill-caution"
-          />
-          My Legislators
-          {mine && <X className="w-[12px] h-[12px]" />}
-        </FilterChip>
-      </Hint>
-    );
+  const mineButton = () => (
+    <span className="flex-1 flex items-center justify-between gap-[18px] pr-[10px] @[1000px]:pl-[10px]">
+      {flip("mine", mine, "My legislators", flipMine)}
+      {flip("most", most, "Most committees", flipMost)}
+      {flip("top", top, "Highest ranked", flipTop)}
+    </span>
+  );
 
   const card = (p: RosterPerson, slug?: string) => {
     // Inside a committee's box the pointer reads one of the six: that one
@@ -1714,10 +1248,7 @@ function Rooms({
     // toggle's three: the ring is drawn outside the face, so at the tight gap
     // it ran into the name.
     const alone = !slug && !picks && !showMine;
-    const back =
-      !!only &&
-      only !== p.seat &&
-      !(COUNT_MODE === 3 && sharedHover.includes(p.seat));
+    const back = !!only && only !== p.seat && !sharedHover.includes(p.seat);
     return (
       <div
         key={p.seat}
@@ -1771,6 +1302,9 @@ function Rooms({
           size="var(--pin)"
           tip={false}
           dim={back}
+          // Back, but not to a third: six faces at that strength are a gap
+          // in the card rather than a short list standing aside.
+          softer
           // The rim belongs to the press. A hover says which entry is about
           // to answer by sending the other five back, which is the same thing
           // said without borrowing the mark that means chosen.
@@ -1783,7 +1317,7 @@ function Rooms({
           <span className="block leading-[1.3] whitespace-nowrap">
             <span
               className={`font-body font-semibold text-sm ${
-                back ? "text-ink-faint" : "text-ink"
+                back ? "text-ink-muted" : "text-ink"
               }`}
             >
               {surname(p.name)}
@@ -1791,7 +1325,7 @@ function Rooms({
             {slug && leads(p, slug) && (
               <span
                 className={`ml-[6px] font-body text-xs ${
-                  back ? "text-ink-faint" : "text-caution-ink"
+                  back ? "text-ink-muted" : "text-caution-ink"
                 }`}
               >
                 chair
@@ -1800,7 +1334,7 @@ function Rooms({
           </span>
           <span
             className={`block font-body text-xs leading-[1.4] ${
-              back ? "text-ink-faint" : "text-ink-mid"
+              back ? "text-ink-muted" : "text-ink-mid"
             }`}
           >
             {MINE_FULL[p.seat] ?? p.district}
@@ -1810,7 +1344,7 @@ function Rooms({
     );
   };
   return (
-    <div className="@container mt-[12px] bg-surface border border-line rounded-card pt-[4px] pb-[4px] min-[960px]:px-[18px] min-[960px]:pt-[10px] min-[960px]:pb-[18px]">
+    <div className="@container mt-[12px] bg-surface border border-line rounded-card pt-[4px] pb-[4px] min-[960px]:px-[18px] min-[960px]:pt-[10px] min-[960px]:pb-[28px]">
       {/* Narrow, the card is a list and nothing else: twelve rows that open
           their committee's page, with each chamber's three stacked into one
           mark. The maps, the box and the reading they support all want a
@@ -1971,7 +1505,6 @@ function Rooms({
               the pointer leaves the block altogether. */}
           <div
             onPointerLeave={() => {
-              if (NO_HOVER) return;
               setHoverRoom(null);
               hideTip();
             }}
@@ -2041,7 +1574,6 @@ function Rooms({
                   // Coming back to the wall is the next answer, so whatever
                   // the map was holding is let go of here.
                   onMouseEnter={(e) => {
-                    if (NO_HOVER) return;
                     setHoverRoom(c.slug);
                     setHoverWho(null);
                     hideTip();
@@ -2049,7 +1581,6 @@ function Rooms({
                       showTip(e.clientX, e.clientY, on);
                   }}
                   onMouseMove={(e) => {
-                    if (NO_HOVER) return;
                     spot.current = { x: e.clientX, y: e.clientY };
                     if (reads || onStrip.current) hideTip();
                     else if (tipUp.current)
@@ -2085,26 +1616,18 @@ function Rooms({
                   // crossed them said they were not. The heads above are not a
                   // target and keep the ordinary arrow.
                   className={`relative flex items-center gap-[14px] px-[8px] -mx-[8px] cursor-pointer [&_*]:cursor-pointer transition-colors ${
-                    // Banded and ruled rows run into each other on purpose:
-                    // the band and the rule are what separate them, and a gap
-                    // as well would be the separation said twice. The leader
-                    // has nothing drawn between rows, so it keeps the gap.
-                    rowStyle === "leader"
-                      ? "my-[6px] rounded-control"
-                      : "py-[5px]"
+                    // Ruled rows run into each other on purpose: the rule is
+                    // what separates them, and a gap as well would be the
+                    // separation said twice.
+                    "py-[5px]"
                   } ${
-                    rowStyle === "rule" && i < COMMITTEES.length - 1
+                    i < COMMITTEES.length - 1
                       ? "after:content-[''] after:absolute after:inset-x-[8px] after:bottom-0 after:h-px after:bg-[#f2f2f2]"
                       : ""
                   } bg-no-repeat bg-left ${
                     on
                       ? "bg-[linear-gradient(var(--color-wash),var(--color-wash))] bg-[length:100%_100%]"
-                      : rowStyle === "band" && i % 2 === 0
-                        ? // The band at rest is half the strength of the one
-                          // a press paints, so a chosen row still stands out
-                          // from the striping it sits in.
-                          "bg-wash/50"
-                        : ""
+                      : ""
                   }`}
                 >
                   <span
@@ -2153,28 +1676,7 @@ function Rooms({
                                 "font-bold text-ink-mid"
                     }`}
                   >
-                    {rowStyle === "leader" ? (
-                      // The committee's own line, with a dotted rule filling
-                      // whatever the name leaves of the column. It sits on the
-                      // name's baseline, a couple of pixels clear of the
-                      // descenders, rather than halfway up the letters.
-                      <span className="flex items-baseline gap-[6px]">
-                        <span className="shrink-0">
-                          {displayName(c.slug, c.short)}
-                        </span>
-                        <span
-                          aria-hidden
-                          className="relative flex-1 translate-y-[2px]"
-                        >
-                          <span
-                            style={DOTS}
-                            className="absolute left-0 right-[-13px] bottom-0 h-px"
-                          />
-                        </span>
-                      </span>
-                    ) : (
-                      displayName(c.slug, c.short)
-                    )}
+                    {displayName(c.slug, c.short)}
                     {/* The two bills the room was called to reconcile, under
                         the name that stands for them. Faint and at one weight
                         throughout: it is what the row is about, not a second
@@ -2207,14 +1709,7 @@ function Rooms({
                     aria-hidden
                     style={CHAMBER_GAP}
                     className="relative self-center"
-                  >
-                    {rowStyle === "leader" && (
-                      <span
-                        style={DOTS}
-                        className="absolute left-[-13px] right-[-13px] bottom-0 h-px"
-                      />
-                    )}
-                  </span>
+                  ></span>
                   <span className="flex items-center">
                     {six(c.slug, "house").map((p) => seat(p, on, c.slug))}
                   </span>
@@ -2250,7 +1745,7 @@ function Rooms({
                       </button>
                     ) : (
                       <>
-                        {!NO_COUNT && !!shared && (
+                        {!!shared && (
                           <span className="font-body text-2xs text-ink-faint tabular-nums leading-none">
                             {shared}
                           </span>
@@ -2259,26 +1754,23 @@ function Rooms({
                             it is one whether or not there is a number in it:
                             the strip is not part of the row, so resting here
                             neither lights the row nor selects it. */}
-                        {!NO_COUNT && (
-                          <Hint
-                            text=""
-                            style={{ cursor: "default" }}
-                            className="absolute -inset-y-[6px] -left-[8px] -right-[26px]"
-                            onEnter={() => {
-                              onStrip.current = true;
-                              hideTip();
-                              // Mode 2: the strip is the way out of a held
-                              // legislator as well as a question of its own.
-                              if (COUNT_MODE === 2) setLockWho(null);
-                              setHoverShare(c.slug);
-                            }}
-                            onLeave={() => {
-                              onStrip.current = false;
-                              setHoverShare(null);
-                            }}
-                            onClick={(e) => e.stopPropagation()}
-                          />
-                        )}
+                        <Hint
+                          text=""
+                          style={{ cursor: "default" }}
+                          className="absolute -inset-y-[6px] -left-[8px] -right-[26px]"
+                          onEnter={() => {
+                            onStrip.current = true;
+                            hideTip();
+                            // Mode 2: the strip is the way out of a held
+                            // legislator as well as a question of its own.
+                            setHoverShare(c.slug);
+                          }}
+                          onLeave={() => {
+                            onStrip.current = false;
+                            setHoverShare(null);
+                          }}
+                          onClick={(e) => e.stopPropagation()}
+                        />
                       </>
                     )}
                   </span>
@@ -2321,9 +1813,7 @@ function Rooms({
             // Whatever is last in the column carries its own floor, the
             // switches or the way in alike: sitting hard on the card's edge
             // made it look like part of the card rather than on it.
-            className={`order-3 pb-[8px] ${
-              rowStyle === "leader" ? "mb-[11px]" : "mb-[10px]"
-            }`}
+            className={`order-3 pb-[8px] ${"mb-[10px]"}`}
           >
             {/* The slot keeps its line whether or not it is holding one. The
                 maps are pinned by what is under them, so a sentence moving
@@ -2349,19 +1839,17 @@ function Rooms({
               {/* With nobody's committee held, the box below is already a list
                   of the rooms this person sits in, so the same fact in a
                   sentence under the maps is the answer said twice. */}
-              {sayIn === "tail" || room ? say() : null}
+              {room ? say() : null}
             </div>
             {/* The switch and the way in share the row, and never at the same
                 time: one belongs to a card with nothing chosen, the other to a
                 card with a committee held. */}
             <div
               className={`h-[22px] flex ${
-                mineAt === "bottom" && !room
-                  ? "items-start justify-start"
-                  : "items-end justify-end"
+                !room ? "items-start justify-start" : "items-end justify-end"
               }`}
             >
-              {mineAt === "bottom" && !room && mineButton()}
+              {!room && mineButton()}
               {room && !NOT_LINKED.has(room) && (
                 <Link
                   to={`/conferenceCommittees/${room}`}
@@ -2398,7 +1886,7 @@ function Rooms({
               room ? "h-[258px]" : "h-[282px]"
             }`}
           >
-            {sayIn === "box" && !room && !readers.length && (
+            {!room && !readers.length && (
               // The card's own sentence, inside the box it is about rather
               // than under the maps. It sits on the box's floor, in the
               // padding the box already keeps there, so it reads as a footnote
@@ -2440,7 +1928,7 @@ function Rooms({
                     // itself is the height it always was.
                     className="group/go flex-1 flex items-center gap-[8px] py-[10px] -my-[10px] px-[6px] -mx-[6px] cursor-pointer"
                   >
-                    <h2 className="font-body font-bold text-[18px] leading-[1.3] text-brand group-hover/go:text-brand-hover transition-colors">
+                    <h2 className="font-body font-bold text-[18px] leading-[1.3] text-[#0f2275] group-hover/go:text-[#081569] transition-colors">
                       {displayName(
                         room,
                         COMMITTEES.find((c) => c.slug === room)?.short ?? "",
@@ -2449,7 +1937,7 @@ function Rooms({
                     <ChevronRight
                       aria-hidden
                       strokeWidth={2.5}
-                      className="ml-auto w-[20px] h-[20px] text-brand group-hover/go:text-brand-hover transition-colors"
+                      className="ml-auto w-[20px] h-[20px] text-[#0f2275] group-hover/go:text-[#081569] transition-colors"
                     />
                   </Link>
                 )
@@ -2468,10 +1956,36 @@ function Rooms({
                     // chosen committee replaces it with its own name in ink.
                     className="font-body font-semibold text-[15px] leading-[1.3] text-ink-muted"
                   >
-                    Conference Committee Explorer
+                    Conference Explorer
                   </h2>
-                  {mineAt === "top" && (
-                    <span className="ml-auto pl-[12px]">{mineButton()}</span>
+                  {/* The way out, where the row that names the card ends.
+                      Everything else that lets a district go is a gesture:
+                      pressing the same cell again, or clicking the page
+                      behind the card. Both have to be known before they can
+                      be used, and a reader who has pressed something and
+                      cannot see how to undo it has no way to ask. This is
+                      that way, written down.
+
+                      Only where no committee is held: a chosen committee has
+                      its own way out, the cross at the end of its row, and a
+                      second one up here would be two answers to one
+                      question. */}
+                  {anything && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        clearAll();
+                      }}
+                      // Ten of margin against six of padding puts the word
+                      // sixteen in from the column's edge, which is the box's
+                      // own corner radius: the point where the top of the box
+                      // stops being straight. Flush with the edge below left
+                      // it hanging over the curve.
+                      className="ml-auto shrink-0 -my-[6px] mr-[10px] px-[6px] py-[6px] rounded-control font-body text-xs text-ink-mid hover:text-ink hover:bg-wash transition-colors cursor-pointer"
+                    >
+                      Clear
+                    </button>
                   )}
                 </>
               )}
@@ -2485,7 +1999,26 @@ function Rooms({
               // something rather than one that is holding three.
               <div className="flex-1 grid content-start gap-x-[20px] gap-y-[10px] @[560px]:grid-cols-2 rounded-card bg-[#f7f7f7] pl-[20px] pr-[16px] pt-[14px] pb-[26px]">
                 {(["senate", "house"] as const).map((chamber) => (
-                  <div key={chamber} className="flex flex-col gap-[10px]">
+                  <div
+                    key={chamber}
+                    // Eight over, drawn rather than laid out. The
+                    // Senate half starts hard against the box's
+                    // padding while the House half starts in the
+                    // middle of it, so the left of the two reads as
+                    // the tighter one.
+                    //
+                    // Padding would have taken those eight pixels out
+                    // of the column's own width, and a district like
+                    // "Hampden, Hampshire and Worcester" needs every
+                    // one of them: the half that looked tight would
+                    // have answered by wrapping. A transform moves
+                    // the painting and leaves the measuring alone, so
+                    // nothing can wrap because of it. What it spends
+                    // is eight of the twenty between the columns.
+                    className={`flex flex-col gap-[10px] ${
+                      chamber === "senate" ? "@[1000px]:translate-x-[8px]" : ""
+                    }`}
+                  >
                     <p className={LABEL}>
                       {chamber === "senate" ? "Senate" : "House"}
                     </p>
@@ -2523,7 +2056,26 @@ function Rooms({
                     name above it: three faces with no heading leave a reader
                     matching them to the maps by position. */}
                 {(["senate", "house"] as const).map((chamber) => (
-                  <div key={chamber} className="flex flex-col gap-[10px]">
+                  <div
+                    key={chamber}
+                    // Eight over, drawn rather than laid out. The
+                    // Senate half starts hard against the box's
+                    // padding while the House half starts in the
+                    // middle of it, so the left of the two reads as
+                    // the tighter one.
+                    //
+                    // Padding would have taken those eight pixels out
+                    // of the column's own width, and a district like
+                    // "Hampden, Hampshire and Worcester" needs every
+                    // one of them: the half that looked tight would
+                    // have answered by wrapping. A transform moves
+                    // the painting and leaves the measuring alone, so
+                    // nothing can wrap because of it. What it spends
+                    // is eight of the twenty between the columns.
+                    className={`flex flex-col gap-[10px] ${
+                      chamber === "senate" ? "@[1000px]:translate-x-[8px]" : ""
+                    }`}
+                  >
                     <p className={LABEL}>
                       {chamber === "senate" ? "Senate" : "House"}
                     </p>
@@ -2549,23 +2101,54 @@ function Rooms({
               // takes whatever width they need, still anchored to their own
               // side so the entry stays under the map it belongs to.
               <div
-                className={`flex-1 content-start grid gap-x-[20px] rounded-card bg-[#f7f7f7] pl-[20px] pt-[14px] pb-[26px] ${
+                onMouseEnter={() => setInBox(true)}
+                onMouseLeave={() => setInBox(false)}
+                // A press in here is not a press on the page. The card lets a
+                // district go on any click that is not the one that took it,
+                // and this box is where a district is read and walked, so a
+                // click landing between the two arrows should not end the
+                // reading it is part of.
+                onClick={(e) => walking && e.stopPropagation()}
+                className={`relative flex-1 content-start grid gap-x-[20px] rounded-card bg-[#f7f7f7] pt-[14px] pb-[26px] ${
                   readers.length > 1
-                    ? "@[560px]:grid-cols-2 pr-[16px]"
-                    : // One of them keeps their own half while the card is
-                      // wide, and takes the whole box only once the halves are
-                      // too narrow to hold a line. Then the text can run the
-                      // full width, so it ends the same distance from the edge
-                      // as the face starts from it.
-                      "@[1000px]:grid-cols-2 pr-[20px]"
+                    ? "@[560px]:grid-cols-2 pl-[20px] pr-[16px]"
+                    : // One of them has the box to themselves, so they take
+                      // the whole of it at every width, anchored to their own
+                      // side so the entry still sits under the map it belongs
+                      // to. Holding them to half a box while the other half
+                      // stands empty wraps a district name that had the room
+                      // to stay on one line.
+                      //
+                      // Room for the arrows: each takes a strip at its own
+                      // edge, and the entry is held off by the same 20 it
+                      // keeps everywhere else, measured from the strip rather
+                      // than from the box.
+                      walking
+                      ? "px-[45px]"
+                      : "pl-[20px] pr-[20px]"
                 }`}
               >
                 {(["senate", "house"] as const).map((chamber) => (
                   <div
                     key={chamber}
                     className={`flex flex-col gap-[10px] ${
-                      readers.length === 1 && chamber === "house"
-                        ? "w-fit max-w-full ml-auto @[1000px]:w-auto @[1000px]:ml-0"
+                      // Only where the box is split in two. One of them holds
+                      // the whole box and is walked with the arrows, so its
+                      // entry is measured off the strip beside it rather than
+                      // off a half it does not have.
+                      readers.length > 1 && chamber === "senate"
+                        ? "@[1000px]:translate-x-[8px]"
+                        : ""
+                    } ${
+                      // A lone House member sits on their own side, under the
+                      // map they belong to, while the box is something the
+                      // card filled. Not while it is something being walked:
+                      // the arrows cross from one chamber into the other, and
+                      // an entry that jumps the width of the box on the step
+                      // between them reads as a different panel rather than
+                      // the next district.
+                      readers.length === 1 && chamber === "house" && !walking
+                        ? "w-fit max-w-full ml-auto"
                         : ""
                     }`}
                   >
@@ -2639,6 +2222,51 @@ function Rooms({
                       ))}
                   </div>
                 ))}
+                {/* A third way to the same selection, beside the maps and the
+                    rows, and the only one that works without knowing which
+                    district to point at. Drawn the way the bill page's own
+                    panel draws them: at the box's edges, in the whole width
+                    the box pads by, so the entry inside does not move when
+                    they appear and nothing shifts when they go.
+
+                    Both are there from the moment a district is pressed,
+                    because a control a reader has to find by sweeping the box
+                    is a control most readers never find. What waits for the
+                    pointer is the lit strip behind the chevron, which says
+                    where the press will land rather than that there is one.
+
+                    The strip is the control, not the chevron inside it, so
+                    it takes nearly the whole of the box's side padding: a
+                    narrow target with a wide margin beside it leaves a band
+                    that looks like the arrow and does nothing. Nearly, not
+                    all of it, so the lit strip stops short of the face rather
+                    than running into it. */}
+                {walking &&
+                  (
+                    [
+                      ["Previous district", -1, "left-0 rounded-l-card"],
+                      ["Next district", 1, "right-0 rounded-r-card"],
+                    ] as const
+                  ).map(([label, dir, side]) => (
+                    <button
+                      key={label}
+                      type="button"
+                      aria-label={label}
+                      onClick={(e) => {
+                        // The card's own click-away would read this as a
+                        // press on the page and let the district go.
+                        e.stopPropagation();
+                        walk(dir);
+                      }}
+                      className={`absolute inset-y-0 ${side} w-[31px] flex items-center justify-center text-ink-mid hover:text-ink hover:bg-wash-strong transition-colors duration-150 cursor-pointer`}
+                    >
+                      {dir === 1 ? (
+                        <ChevronRight className="w-[14px] h-[14px]" />
+                      ) : (
+                        <ChevronLeft className="w-[14px] h-[14px]" />
+                      )}
+                    </button>
+                  ))}
               </div>
             ) : (
               // Nothing asked yet. The box holds the room the six will fill,
@@ -2659,634 +2287,6 @@ function Rooms({
           </div>
         </div>
       </div>
-    </div>
-  );
-}
-
-/**
- * A second copy of the card above, to try a different idea on.
- *
- * Deliberately a duplicate rather than a prop: the two are meant to diverge,
- * and sharing one component would mean every change having to be true of both.
- * Whichever one wins, the other goes.
- *
- * Twelve rooms, six seats each, against the districts they come from.
- *
- * The grid answers who is in the room; the maps answer where the room comes
- * from. They are one card because the two questions are asked in one gesture:
- * run the pointer down the rows and the maps fall to that committee's six
- * districts, stop on a face and that person is ringed in every room they sit
- * in, which is the only way to see the overlap without counting.
- *
- * Nothing is lost at rest. With no pointer on it the maps carry all fifty and
- * the card reads as the two cards it replaced.
- */
-function RoomsTwo() {
-  const [hoverRoom, setHoverRoom] = useState<string | null>(null);
-  const [pinRoom, setPinRoom] = useState<string | null>(null);
-  const [hoverWho, setHoverWho] = useState<string | null>(null);
-  // Nothing on this card is kept except the committee. A person is read while
-  // the pointer is on them and let go of when it leaves, which on a phone is
-  // what a tap does.
-  //
-  // Which face the pointer is actually on, as against which person it is
-  // reading: a person sits in up to three rows, and only the one under the
-  // hand should be treated as touched.
-  const [hoverAt, setHoverAt] = useState<{
-    seat: string;
-    slug: string;
-  } | null>(null);
-  /**
-   * A district holds for as long as the pointer is on the map.
-   *
-   * Dragging across the map crosses the hairline between two cells, and that
-   * gap reports as "nothing under the pointer" for a frame or two, which made
-   * the card flicker back to rest between every district. So a cell leaving is
-   * ignored: the reading changes when another cell claims it, and is let go of
-   * when the pointer leaves the maps altogether, which the surrounding box
-   * reports with a little room to spare.
-   */
-  const readDistrict = (k: string | null) => k && setHoverWho(k);
-  //
-  // A committee is chosen by pressing its row. Passing over the row previews
-  // the same thing without committing to it: the six light up and the maps
-  // take their districts, and nothing is ringed, because nothing has been
-  // chosen yet.
-  const room = pinRoom;
-  const shownRoom = room ?? hoverRoom;
-  const who = hoverWho;
-  /** Whoever the pointer is on, if anyone. */
-  const reading = who ? [who] : [];
-  const isRead = (key: string) => reading.includes(key);
-  const readers = reading
-    .map((k) => ROSTER.find((p) => p.seat === k))
-    .filter((p): p is RosterPerson => !!p);
-  const leads = (p: RosterPerson, slug: string) =>
-    p.on.some((x) => x.slug === slug && x.chair);
-  const six = (slug: string, chamber: "house" | "senate") =>
-    ROSTER.filter(
-      (p) => p.chamber === chamber && p.on.some((x) => x.slug === slug),
-    ).sort(
-      (a, b) =>
-        Number(leads(b, slug)) - Number(leads(a, slug)) ||
-        (a.party === "R" ? 1 : 0) - (b.party === "R" ? 1 : 0) ||
-        byStanding(a, b),
-    );
-  const inRoom = (slug: string) =>
-    ROSTER.filter((p) => p.on.some((x) => x.slug === slug));
-  // The maps always hold all fifty, so the headings keep counting the whole
-  // bench. What changes is which of them are painted over the veil: the people
-  // being read, and the six of a chosen committee.
-  const shown = ROSTER;
-  // Everyone in the chosen committee, wherever they turn up. A person on three
-  // conferences is the same person in all three rows, and dimming their other
-  // faces said the committee stopped at its own line.
-  const chosen = new Set(shownRoom ? inRoom(shownRoom).map((p) => p.seat) : []);
-  // What the maps paint over the veil. A person being read is the whole
-  // answer, the same as in the grid: a committee's other five step back on the
-  // map as well as in the box.
-  // What the maps paint over the veil: the committee being shown, and anyone
-  // being read. Both at once where a reader is inside a committee, with the
-  // person forward and the room behind them.
-  // With a committee on the card the maps hold that committee and stop there.
-  // Reading one of its six changes the grid and the box; the map is the
-  // picture of the room, and it should not be redrawn every time the pointer
-  // moves inside it.
-  const front = shownRoom ? inRoom(shownRoom).map((p) => p.seat) : reading;
-  // Who the map will answer about. With a committee selected that is its six
-  // and nobody else: the other districts are drawn as unlit, and a cell that
-  // cannot be seen should not be able to be read either.
-  const people = Object.fromEntries(
-    (room ? inRoom(room) : ROSTER).map((p) => [
-      p.seat,
-      {
-        name: p.name,
-        district: p.district,
-        party: p.party,
-        portrait: p.portrait,
-        title: p.title,
-      },
-    ]),
-  );
-  const map = (chamber: "senate" | "house") => {
-    // The map is redrawn the moment a committee is in play, hovered or
-    // pressed: down to that committee's districts, with the headings counting
-    // them. A hover gets the same picture at less than full strength, so a
-    // press is the difference between looking and choosing rather than the
-    // difference between two drawings.
-    const focus = shownRoom ? inRoom(shownRoom).map((p) => p.seat) : null;
-    return (
-      <span
-        className={`block transition-opacity ${
-          focus && !room ? "opacity-60" : ""
-        }`}
-      >
-        <VoteMap
-          key={chamber}
-          chamber={chamber}
-          // Reading one person sends everything else back: inside a committee
-          // that is its other five, and outside one it is the whole bench
-          // behind a veil.
-          dim={reading.length > 0}
-          veil={!focus && reading.length > 0}
-          veilAt={0.35}
-          highlight={focus ?? shown.map((p) => p.seat)}
-          selected={focus ? reading : front}
-          enlarged={focus ? [] : reading}
-          onHover={readDistrict}
-          // A press on a district is a tap's hover and nothing else: on a
-          // phone it reads that district, and on a desktop it repeats what the
-          // pointer has already said rather than undoing it.
-          onPin={(k) => setHoverWho(k)}
-          people={people}
-        />
-      </span>
-    );
-  };
-  const seat = (p: RosterPerson, lit: boolean, slug: string) => {
-    // A face in this grid answers nothing. The row is the only target on the
-    // left: the pointer chooses a committee, not a person, and a face that
-    // took the card over on the way past was answering a question the reader
-    // had not asked. Reading one person is what the box and the maps are for.
-    //
-    // Sitting back means: outside the committee being shown, and not whoever
-    // is being read from one of those. The committee being shown is the one
-    // pressed or, failing that, the one the pointer is over.
-    // Whether this is the face the pointer is actually on. A hover that came
-    // from the box or the map is on a person rather than on a face, and then
-    // no face in the grid is the one being touched: they all take the ring.
-    const here = hoverAt
-      ? hoverAt.seat === p.seat && hoverAt.slug === slug
-      : false;
-    const back = chosen.size
-      ? slug !== shownRoom && !isRead(p.seat)
-      : // Nothing asked yet: the whole wall stands at full. Dimming is what
-        // happens when there is something to dim against.
-        //
-        // With no committee on the card, reading someone lights the face
-        // under the hand and nothing else. Their other rooms light up only
-        // once a committee has been pressed, where the question is what that
-        // room reaches into.
-        reading.length
-        ? // Read from the map or the box, the person lights wherever they sit;
-          // read from a face in the grid, only that face lights.
-          !(hoverAt ? here : who === p.seat)
-        : // At rest the wall sits back at the middle strength: it is a wall of
-          // faces nobody has asked about yet, and the maps beside it are the
-          // thing that is actually saying something.
-          true;
-    return (
-      // Room for a ring on every side. The ink ring is drawn outside the
-      // face, so without the padding it would cross into the row above and
-      // below and be cut by whichever band is painted over it.
-      //
-      // The face reads on hover and nothing more: the ring marks the person
-      // and the maps follow them, while the press underneath still belongs to
-      // the row, so pointing at someone never takes a committee away.
-      <span
-        key={p.seat}
-        className="flex px-[5px] py-[7px]"
-        // With a row selected the only moves left are releasing it or taking
-        // another: a face outside that row answers nothing, or the reader
-        // ends up reading a person out of a room they did not choose.
-        onMouseEnter={() => {
-          if (!room || slug !== room) return;
-          setHoverWho(p.seat);
-          setHoverAt({ seat: p.seat, slug });
-        }}
-        onMouseLeave={() => {
-          setHoverWho(null);
-          setHoverAt(null);
-        }}
-      >
-        {/* The ring is the selected state, in the grid and in the list alike.
-          The pointer does not borrow it: hovering only sends everything else
-          back. */}
-        <RowFace
-          p={p}
-          size={30}
-          tip={false}
-          // Not on the face under the hand: the pointer is already on it, so
-          // the ring there says nothing. It goes on the other instances of
-          // that person, which is the thing worth pointing out, and on their
-          // entry in the box.
-          // The ring marks the other instances of whoever is being read, and
-          // only while a committee is on the card: reading a face on its own
-          // is about that face, not about the rooms it turns up in.
-          ring={who === p.seat && !here}
-          // Dim at rest, and dim again outside whatever is being read. A
-          // chosen committee lights its own row and no further: the same
-          // people elsewhere are other rooms' business until the pointer asks
-          // about one of them, and then they light wherever they sit.
-          dim={back}
-          // Gray is about the room: everyone outside the committee being
-          // shown loses their color. The person being read keeps theirs
-          // wherever they are standing, and still sits back, so their other
-          // rooms read as "also here" rather than as part of the answer.
-          // Gray is for rows nobody is pointing at. The hovered row keeps its
-          // color even while another committee is pressed.
-          // A person's other rooms only come out of the gray once a committee
-          // has been pressed. With nothing held, reading someone is about the
-          // face under the hand and the rest of the wall stays as it was.
-          gray={
-            chosen.size > 0 &&
-            slug !== room &&
-            slug !== hoverRoom &&
-            !(!!room && isRead(p.seat))
-          }
-          // At rest the whole wall sits at the middle strength rather than
-          // the deep one: nothing has been asked about yet, so nothing has
-          // been pushed back behind anything else.
-          // A row under the pointer is lit but not fully: color, at the
-          // middle strength, and a step stronger where nothing has been
-          // pressed for it to sit under.
-          lift={!room}
-          soft={
-            (!chosen.size && !reading.length) ||
-            (!!room && isRead(p.seat)) ||
-            (slug === hoverRoom && slug !== room)
-          }
-        />
-      </span>
-    );
-  };
-  // The committee page's own conferee row, at its size and in its order: the
-  // face with the party ring, the surname, the office beside it, the district
-  // under it. A reader arriving from that page should not have to learn a
-  // second way of reading the same six people.
-  const card = (p: RosterPerson, slug?: string) => {
-    // Inside a committee's box the pointer reads one of the six: that one
-    // takes the ring and the other five sit back. In the list of pins there
-    // is nothing to sit back from, so they stay as they are.
-    // Reading one of the six sends the other five back, here as in the row.
-    const back = !!who && who !== p.seat;
-    return (
-      <div
-        key={p.seat}
-        // A previewed committee's box is a picture of the room, not somewhere
-        // to point: until the row has been pressed, nothing in here answers.
-        onMouseEnter={() => room && setHoverWho(p.seat)}
-        onMouseLeave={() => room && setHoverWho(null)}
-        // A pill on hover, with the way out at its far end. The entry is the
-        // whole target, as it was; the X says so, and the ground under it
-        // says how far the target reaches.
-        className="group/pin relative flex items-center gap-[10px] cursor-pointer"
-      >
-        {/* Nothing in this list sits back. Everyone in it is pinned or
-            under the pointer, which is to say everyone in it was asked for.
-            No tooltip anywhere on this card: the card answers the pointer
-            itself, and a label arriving on top of that answer is a second
-            answer to the same gesture. */}
-        {/* No clear badge here: the grid is where a pin is let go of, and
-            this list has its own instructions coming. */}
-        {/* The ring belongs to a committee that has been pressed. While this
-            box is only a preview of the row under the pointer, nothing in it
-            is marked. */}
-        <RowFace
-          p={p}
-          size={36}
-          tip={false}
-          dim={back}
-          ring={!!room && who === p.seat}
-        />
-        <span className="min-w-0">
-          <span className="block leading-[1.3] whitespace-nowrap">
-            <span
-              className={`font-body font-semibold text-sm ${
-                back ? "text-ink-faint" : "text-ink"
-              }`}
-            >
-              {surname(p.name)}
-            </span>
-            {slug && leads(p, slug) && (
-              <span
-                className={`ml-[6px] font-body text-xs ${
-                  back ? "text-ink-faint" : "text-caution-ink"
-                }`}
-              >
-                chair
-              </span>
-            )}
-          </span>
-          <span
-            className={`block font-body text-xs leading-[1.4] ${
-              back ? "text-ink-faint" : "text-ink-mid"
-            }`}
-          >
-            {p.district}
-          </span>
-        </span>
-      </div>
-    );
-  };
-  return (
-    <div className="@container mt-[20px] bg-surface border border-line rounded-card px-[18px] pt-[16px] pb-[18px]">
-      <p className={LABEL}>
-        Twelve rooms · {TALLY.seats} seats · {TALLY.people} people
-      </p>
-      <div className="mt-[12px] flex flex-col @[900px]:flex-row gap-[24px]">
-        <div className="shrink-0">
-          {/* No mark on the faces. Every seat in a column holds the same
-              office in every room, so the column is the label. */}
-          <div className="w-max">
-            <div className="flex items-end gap-[14px] pb-[6px]">
-              <span className="w-[150px] shrink-0" aria-hidden />
-              {(["Senate", "House"] as const).map((chamber, i) => (
-                <Fragment key={chamber}>
-                  {i > 0 && <span className="w-[14px]" aria-hidden />}
-                  <span className="flex flex-col items-stretch">
-                    <span className={`${LABEL} pb-[6px] text-center`}>
-                      {chamber}
-                    </span>
-                    {/* The middle column goes unnamed. "Member" was the one
-                        head that said nothing the column did not already say,
-                        and at this width it ran into "Minority". */}
-                    <span className="flex items-end">
-                      {["Chair", "", "Minority"].map((head, k) => (
-                        <span
-                          key={k}
-                          className="w-[40px] shrink-0 text-center font-body text-2xs text-ink-faint leading-none"
-                        >
-                          {head}
-                        </span>
-                      ))}
-                    </span>
-                  </span>
-                </Fragment>
-              ))}
-            </div>
-            {COMMITTEES.map((c) => {
-              const on = room === c.slug;
-              // A row stays lit either because it is the row being read or
-              // because the person being read sits in it. That second rule is
-              // the whole point of the ring: three rows light at once and the
-              // reader sees the overlap without counting.
-              // Only the chosen committee's own name stays dark. The rooms
-              // its people also sit in light up while the pointer is on one
-              // of them, and go back when it leaves.
-              const holds = readers.some((p) =>
-                p.on.some((x) => x.slug === c.slug),
-              );
-              // At rest every name is back too: the card opens as a wall
-              // nobody has asked about, and a row of full-strength names over
-              // dimmed faces was half the card still at full strength.
-              const back = !on && !holds;
-              return (
-                <div
-                  key={c.slug}
-                  // Coming back to the wall is the next answer, so whatever
-                  // the map was holding is let go of here.
-                  onMouseEnter={() => {
-                    setHoverRoom(c.slug);
-                    if (!room) setHoverWho(null);
-                  }}
-                  onMouseLeave={() => setHoverRoom(null)}
-                  // The press leaves the page rather than choosing on it:
-                  // a new tab, so the card a reader was working through is
-                  // still there when they come back. A committee with no page
-                  // behind it is not opened at all.
-                  onClick={() => {
-                    if (NOT_LINKED.has(c.slug)) return;
-                    window.open(
-                      `/conferenceCommittees/${c.slug}`,
-                      "_blank",
-                      "noopener",
-                    );
-                  }}
-                  // Hover is paint only. The row says it is a thing you are
-                  // over, and nothing on the right hand side moves: the maps
-                  // and the list still answer to a face or a district.
-                  // The whole strip is the target, not the faces on it: full
-                  // width of the grid, with the padding inside the row so the
-                  // press reaches past the last face and before the name.
-                  className={`relative flex items-center gap-[14px] rounded-control px-[8px] -mx-[8px] cursor-pointer transition-colors hover:bg-wash ${
-                    on ? "bg-wash" : ""
-                  }`}
-                >
-                  <span
-                    // Dark for the committee being shown, pressed or merely
-                    // passed over, and for any room holding someone being
-                    // read. Everything else sits back.
-                    // Three states, and only one of them is the subject. The
-                    // Two schemes. With nothing held, every name is ink and
-                    // weight alone marks what the pointer is on. With a
-                    // committee held, it is the only one in ink and the column
-                    // behind it goes gray.
-                    className={`w-[150px] shrink-0 font-body text-sm leading-[1.3] transition-colors ${
-                      on
-                        ? "font-bold text-ink"
-                        : c.slug === hoverRoom
-                          ? "font-medium text-ink"
-                          : shownRoom
-                            ? // A committee is being shown, pressed or hovered:
-                              // the rest of the column goes back, and a room
-                              // holding the person being read comes halfway.
-                              back
-                              ? "font-normal text-ink-faint"
-                              : "font-semibold text-ink-mid"
-                            : // Nothing held: every name is ink and weight
-                              // alone says what the pointer is on.
-                              back
-                              ? "font-normal text-ink"
-                              : "font-medium text-ink"
-                    }`}
-                  >
-                    {displayName(c.slug, c.short)}
-                  </span>
-                  <span className="flex items-center">
-                    {six(c.slug, "senate").map((p) => seat(p, on, c.slug))}
-                  </span>
-                  <span className="w-[14px]" aria-hidden />
-                  <span className="flex items-center">
-                    {six(c.slug, "house").map((p) => seat(p, on, c.slug))}
-                  </span>
-                  {/* Where the press goes. It keeps its place in the row, so
-                      the row is no wider with it than without, and it only
-                      appears on the row under the pointer. */}
-                  <ExternalLink
-                    aria-hidden
-                    strokeWidth={2.25}
-                    className={`shrink-0 ml-[6px] -translate-x-[10px] w-[13px] h-[13px] text-ink-mid transition-opacity ${
-                      c.slug === shownRoom && !NOT_LINKED.has(c.slug)
-                        ? "opacity-100"
-                        : "opacity-0"
-                    }`}
-                  />
-                </div>
-              );
-            })}
-          </div>
-        </div>
-        <div className="min-w-0 flex-1">
-          {/* Equal columns, so the two maps are drawn at the same size and
-              the lists under them start on the same line. */}
-          <div className="relative">
-            {/* The pair is one area to the pointer: the gutter between the
-                two maps is inside it, so crossing from the Senate to the House
-                does not let go of what was being read. The padding gives the
-                edges a little slack, and leaving this box is what clears it. */}
-            <div
-              onPointerLeave={() => setHoverWho(null)}
-              className="grid gap-[20px] @[560px]:grid-cols-2 items-start p-[10px] -m-[10px]"
-            >
-              {map("senate")}
-              {map("house")}
-            </div>
-          </div>
-          {/* A floor under the readout, so the card does not grow and shrink
-              as the pointer moves down the rows. Three rows of a name and a
-              district is the tallest it gets. */}
-          <div className="mt-[24px] min-h-[104px]">
-            {shownRoom ? (
-              <>
-                {/* Named above its own box: the grid says which row is chosen
-                    by lighting it, and the right hand side should not make a
-                    reader look back across the card to find out. */}
-                {/* Printed for whichever committee is being shown, pressed
-                    or hovered: the right hand side answers the pointer at the
-                    same moment the row does. */}
-                {/* The same name at the same weight and size as the row it
-                    came from, so the two read as one thing rather than as a
-                    heading about it. */}
-                <p
-                  // Invisible while the committee is only being hovered, but
-                  // still in the layout, so the box below it does not move
-                  // when the name arrives.
-                  className={`font-body font-bold text-sm text-ink leading-[1.3] mb-[10px] transition-opacity ${
-                    room ? "opacity-100" : "opacity-0"
-                  }`}
-                >
-                  {displayName(
-                    shownRoom,
-                    COMMITTEES.find((c) => c.slug === shownRoom)?.short ?? "",
-                  )}
-                </p>
-                {/* A committee's six read as one thing, so they are drawn as
-                    one: a single box holding both chambers' halves. */}
-                {/* Hovered, the box is the shape of the answer rather than
-                    the answer: the room it would fill and what to do to fill
-                    it. The six arrive when the committee is pressed. */}
-                {!room ? (
-                  <div className="rounded-card bg-wash px-[16px] py-[14px] min-h-[104px] flex items-center justify-center">
-                    <p className="font-body text-sm text-ink-mid">
-                      Click to see{" "}
-                      {displayName(
-                        shownRoom,
-                        COMMITTEES.find((c) => c.slug === shownRoom)?.short ??
-                          "",
-                      )}
-                    </p>
-                  </div>
-                ) : (
-                  <div
-                    className={`grid gap-x-[20px] gap-y-[10px] @[560px]:grid-cols-2 rounded-card bg-wash px-[16px] py-[14px] transition-opacity ${
-                      room ? "" : "opacity-60"
-                    }`}
-                  >
-                    {/* Each half named inside the box, under the committee's
-                      own name above it: three faces with no heading leave a
-                      reader matching them to the maps by position. */}
-                    {(["senate", "house"] as const).map((chamber) => (
-                      <div key={chamber} className="flex flex-col gap-[10px]">
-                        <p className={LABEL}>
-                          {chamber === "senate" ? "Senate" : "House"}
-                        </p>
-                        {six(shownRoom, chamber).map((p) => card(p, shownRoom))}
-                      </div>
-                    ))}
-                  </div>
-                )}
-                {/* Out of the card and into the committee's own page. Only
-                    once one has been pressed: a hovered preview is not
-                    somewhere a reader has decided to go. */}
-                {room && !NOT_LINKED.has(room) && (
-                  <p className="mt-[12px] text-right">
-                    <Link
-                      to={`/conferenceCommittees/${room}`}
-                      className="inline-flex items-center gap-[5px] font-body font-semibold text-sm text-brand-ink hover:text-brand"
-                    >
-                      Go to conference committee
-                      <ArrowRight aria-hidden className="w-[14px] h-[14px]" />
-                    </Link>
-                  </p>
-                )}
-              </>
-            ) : readers.length ? (
-              // Each under their own chamber's map, in the order they were
-              // pinned, with the one under the pointer last. A House member
-              // printed under the Senate map is pointing at the wrong picture.
-              <div className="grid gap-x-[20px] @[560px]:grid-cols-2">
-                {(["senate", "house"] as const).map((chamber) => (
-                  <div key={chamber} className="flex flex-col gap-[10px]">
-                    {readers
-                      .filter((p) => p.chamber === chamber)
-                      .map((p) => card(p))}
-                  </div>
-                ))}
-              </div>
-            ) : null}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/**
- * The fifty once each, in three tiers.
- *
- * The two cards below it count seats, so a face there is a seat and the same
- * person appears three times. This one counts people: one face each, grouped
- * by how many rooms they are in, both chambers in the one card because the
- * fact it carries is about the set rather than about either bench.
- */
-function Bench() {
-  const tier = (n: number) =>
-    ROSTER.filter((p) => p.on.length === n).sort(
-      // Senate first, then standing inside each chamber.
-      (a, b) =>
-        (a.chamber === "senate" ? 0 : 1) - (b.chamber === "senate" ? 0 : 1) ||
-        byStanding(a, b),
-    );
-  const word = (n: number) => (n === 3 ? "Three" : n === 2 ? "Two" : "One");
-  return (
-    // The three tiers side by side rather than one above the other, each given
-    // width in proportion to how many people are in it, so the faces wrap at
-    // about the same number of rows in all three and the widths themselves say
-    // how lopsided the set is.
-    <div className="mt-[20px] bg-surface border border-line rounded-card px-[18px] pt-[16px] pb-[18px] flex flex-wrap items-end gap-x-[28px] gap-y-[20px]">
-      {[3, 2, 1].map((n) => {
-        const people = tier(n);
-        if (!people.length) return null;
-        return (
-          <div
-            key={n}
-            style={{ flexGrow: people.length, flexBasis: 0 }}
-            className="min-w-[132px]"
-          >
-            {/* flex-wrap-reverse, so the rows fill from the bottom up and
-                each tier stands on the card's floor like a bar. The label
-                sits under it, where a chart's categories go. */}
-            <div className="flex flex-wrap-reverse content-end items-end gap-[6px]">
-              {people.map((p) => (
-                // The same reserve the walls below use, so a ring spends
-                // space that was already set aside for it.
-                <span key={p.seat} className="flex p-[4px]">
-                  <RowFace
-                    p={p}
-                    size={34}
-                    chairMark={p.on.some((x) => x.chair)}
-                  />
-                </span>
-              ))}
-            </div>
-            <p className={`${LABEL} mt-[10px]`}>
-              {word(n)} committee{n > 1 ? "s" : ""} · {people.length}{" "}
-              {people.length === 1 ? "person" : "people"}
-            </p>
-          </div>
-        );
-      })}
     </div>
   );
 }
@@ -3365,15 +2365,6 @@ function Everyone() {
         </div>
       ))}
     </div>
-  );
-}
-
-/** How many committees the rows under it hold, said once above them. */
-function Tier({ n }: { n: number }) {
-  return (
-    <li className="px-[18px] pt-[16px] pb-[6px] border-t border-line first:border-0 first:pt-0">
-      <p className={LABEL}>{n === 3 ? "Three committees" : "Two committees"}</p>
-    </li>
   );
 }
 
@@ -3567,90 +2558,23 @@ function Districts() {
 //   );
 // }
 
-/**
- * The second section: the fifty people behind the twelve rows.
- *
- * Its own heading, and the same measure the list keeps, so it reads as
- * something further down the page rather than as a wider, louder answer to it.
- *
- * Why a roster and not a ranking. Nobody sits on more than three committees, so
- * a chart of who sits on the most would be eight threes, six twos and thirty-six
- * ones: a shape that implies a hierarchy the appointments do not have. The
- * finding the data does carry is the split, half the seats to fourteen people,
- * and a roster in two tiers shows that without drawing a distribution out of a
- * range of three.
- */
-function WhoSitsOnThem() {
-  return (
-    <section className="@container mt-[56px]">
-      <h2 className="font-display font-normal text-xl text-ink text-balance max-w-[720px]">
-        Who sits on them
-      </h2>
-      <p className="font-body text-base text-ink-mid leading-[1.6] mt-[10px] max-w-[62ch]">
-        {TALLY.committees} committees, {TALLY.seats} seats, {TALLY.people}{" "}
-        people. No one sits on more than three of them, so there is no single
-        figure running the end of the session. What the count shows instead is a
-        narrow bench: {TALLY.repeat} of the {TALLY.people} hold{" "}
-        {TALLY.repeatSeats} of the {TALLY.seats} seats between them, and the
-        narrowest part of it is the minority side, where {SIDES.senateR.people}{" "}
-        Republican senators take all {SIDES.senateR.seats} of the Senate&rsquo;s
-        Republican places.
-        {SAME_SPLIT && (
-          <>
-            {" "}
-            All {TALLY.committees} are put together the same way: two Democrats
-            and one Republican from each chamber, without exception.
-          </>
-        )}
-      </p>
-
-      <Figures />
-
-      <Rooms />
-
-      <Bench />
-
-      <Everyone />
-
-      {/* Clipped like the list above, so a row at either end keeps the card's
-          corner. */}
-      <div className="mt-[20px] max-w-[720px] bg-surface border border-line rounded-card overflow-hidden">
-        <div className="px-[18px] pt-[16px] pb-[12px]">
-          <p className={LABEL}>
-            On more than one · {TALLY.repeat} of {TALLY.people}
-          </p>
-        </div>
-        <ul>
-          {REPEATERS.flatMap((p, i) => {
-            const opens = i === 0 || REPEATERS[i - 1].on.length !== p.on.length;
-            return [
-              ...(opens
-                ? [<Tier key={`tier-${p.on.length}`} n={p.on.length} />]
-                : []),
-              <RepeaterRow key={p.code} p={p} />,
-            ];
-          })}
-        </ul>
-        <div className="px-[18px] py-[14px] border-t border-line bg-wash">
-          <p className="font-body text-xs text-ink-mid leading-[1.6]">
-            Amber marks a committee they chair. Chairing spreads further than
-            membership does: {TALLY.chairs} different people hold the{" "}
-            {TALLY.chairSeats} chairmanships and only {TALLY.chairsTwice} hold
-            two, so these rooms repeat their members far more than their chairs.
-            The other {TALLY.people - TALLY.repeat} conferees sit on one
-            committee each, and all {TALLY.people} are a filled district on the
-            maps above.
-          </p>
-        </div>
-      </div>
-    </section>
-  );
-}
-
 export function ConferenceCommittees() {
   useDeviceViewport();
   return (
-    <div className="bg-ground min-h-screen font-body text-ink">
+    // The page's own ink, a blue-grey where the site's is warm. Set as the
+    // variable rather than as a colour on one paragraph, so the whole page is
+    // being tried in it: the headings, the ring that marks a face, the dark
+    // ground a tooltip is drawn on.
+    //
+    // The three steps under it follow, each keeping the exact lightness of
+    // the warm grey it replaces and taking ink's own hue at a hundredth of
+    // chroma, so the ladder reads at the strengths it always did and is cool
+    // rather than blue. Ink carries four times that and can: it is the colour
+    // the page was asked for, and three steps of the same turned the greys
+    // into a palette of their own. The faintest step is neutral, because the
+    // lighter a grey is the more a tint shows in it, and that one is a ground
+    // for other things rather than something read.
+    <div className="bg-ground min-h-screen font-body text-ink [--color-ink:#334155] [--color-ink-mid:#6e7278] [--color-ink-muted:#8f9399] [--color-ink-faint:#b4b4b4]">
       <SiteNav inner="w-full px-[20px] sm:px-[32px]" />
       <main className="mx-auto max-w-[1180px] px-[20px] sm:px-[32px] pt-[20px]">
         {/* The detail page's hero, at the same face and weight and stepping
@@ -3662,41 +2586,26 @@ export function ConferenceCommittees() {
             This page has no rail, so the same moment is 910 of its own width:
             min(1180, W - 64) at the window where the other one crosses. */}
         <div className="@container">
-          <h1 className="font-display font-bold text-[29.7px] @[800px]:text-[36px] leading-[1.2] text-brand text-balance">
+          <h1 className="font-display font-bold text-[29.7px] @[800px]:text-[36px] leading-[1.2] text-[#0f2275] text-balance">
             Conference Committees
           </h1>
         </div>
 
         {/* One paragraph. The mechanism, and the half that makes it matter:
             nobody watches, and neither chamber can amend what comes back. */}
-        <p className="font-body text-base sm:text-lg text-ink-mid leading-[1.55] mt-[2px] mb-[14px] pl-[4px] max-sm:pl-0">
-          When the House and the Senate pass different versions of the same
-          bill, six legislators, three from each chamber, meet to reconcile them
-          into one text. Both chambers then vote on that text and, if passed, it
-          becomes &ldquo;enacted&rdquo; and is sent to the Governor to sign.
+        <p className="font-body text-base sm:text-lg text-ink leading-[1.55] mt-[6px] mb-[16px] pl-[4px] max-sm:pl-0">
+          In Massachusetts, when the House and the Senate pass different
+          versions of the same bill, six legislators, three from each chamber,
+          meet to reconcile them into one text. Both chambers then vote on that
+          text and, if passed, it becomes &ldquo;enacted&rdquo; and is sent to
+          the Governor to sign.
         </p>
 
         {/* Everything else on this page is parked while the card below is
             worked on: the maps card, the twelve-row list and the whole "Who
             sits on them" section. Uncomment the block at the foot of this
             component to bring them back. */}
-        {/* The same card three times, each answering the same question a
-            different way: how a row is told apart from the one under it.
-            Labelled above rather than inside, so the cards themselves stay
-            exactly as they would ship. Two of these come out once one is
-            chosen. */}
-        {/* The banded and the leader cards are parked while the ruled one is
-            worked on. Uncomment either to put it back for comparison. */}
-        {/* <p className={`${LABEL} mt-[28px]`}>One · banded rows</p> */}
-        {/* <Rooms rowStyle="band" /> */}
-        {/* <p className={`${LABEL} mt-[36px]`}>Two · leader to the faces</p> */}
-        {/* <Rooms rowStyle="leader" /> */}
-        {/* The other arrangement, parked: the chip on the title line and the
-            card's sentence under the maps rather than inside the box.
-            Uncomment to put it back above this one. */}
-        {/* <Rooms rowStyle="rule" /> */}
-        <Rooms rowStyle="rule" mineAt="bottom" sayIn="box" />
-        {WATCH && <DebugWatch />}
+        <Rooms />
         {/* The second card, the one whose rows open the committee page in a
             new tab, is parked. Uncomment to put it back below the first. */}
         {/* <RoomsTwo /> */}
