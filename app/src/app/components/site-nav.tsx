@@ -7,16 +7,25 @@
 // (`$maple-brand-primary`, `.desktop-navbar-link`), not approximations.
 
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { Menu, TreePine, X } from "lucide-react";
 
-/** The live bar's order: bills first, the standing sections after. */
-const NAV = [
-  "Bills",
-  "Ballot questions",
-  "Hearings",
-  "Testimony",
-  "About",
-  "Learn",
+/**
+ * The prototypes this bar can reach, not the live site's sections.
+ *
+ * The live bar reads Bills, Ballot questions, Hearings, Testimony, About,
+ * Learn, and none of those exist here. What does exist is four readings of one
+ * committee, so the bar names those and the designer can move between them
+ * without the address bar. Phone-Free Schools is the committee they all open
+ * on: it is the only one with bill text and a lobbying register behind it.
+ */
+const HOME = "/conferenceCommittees/phone-free-schools";
+const NAV: { label: string; to: string }[] = [
+  { label: "Conference Explorer", to: "/conferenceCommittees" },
+  { label: "Committees", to: HOME },
+  // Straight to the feed, which is the part of those two being compared.
+  { label: "Cosign", to: `${HOME}/cosign#input` },
+  { label: "Cosign-Viz", to: `${HOME}/cosign-viz#input` },
 ];
 
 /** MAPLE's `$maple-brand-primary`, the same value links use. */
@@ -85,14 +94,15 @@ export function SiteNav({
             rather than trailing the wordmark. */}
           <nav className="hidden lg:flex lg:ml-auto items-center gap-[2px]">
             {NAV.map((n) => (
-              <button
-                key={n}
+              <Link
+                key={n.label}
+                to={n.to}
                 // Nothing lit. The bar marks where you can go, not where you
                 // are, and a page can sit under more than one of these.
                 className="font-body text-base rounded-control px-[12px] py-[6px] cursor-pointer transition-colors hover:bg-white/[0.12]"
               >
-                {n}
-              </button>
+                {n.label}
+              </Link>
             ))}
           </nav>
           <button
@@ -130,12 +140,14 @@ export function SiteNav({
           <div className="lg:hidden border-t border-white/20">
             <nav className={`${inner} py-[8px] flex flex-col`}>
               {NAV.map((n) => (
-                <button
-                  key={n}
+                <Link
+                  key={n.label}
+                  to={n.to}
+                  onClick={() => setOpen(false)}
                   className="text-left font-body text-base py-[10px]"
                 >
-                  {n}
-                </button>
+                  {n.label}
+                </Link>
               ))}
             </nav>
           </div>

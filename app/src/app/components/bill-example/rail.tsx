@@ -61,7 +61,14 @@
 import { useEffect, useRef } from "react";
 import type { ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { ChevronsLeft, ChevronsRight, Plus, X } from "lucide-react";
+import {
+  ChevronsLeft,
+  ChevronsRight,
+  Maximize2,
+  Minimize2,
+  Plus,
+  X,
+} from "lucide-react";
 
 import { useMatchMedia, useVisibleBox } from "../ballot";
 
@@ -104,6 +111,8 @@ export function Rail({
   addLabel = "Add",
   onResize,
   onResizeEnd,
+  expanded = false,
+  onExpandedChange,
 }: {
   /** In order. The first is the default: the view the rail rests on. */
   views: RailView[];
@@ -149,6 +158,19 @@ export function Rail({
    * the second one to put its transitions back.
    */
   onResizeEnd?: () => void;
+  /**
+   * The panel takes the whole window rather than a column of it.
+   *
+   * For a view that is reading and writing at once: a letter on one side and
+   * the form on the other do not both fit in a column, and the drag handle
+   * only ever buys one of them room at the other's expense.
+   *
+   * Offered only where the page hands in `onExpandedChange`, so a panel that
+   * has nothing to spread into keeps its header free of a control that would
+   * do nothing.
+   */
+  expanded?: boolean;
+  onExpandedChange?: (expanded: boolean) => void;
 }) {
   const fallback = views[0];
   const current = views.find((v) => v.id === view) ?? fallback;
@@ -183,60 +205,104 @@ export function Rail({
     };
   }, [upAsSheet]);
 
+  // Filling the window makes the panel the whole surface, so the page behind
+  // it should not scroll under it the way it does beside a column: a wheel over
+  // the letter would otherwise move the committee page nobody can see.
+  //
+  // Not while it is already a sheet, which locks the same property for its own
+  // reasons. Two effects holding one style would restore them in the order they
+  // were declared, and the second restore would put the first one's value back.
+  useEffect(() => {
+    if (!expanded || !open || upAsSheet) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [expanded, open, upAsSheet]);
+
   // Written once and drawn in either shell, so a sheet and a rail cannot end up
   // holding two different panels.
   const panel = (
     <div className="flex-1 min-h-0 flex flex-col w-full [--rail-pad:18px]">
-      <header className="shrink-0 flex items-center gap-[12px] px-[var(--rail-pad)] pt-[24px] pb-[4px]">
-        {/* Lexend, like the page's own headings: the panel is a place with a
+      <header className="shrink-0 flex px-[var(--rail-pad)] pt-[24px] pb-[4px]">
+        {/* Expanded, the panel is the window but the form is still the column
+            it always was, over on the right. The header holds that column's
+            width so the title and the controls stay where they were: only the
+            room beside them changed, and a title that slid to the far edge
+            would read as a different panel rather than the same one opened
+            out. 440 is the form column's width in the view below. */}
+        <div
+          className={`flex flex-1 items-center gap-[12px] ${
+            expanded
+              ? "lg:flex-none lg:ml-auto lg:w-[calc(var(--rail-w)-36px)]"
+              : ""
+          }`}
+        >
+          {/* Lexend, like the page's own headings: the panel is a place with a
             name, and its name should be set in the face the page sets names
             in. It was Nunito bumped a step to make up for the x-height, which
             was a way of imitating this. */}
-        <p className="font-display font-normal text-xl text-ink">
-          {current.title}
-        </p>
-        {current.action}
-        {/* Pushes the panel's own control to the far edge and leaves the
+          <p className="font-display font-normal text-xl text-ink">
+            {current.title}
+          </p>
+          {current.action}
+          {/* Pushes the panel's own control to the far edge and leaves the
           space before it free. */}
-        <div className="ml-auto flex items-center gap-[10px]">
-          {isDefault && onAdd && (
-            <button
-              onClick={onAdd}
-              aria-label={addLabel}
-              title={addLabel}
-              className="shrink-0 p-[6px] rounded-control text-ink-mid hover:text-ink hover:bg-wash cursor-pointer transition-colors"
-            >
-              <Plus className="w-[18px] h-[18px]" />
-            </button>
-          )}
-          {isDefault ? (
-            // As a sheet there is no strip to fold onto and no page left
-            // showing, so minimize and close are the same act and the control
-            // says the one it is actually doing.
-            <button
-              onClick={() => onOpenChange(false)}
-              aria-label={`${sheet ? "Close" : "Collapse"} ${current.title}`}
-              title={sheet ? "Close" : "Collapse"}
-              className="shrink-0 -mr-[6px] p-[6px] rounded-control text-ink-mid hover:text-ink hover:bg-wash cursor-pointer transition-colors"
-            >
-              {sheet ? (
+          <div className="ml-auto flex items-center gap-[10px]">
+            {isDefault && onAdd && (
+              <button
+                onClick={onAdd}
+                aria-label={addLabel}
+                title={addLabel}
+                className="shrink-0 p-[6px] rounded-control text-ink-mid hover:text-ink hover:bg-wash cursor-pointer transition-colors"
+              >
+                <Plus className="w-[18px] h-[18px]" />
+              </button>
+            )}
+            {onExpandedChange && (
+              <button
+                onClick={() => onExpandedChange(!expanded)}
+                aria-label={expanded ? "Leave full screen" : "Fill the window"}
+                title={expanded ? "Leave full screen" : "Fill the window"}
+                className="shrink-0 p-[6px] rounded-control text-ink-mid hover:text-ink hover:bg-wash cursor-pointer transition-colors"
+              >
+                {expanded ? (
+                  <Minimize2 className="w-[17px] h-[17px]" />
+                ) : (
+                  <Maximize2 className="w-[17px] h-[17px]" />
+                )}
+              </button>
+            )}
+            {isDefault ? (
+              // As a sheet there is no strip to fold onto and no page left
+              // showing, so minimize and close are the same act and the control
+              // says the one it is actually doing.
+              <button
+                onClick={() => onOpenChange(false)}
+                aria-label={`${sheet ? "Close" : "Collapse"} ${current.title}`}
+                title={sheet ? "Close" : "Collapse"}
+                className="shrink-0 -mr-[6px] p-[6px] rounded-control text-ink-mid hover:text-ink hover:bg-wash cursor-pointer transition-colors"
+              >
+                {sheet ? (
+                  <X className="w-[18px] h-[18px]" />
+                ) : (
+                  <ChevronsRight className="w-[18px] h-[18px]" />
+                )}
+              </button>
+            ) : (
+              <button
+                onClick={() =>
+                  onCloseView ? onCloseView() : onViewChange(fallback.id)
+                }
+                aria-label={`Close ${current.title}`}
+                title="Close"
+                className="shrink-0 -mr-[6px] p-[6px] rounded-control text-ink-mid hover:text-ink hover:bg-wash cursor-pointer transition-colors"
+              >
                 <X className="w-[18px] h-[18px]" />
-              ) : (
-                <ChevronsRight className="w-[18px] h-[18px]" />
-              )}
-            </button>
-          ) : (
-            <button
-              onClick={() =>
-                onCloseView ? onCloseView() : onViewChange(fallback.id)
-              }
-              aria-label={`Close ${current.title}`}
-              title="Close"
-              className="shrink-0 -mr-[6px] p-[6px] rounded-control text-ink-mid hover:text-ink hover:bg-wash cursor-pointer transition-colors"
-            >
-              <X className="w-[18px] h-[18px]" />
-            </button>
-          )}
+              </button>
+            )}
+          </div>
         </div>
       </header>
 
@@ -300,7 +366,12 @@ export function Rail({
           // at the edge of the screen: a button, most visibly. Open, the
           // overflow has to stay visible, because notes and menus inside the
           // panel rise out of it.
-          className={`hidden lg:flex fixed right-0 top-[calc(var(--nav-h)+1px)] bottom-0 z-40 w-[var(--rail-w)] flex-col ${current.surface ?? "bg-ground"} border-l border-line transition-transform duration-400 ease-out motion-reduce:transition-none ${
+          className={`hidden lg:flex fixed right-0 top-[calc(var(--nav-h)+1px)] bottom-0 ${
+            // Filling the window makes this the thing the reader just opened
+            // rather than a column beside the page, so it rises past the
+            // floating buttons the way a drawer does.
+            expanded ? "z-[60] w-screen" : "z-40 w-[var(--rail-w)]"
+          } flex-col ${current.surface ?? "bg-ground"} border-l border-line transition-transform duration-400 ease-out motion-reduce:transition-none ${
             open ? "translate-x-0" : "translate-x-full overflow-hidden"
           }`}
         >
@@ -313,7 +384,7 @@ export function Rail({
 
               Not on a sheet, which has no edge to pull and nothing to pull it
               into. */}
-          {onResize && (
+          {onResize && !expanded && (
             <div
               onPointerDown={(e) => {
                 e.currentTarget.setPointerCapture(e.pointerId);

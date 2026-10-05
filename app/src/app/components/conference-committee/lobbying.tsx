@@ -12,11 +12,11 @@ import {
 
 /**
  * Twenty rows a page, which is more than any committee currently has, so the
- * table pages at ten, which is short enough that the foot of the list is in
+ * table pages at six, which is short enough that the foot of the list is in
  * view with its head, and the count in the footer says how many there are in
  * all rather than how many are on this page.
  */
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 6;
 
 /** Where a position gets a color, and where it does not. */
 const POSITION_TONE: Record<string, string> = {
@@ -55,11 +55,15 @@ function Position({ position }: { position: string }) {
  * Half the width to the two names, half to the three facts. The names hold the
  * only strings that can run long, so they split their half unevenly, the
  * organisation taking more than the lobbyist. The three on the right are a
- * chip, a chip and a year, all short and of fixed length, so they share their
- * half evenly and keep small minimums for the narrow end.
+ * chip, a chip and a year, all short and of fixed length.
+ *
+ * The last three take only what their content needs rather than a share of the
+ * row: as fractions they held width a pill never used, and the slack sat idle
+ * beside a long organisation name wrapping onto a second line. The two text
+ * columns divide what is left, which is where the wrapping actually matters.
  */
 const COLS =
-  "sm:grid-cols-[minmax(0,1.1fr)_minmax(0,1.4fr)_minmax(72px,0.9fr)_minmax(72px,0.9fr)_minmax(56px,0.7fr)]";
+  "sm:grid-cols-[minmax(0,1.1fr)_minmax(0,1.6fr)_minmax(72px,max-content)_minmax(72px,max-content)_minmax(56px,max-content)]";
 
 /** Which column the table is ordered by. */
 type SortKey = "lobbyist" | "org" | "senate" | "house" | "filed";

@@ -10,7 +10,7 @@
 // the first sentence is a real answer and the rest is evidence. The summary
 // prints the answer and puts the evidence behind a control.
 
-import { useMemo, useEffect, useRef, useState } from "react";
+import { useId, useMemo, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { CSSProperties } from "react";
 import {
@@ -102,9 +102,12 @@ import { billDocument, mapleBillUrl } from "../../data/bills-194/texts";
 import { MapleFab } from "../tax-rebate-62f/maple-fab";
 import {
   SubmissionFeed,
+  OwnSubmission,
   type PositionFilter,
   type AccountTypeFilter,
 } from "./testimony";
+import { AccountAvatar, AccountTypeIcon, PositionChip } from "./accounts";
+import { SentimentMap } from "./sentiment-map";
 import {
   DEMO_ACCOUNTS,
   DEMO_SEATS,
@@ -113,10 +116,12 @@ import {
 } from "../../data/conference-committees/testimony";
 import type { ConferenceSubmission } from "../../data/conference-committees/testimony";
 import { POSITIONS } from "../../data/conference-committees/positions";
+import type { ConferencePosition } from "../../data/conference-committees/positions";
 import {
   MAP_OUTLINE,
   MAP_SQUASH,
   MAP_VIEWBOX,
+  seatCell,
   seatPoint,
 } from "../../data/conference-committees/geography";
 import { SiteNav } from "../site-nav";
@@ -136,7 +141,14 @@ import {
   ReviewPane,
   reviewTitle,
 } from "./compose";
-import { detailPath, reviewPath, useDraft, useDrafted, useRail } from "./draft";
+import {
+  detailPath,
+  reviewPath,
+  useDraft,
+  useDrafted,
+  usePosted,
+  useRail,
+} from "./draft";
 import type { ReviewStyle } from "./draft";
 // The bill page's panel on the right edge, under a second name: this page
 // already calls the twelve committees down the left a rail, and two rails
@@ -1006,8 +1018,17 @@ const COUNTY_PAGE = 5;
  * county prefers is deliberately not here. House and Senate are a choice, not a
  * scale, and a dot cannot hold three colors and still be read as one place.
  */
-function PublicMap({ onOpenRail }: { onOpenRail?: () => void }) {
+function PublicMap({
+  conferees,
+  onOpenRail,
+}: {
+  /** The six seats on this conference, for the ground behind the dots. */
+  conferees: string[];
+  onOpenRail?: () => void;
+}) {
   const [picked, setPicked] = useState<string | null>(null);
+  /** For the clip path, which has to be addressable and must not collide. */
+  const clipId = useId();
   // Set the moment the reader does anything here, and never unset. A rotation
   // that resumed would move the ground under someone who is reading, which is
   // worse than one that never started.
@@ -1050,6 +1071,11 @@ function PublicMap({ onOpenRail }: { onOpenRail?: () => void }) {
         const point = seatPoint(seat);
         if (!point) return [];
         const here = filers.filter((f) => f.seat === seat);
+        // Which of the four this place is asking for, not which direction
+        // it leans. Three of the four ask for a bill, so a two-colour lean
+        // put the House version and the Senate version in the same green and
+        // the map could not show the thing being negotiated. Even between the
+        // top two, it keeps the map's own faint ink rather than taking a side.
         const up = here.filter(
           (f) => POSITIONS[f.position].ask === "bill",
         ).length;
@@ -1153,6 +1179,39 @@ function PublicMap({ onOpenRail }: { onOpenRail?: () => void }) {
               {MAP_OUTLINE.map((d) => (
                 <path key={d.slice(0, 24)} d={d} className="fill-sunken" />
               ))}
+              {/* The six conferees' districts, as ground rather than as
+                  shapes. No edges: these are cells grown from a point each,
+                  not boundaries, and two of them meeting should read as one
+                  area rather than as two districts. The question the map is
+                  being asked is coverage, whether the input came from
+                  somewhere with somebody in the room, so the areas only have
+                  to be roughly right and the dots are what carry the detail. */}
+              {/* Clipped to the coastline. A cell is a Voronoi cell grown
+                  from a seed, so the ones on the edge of the state run out to
+                  the bounding box: unclipped, a district on the south coast
+                  paints a wedge of open water the size of the Cape. */}
+              <defs>
+                <clipPath id={clipId}>
+                  {MAP_OUTLINE.map((d) => (
+                    <path key={d.slice(0, 24)} d={d} />
+                  ))}
+                </clipPath>
+              </defs>
+              <g clipPath={`url(#${clipId})`}>
+                {conferees.flatMap((seat) => {
+                  const cell = seatCell(seat);
+                  return cell
+                    ? [
+                        <polygon
+                          key={seat}
+                          points={cell}
+                          className="fill-ink-faint"
+                          fillOpacity={0.45}
+                        />,
+                      ]
+                    : [];
+                })}
+              </g>
               {/* The coastline as a hairline, so the state has an edge of its
                   own, the same way the district maps above draw it. */}
               {MAP_OUTLINE.map((d) => (
@@ -1311,24 +1370,43 @@ function PublicMap({ onOpenRail }: { onOpenRail?: () => void }) {
  * stands in the page beside a heading rather than in a panel header where the
  * title above it has already said.
  */
-function AddInput({ onClick }: { onClick: () => void }) {
+function AddInput({
+  onClick,
+  mine,
+  posted = false,
+}: {
+  onClick: () => void;
+  /** The six, so the line can say whether one of them is the reader's. */
+  mine: CommitteeMember[];
+  /** Already on the record, so the invitation has been taken. */
+  posted?: boolean;
+}) {
+  // Once they have filed, the nudge has nothing to ask for and nothing to say
+  // here: what happened is said over the section that holds what they filed.
+  if (posted) return null;
   return (
-    <button
-      onClick={onClick}
-      aria-label="Add Public Input"
-      className="group inline-flex items-center p-[6px] rounded-control text-ink-mid hover:text-ink hover:bg-wash cursor-pointer transition-colors"
-    >
-      <Plus className="w-[18px] h-[18px] shrink-0" />
-      {/* The label takes no width until it is wanted: a grid track that goes
-          from nothing to its content, which animates where a width cannot. */}
-      <span className="grid grid-cols-[0fr] group-hover:grid-cols-[1fr] group-focus-visible:grid-cols-[1fr] transition-[grid-template-columns] duration-300 ease-out motion-reduce:transition-none">
-        <span className="overflow-hidden">
-          <span className="block pl-[7px] pr-[3px] font-body font-semibold text-sm whitespace-nowrap">
-            Add Public Input
-          </span>
-        </span>
-      </span>
-    </button>
+    // The control the column of unresolved questions ends on, so the way in
+    // is one thing a reader learns once. Right of the heading while they share
+    // a line, and under the title and centred below 580.
+    <p className="font-body text-sm text-ink leading-[1.5] text-right max-[580px]:text-center">
+      {/* The star alone, where one of the six is the reader's own. The
+          sentence that used to follow it says the same thing the column of
+          unresolved questions already says further up the page, and beside a
+          heading the mark is enough to carry it. */}
+      {mine.length > 0 && (
+        <Star
+          aria-hidden
+          className="inline align-[-2px] mr-[7px] w-[13px] h-[13px] text-caution fill-caution"
+        />
+      )}
+      <button
+        onClick={onClick}
+        className="inline-flex items-baseline gap-[4px] font-body font-semibold text-sm text-brand-ink hover:text-brand cursor-pointer underline decoration-dotted underline-offset-[4px]"
+      >
+        Share your input
+        <ArrowRight className="w-[13px] h-[13px] shrink-0 self-center no-underline" />
+      </button>
+    </p>
   );
 }
 
@@ -1346,6 +1424,7 @@ function Scan({
   card = false,
   asked = false,
   onCompose,
+  posted = false,
 }: {
   c: CommitteeDetail;
   /** The card view presses on the question itself and opens onto the two
@@ -1363,6 +1442,8 @@ function Scan({
   asked?: boolean;
   /** Offered where one of the six is the reader's own legislator. */
   onCompose?: () => void;
+  /** Already on the record, so the sentence closes rather than inviting. */
+  posted?: boolean;
 }) {
   const settled = c.settled ?? [];
   const open = c.open ?? [];
@@ -1502,10 +1583,22 @@ function Scan({
                   </>
                 )}
               </span>
-              {onCompose && (
+              {/* Once they have filed, the sentence says so and stops. The
+                  fact above it is still worth saying: one of the people
+                  answering these questions is theirs, and now they have told
+                  them something. */}
+              {posted ? (
                 <>
                   {" "}
-                  {/* The arrow the ballot pages' testimony link carried, kept
+                  <span className="font-semibold text-positive-ink">
+                    Your input is on the record.
+                  </span>
+                </>
+              ) : (
+                onCompose && (
+                  <>
+                    {" "}
+                    {/* The arrow the ballot pages' testimony link carried, kept
                       inside the control so it is part of the target rather than
                       punctuation after it.
 
@@ -1516,14 +1609,15 @@ function Scan({
                       below the sentence they belong to. The arrow is centred
                       against them on its own, and carries `no-underline` so the
                       dotted rule stops at the last word. */}
-                  <button
-                    onClick={onCompose}
-                    className="inline-flex items-baseline gap-[4px] font-body font-semibold text-base text-brand-ink hover:text-brand cursor-pointer underline decoration-dotted underline-offset-[4px]"
-                  >
-                    Share your input
-                    <ArrowRight className="w-[14px] h-[14px] shrink-0 self-center no-underline" />
-                  </button>
-                </>
+                    <button
+                      onClick={onCompose}
+                      className="inline-flex items-baseline gap-[4px] font-body font-semibold text-base text-brand-ink hover:text-brand cursor-pointer underline decoration-dotted underline-offset-[4px]"
+                    >
+                      Share your input
+                      <ArrowRight className="w-[14px] h-[14px] shrink-0 self-center no-underline" />
+                    </button>
+                  </>
+                )
               )}
             </p>
           )}
@@ -1698,6 +1792,7 @@ function Rail({
   href: (slug: string) => string;
 }) {
   const drafted = useDrafted();
+  const posted = usePosted();
   return (
     // In the flow, not absolute. The page below the nav widens by exactly the
     // rail plus its gap, so the rail lands in what would otherwise be margin
@@ -1746,15 +1841,38 @@ function Rail({
                   <span className="min-w-0">
                     {displayName(x.slug, x.short)}
                   </span>
-                  {(!on || !composing) && drafted.has(x.slug) && (
-                    // A word rather than a glyph, because an icon says there
-                    // is something here without saying it is unfinished and
-                    // yours. No fill and no caps: at this size the word alone
-                    // is enough, and the row is a list of committees rather
-                    // than a list of drafts.
-                    <span className="shrink-0 mt-[2px] font-body text-2xs italic text-ink-faint">
-                      draft
+                  {/* Finished work takes the mark a word cannot: a check
+                      says done at a glance, where "posted" would read as one
+                      more label to compare against "draft". Shown on the
+                      committee you are reading as well, because unlike a
+                      draft it is not already on screen. */}
+                  {posted.has(x.slug) ? (
+                    <span
+                      // On the wrapper rather than the glyph: a title on an
+                      // SVG is not shown by every browser, and this one has to
+                      // be, since the mark says nothing on its own.
+                      title="Submitted input"
+                      aria-label="Submitted input"
+                      className="shrink-0 mt-[2px]"
+                    >
+                      <Check
+                        aria-hidden
+                        className="w-[13px] h-[13px] text-positive-ink"
+                        strokeWidth={2.5}
+                      />
                     </span>
+                  ) : (
+                    (!on || !composing) &&
+                    drafted.has(x.slug) && (
+                      // A word rather than a glyph, because an icon says there
+                      // is something here without saying it is unfinished and
+                      // yours. No fill and no caps: at this size the word alone
+                      // is enough, and the row is a list of committees rather
+                      // than a list of drafts.
+                      <span className="shrink-0 mt-[2px] font-body text-2xs italic text-ink-faint">
+                        draft
+                      </span>
+                    )
                   )}
                 </span>
               </span>
@@ -2319,6 +2437,7 @@ function Boxed({
   flushBottom,
   plain,
   filled,
+  tint,
   bleed,
   children,
 }: {
@@ -2333,7 +2452,14 @@ function Boxed({
    */
   plain?: boolean;
   /** White rather than the page ground. */
+  /** White rather than the page ground. */
   filled?: boolean;
+  /**
+   * A point off that white, for a filled section whose content is itself
+   * cards. White cards on a white card have only their own edges to be found
+   * by; a shade behind them gives them something to sit on.
+   */
+  tint?: boolean;
   /**
    * Keep the vertical rhythm and give the width back.
    *
@@ -2373,7 +2499,13 @@ function Boxed({
       style={
         {
           marginTop: SECTION_AIR,
-          ...(filled && on ? { "--band": "var(--color-surface)" } : null),
+          ...(filled && on
+            ? {
+                "--band": tint
+                  ? "var(--color-surface-tinted)"
+                  : "var(--color-surface)",
+              }
+            : null),
         } as CSSProperties
       }
       // flow-root, so nothing inside can move this edge. A pinned heading's
@@ -2388,7 +2520,11 @@ function Boxed({
               // heading is drawn four back from that: the body sits at 34
               // and the heading at 30, which is the four pixels the first
               // capital of a heading asks for and the body does not.
-              filled ? "on-surface bg-surface pl-[34px] pr-[32px]" : CARD_PX
+              filled
+                ? `on-surface pl-[34px] pr-[32px] ${
+                    tint ? "bg-surface-tinted" : "bg-surface"
+                  }`
+                : CARD_PX
             } ${CARD_PT} ${plain || bleed ? "border-transparent" : "border-line"} ${
               bleed ? "-mx-[32px]" : ""
             } ${flushBottom ? "" : CARD_PB}`
@@ -2525,6 +2661,17 @@ function Contents({
  */
 const SUB_HEAD =
   "relative [.on-surface_&]:left-[-4px] font-display font-normal text-xl lg:text-[22px] text-ink text-balance";
+
+/**
+ * Every section the address can name.
+ *
+ * Your Input is not in the contents bar, because it only exists once the
+ * reader has filed something, but a link can still land on it and the page
+ * writes it into the address after posting. A fragment the page does not
+ * recognise is one it will not position, which left the reader holding a
+ * `#your-input` that behaved like no anchor at all.
+ */
+const ANCHORS = () => [...CONTENTS.map((x) => x.id), "your-input"];
 
 const CONTENTS = [
   { id: "committee", label: "Committee" },
@@ -2841,6 +2988,35 @@ function Detail({ c, style }: { c: CommitteeDetail; style: ReviewStyle }) {
   const panelStanding = (l: Layout, m: TestimonyMode) =>
     rail[l] === "open" && (m === "sidebar" || railView[l] === "compose");
   const panelOpen = panelStanding(layout, testimony);
+  // The co-sign experiment's own route, and nothing else. The committee page
+  // everyone else is looking at keeps the panel it had.
+  // Both copies of the route, which behave alike until one is changed.
+  const cosignRoute = /\/cosign(-\d+|-viz)?$/.test(location.pathname);
+  // The eighth and ninth readings have two steps rather than three: the terms
+  // are on the step that asks, and the writing step ends in the act itself.
+  //
+  // They differ only in where the reader lands afterwards and which of the two
+  // moments plays. The eighth leaves them in the public record and runs the
+  // count up on the letter; the ninth puts them in their own section and plays
+  // the line over it. One at a time, so each ending is judged on its own.
+  const ownEnding =
+    location.pathname.endsWith("/cosign") ||
+    location.pathname.endsWith("/cosign-viz") ||
+    location.pathname.endsWith("/cosign-9") ||
+    location.pathname.endsWith("/cosign-10");
+  const directCosign = location.pathname.endsWith("/cosign-8") || ownEnding;
+  // The sixth alone, where the feed is handed the section's own title so that
+  // the title, the map and the filters can be drawn as one card.
+  const headedFeed = location.pathname.endsWith("/cosign-6");
+  /**
+   * The panel over the whole window rather than a column of it.
+   *
+   * Co-signing is reading and writing at once: the letter being signed on one
+   * side, the form on the other. A column cannot hold both, and widening it by
+   * drag only takes the room from the page behind it, which is where the
+   * letter is.
+   */
+  const [panelFull, setPanelFull] = useState(false);
   /** When the corner is not the page's to spend on three stacked switches. */
   const tightControls = narrowControls || panelOpen;
   // The default follows the room available; a press overrides it for good.
@@ -2877,9 +3053,44 @@ function Detail({ c, style }: { c: CommitteeDetail; style: ReviewStyle }) {
    * The viewer is in the roster either way, because the roster is who the feed
    * can resolve rather than who is in it.
    */
+  // A filing that names a bill belongs to the conference it was written to.
+  // The placeholders carry no committee and stand on all twelve, which is what
+  // lets one set of filler fill every page; a real letter cannot, so it is
+  // dropped from the eleven it was not addressed to.
+  /**
+   * Which letter is being seconded, or nothing.
+   *
+   * Held beside the draft rather than on it: the draft is what the reader
+   * wrote, and this is what they wrote it under. The composer reads it to know
+   * whose position it is inheriting.
+   */
+  const [cosignOf, setCosignOf] = useState<string | null>(null);
+  const forHere = DEMO_TESTIMONY.filter(
+    (t) => !t.committee || t.committee === c.slug,
+  );
+  // The letter the reader just signed has one more name on it, from one more
+  // district. The count is the page's own claim about how many people stand
+  // behind it, so it has to move when somebody does: a tally that still says
+  // twenty while twenty-one cards sit under it is the page contradicting
+  // itself on the same screen.
+  const signedHere = draft.posted ? cosignOf : null;
+  const withOwn = signedHere
+    ? forHere.map((t) =>
+        t.id === signedHere
+          ? {
+              ...t,
+              cosignCount: (t.cosignCount ?? 0) + 1,
+              // The count moves, the spread does not: the reader is in
+              // Norfolk and the letter already carries names from there, so a
+              // district it had reached is not a district it has just reached.
+              cosignLatest: "Just now",
+            }
+          : t,
+      )
+    : forHere;
   const feedItems: ConferenceSubmission[] = draft.posted
-    ? [asSubmission(draft), ...DEMO_TESTIMONY]
-    : DEMO_TESTIMONY;
+    ? [asSubmission(draft, cosignOf), ...withOwn]
+    : forHere;
   const feedAccounts = [VIEWER, ...DEMO_ACCOUNTS];
 
   const shellRef = useRef<HTMLDivElement>(null);
@@ -3012,6 +3223,64 @@ function Detail({ c, style }: { c: CommitteeDetail; style: ReviewStyle }) {
       // review step's promise is that the card in the list is the card that
       // was approved, and a card left standing while its words are being
       // rewritten is the one way to break it.
+      if (draft.posted) patchDraft({ posted: false });
+      // The plus is a filing of the reader's own, so it leaves co-sign mode,
+      // and with it the window: there is no letter to put beside the form.
+      setCosignOf(null);
+      setPanelFull(false);
+      setReview(false);
+      showView("compose");
+      openWhen("open");
+    });
+  /**
+   * The letter being seconded, resolved, or nothing.
+   *
+   * Only on the route the experiment lives on, so a stale id cannot put the
+   * ordinary composer into a mode it has no way out of.
+   */
+  // Whether the reader has agreed to cosign and moved on to writing. Here
+  // rather than in the composer, because the panel's title changes with it.
+  const [cosignAsked, setCosignAsked] = useState(false);
+  // Whether they have said they are adding no words of their own. Here too,
+  // because the review shows the entry that answer decides.
+  const [cosignNoWords, setCosignNoWords] = useState(false);
+  const cosignLetter = (() => {
+    if (!cosignRoute || !cosignOf) return undefined;
+    const t = feedItems.find((x) => x.id === cosignOf);
+    const who = t && feedAccounts.find((u) => u.id === t.userId);
+    return t && who
+      ? {
+          name: who.name,
+          // The whole account, so the sheet can draw the head the feed draws
+          // rather than a name on its own.
+          account: who,
+          date: t.date,
+          position: t.position,
+          body: t.body,
+          count: t.cosignCount ?? 0,
+          inDistrict: t.cosignInDistrict ?? 0,
+          // Whether one of the six is the reader's own, which is the fact
+          // that makes a co-sign worth more here than anywhere else.
+          yours: sixOf(c).some((m) => MINE[m.key]),
+        }
+      : undefined;
+  })();
+  /** Put your name to a letter: the same panel the plus opens, on that letter. */
+  const startCosign = (id: string) =>
+    holdAnchor(() => {
+      setCosignOf(id);
+      setCosignAsked(false);
+      setCosignNoWords(false);
+      // Open on the whole window. Signing is reading and writing at once, and
+      // the column can only hold the writing half, so the reader would have to
+      // ask for the letter before they could see what they were putting their
+      // name to. Collapsing is still one press away.
+      setPanelFull(true);
+      // The position is recorded as the reader's own, copied from the letter
+      // at the moment they sign. A later change by the organisation does not
+      // rewrite what anybody agreed to.
+      const t = feedItems.find((x) => x.id === id);
+      if (t) patchDraft({ position: t.position });
       if (draft.posted) patchDraft({ posted: false });
       setReview(false);
       showView("compose");
@@ -3151,7 +3420,15 @@ function Detail({ c, style }: { c: CommitteeDetail; style: ReviewStyle }) {
    * layout, so changing committee mid-comparison does not quietly change what
    * is being compared.
    */
-  const committeeHref = (slug: string) => keepSearch(detailPath(slug, style));
+  const committeeHref = (slug: string) => {
+    // The reading, not only the style. A co-sign route is a different page
+    // from the plain one, and the twelve down the left are for changing
+    // committee rather than for leaving the thing being compared.
+    const tail = location.pathname.match(/\/(cosign(?:-\d+|-viz)?)$/)?.[1];
+    return keepSearch(
+      tail ? `/conferenceCommittees/${slug}/${tail}` : detailPath(slug, style),
+    );
+  };
 
   /**
    * "Review and Post", in whichever container this route asks for.
@@ -3160,6 +3437,10 @@ function Detail({ c, style }: { c: CommitteeDetail; style: ReviewStyle }) {
    * whichever container drew it, which is what makes the three comparable.
    */
   const toReview = () => {
+    // Back to the panel's own width. The wide reading exists so the letter can
+    // be read beside the form; the review has no letter in it, and leaving the
+    // panel stretched across the page would hand that width to an empty half.
+    setPanelFull(false);
     if (style === "page") navigate(keepSearch(reviewPath(c.slug)));
     else setReview(true);
   };
@@ -3170,10 +3451,110 @@ function Detail({ c, style }: { c: CommitteeDetail; style: ReviewStyle }) {
    * it and the page navigates away from it.
    */
   const paneReview = style === "pane" && review;
+  /**
+   * Whether the panel is showing the letter beside the form.
+   *
+   * Only when it has been given the window: a column cannot hold a letter and
+   * a form at once, which is what the expand control is for.
+   */
+  const wideCosign = !!cosignLetter && panelFull && !paneReview;
   /** Back to the form, from the pane or the modal in front of it. */
   const toEditing = () => setReview(false);
   /** Nothing is sent. The flag is as far as a prototype with no backend goes. */
   const post = () => patchDraft({ posted: true });
+  /**
+   * The eighth reading's last press: on the record, and straight to the word
+   * that says so. No review between, because the step that offered the co-sign
+   * carried the terms and the writing step showed the entry.
+   */
+  // A moment long enough for the count on the letter to be watched moving,
+  // and no longer: it is the one thing on the page that says what the reader
+  // just did, and a page that keeps saying it is a page congratulating itself.
+  const [fresh, setFresh] = useState(false);
+  useEffect(() => {
+    if (!fresh) return;
+    const done = setTimeout(() => setFresh(false), 2600);
+    return () => clearTimeout(done);
+  }, [fresh]);
+  /**
+   * The end of either path on the two-step readings.
+   *
+   * Filing your own words and co-signing somebody else's are the same act
+   * under the page's own rule, so they end the same way: on the record, panel
+   * away, and the reader standing in front of what they filed.
+   */
+  const postCosign = () => {
+    setPanelFull(false);
+    post();
+    // The review goes with the panel. Left standing, reopening the panel for
+    // anything else lands on a review of something already on the record.
+    setReview(false);
+
+    // A co-sign ends where the route says; words of your own have no letter
+    // carrying the moment in the public list, so they land in the section that
+    // holds them.
+    const to = cosignOf ? (ownEnding ? "your-input" : "input") : "your-input";
+    const land = (smooth: boolean, after: () => void) => {
+      const at = document.getElementById(to);
+      if (!at) return after();
+      const still = window.matchMedia(
+        "(prefers-reduced-motion: reduce)",
+      ).matches;
+      at.scrollIntoView({
+        behavior: smooth && !still ? "smooth" : "auto",
+        block: "start",
+      });
+      history.replaceState(null, "", `${location.pathname}#${to}`);
+      after();
+    };
+
+    if (cosignOf) {
+      // The co-sign ending keeps its slide and its clock: the delay here plus
+      // the one inside each piece comes to the timings it was tuned at.
+      //
+      // What it does not keep is `collapseRail`'s anchor hold, which pins the
+      // page to whichever section the reader was in and keeps correcting for
+      // 480ms. The landing was being applied and then dragged back, which is
+      // why the fragment never took.
+      setTimeout(() => setFresh(true), 340);
+      clearRailFilters();
+      applyRailWidth(null);
+      openWhen("min");
+      requestAnimationFrame(() =>
+        requestAnimationFrame(() =>
+          requestAnimationFrame(() => land(false, () => {})),
+        ),
+      );
+      return;
+    }
+
+    // Filing words of your own, where the panel going is not the interesting
+    // part. `data-resizing` is the page's own way of saying a width change is
+    // not an animation, so the panel is simply gone and the only thing moving
+    // is the page travelling to what was filed. The moment then waits for that
+    // travel: `scrollend` says when the page has settled, with a timeout
+    // behind it for browsers that do not fire it and for a scroll that had
+    // nowhere to go.
+    const shell = shellRef.current;
+    shell?.setAttribute("data-resizing", "true");
+    clearRailFilters();
+    applyRailWidth(null);
+    openWhen("min");
+    requestAnimationFrame(() => {
+      shell?.removeAttribute("data-resizing");
+      land(true, () => {
+        let fired = false;
+        const settled = () => {
+          if (fired) return;
+          fired = true;
+          window.removeEventListener("scrollend", settled);
+          setFresh(true);
+        };
+        window.addEventListener("scrollend", settled, { once: true });
+        window.setTimeout(settled, 900);
+      });
+    });
+  };
   /** The review put away from a container's own close control. */
   const closeReview = () => {
     setReview(false);
@@ -3217,12 +3598,20 @@ function Detail({ c, style }: { c: CommitteeDetail; style: ReviewStyle }) {
     // the page lands it itself instead, so arriving by link and arriving by
     // press put the section in the same place.
     const id = location.hash.slice(1);
-    if (!id || !CONTENTS.some((x) => x.id === id)) return;
+    if (!id || !ANCHORS().includes(id)) return;
     if (mode === "tabbed" && tabs.some((x) => x.id === id)) pickTab(id);
     else requestAnimationFrame(() => jumpTo(id));
-    // Once, on arrival. A later press is somebody navigating rather than
-    // landing, and it has a handler of its own.
-  }, []);
+    // On every arrival, not only the first. Every reading of a committee is
+    // this one component, so moving from the committee page to a co-sign
+    // route, or pressing a bar link while already on one, changes the address
+    // without mounting anything: the effect that lands the fragment has to
+    // answer the navigation rather than the mount.
+    //
+    // Keyed on the router's own key, which changes once per navigation. A
+    // press on the contents bar writes its fragment with `replaceState` and
+    // leaves the key alone, so the bar still owns its own landing and this
+    // does not fire a second one on top of it.
+  }, [location.key]);
 
   const order: string[] = [];
   const see = (id?: string) => {
@@ -3298,7 +3687,10 @@ function Detail({ c, style }: { c: CommitteeDetail; style: ReviewStyle }) {
             rail, so this is the way in on a phone as well as the shortcut on a
             wide window; --fab-r falls back to the plain 24px there, since
             nothing is being taken from the page for a panel to stand in. */}
-        {!composing && (
+        {/* And gone once something is on the record: the page already carries
+            their entry, pinned above the list, and a standing invitation to
+            add another is an offer the page cannot keep. */}
+        {!composing && !draft.posted && (
           <button
             onClick={compose}
             aria-label="Add public input"
@@ -3323,7 +3715,12 @@ function Detail({ c, style }: { c: CommitteeDetail; style: ReviewStyle }) {
           another floating button competing with the two on the right. Open, the
           same corner holds a white panel with the way to shut it at the top,
           above the switches it controls. */}
-      <div className="hidden md:block fixed bottom-0 left-0 z-50">
+      {/* Not on the co-sign readings. Those are settled: the layout and the
+          container are decided, and a drawer offering to change them is a
+          switch for a comparison that is over. */}
+      <div
+        className={`${cosignRoute ? "hidden" : "hidden md:block"} fixed bottom-0 left-0 z-50`}
+      >
         {!showControls ? (
           <Hint text="Prototype controls" className="block">
             <button
@@ -3662,6 +4059,7 @@ function Detail({ c, style }: { c: CommitteeDetail; style: ReviewStyle }) {
                     card={layout === "card"}
                     asked={unresolved === "questions"}
                     onCompose={compose}
+                    posted={draft.posted}
                   />
                 </Chapter>
               </Boxed>
@@ -3774,6 +4172,65 @@ function Detail({ c, style }: { c: CommitteeDetail; style: ReviewStyle }) {
               </Boxed>
             )}
 
+            {/* A section of its own, above the public one. What the reader
+                filed is not one of the things the page is showing them; it is
+                the thing they did, and it answers to none of the controls the
+                section below carries. */}
+            {show("input") && draft.posted && (
+              <Boxed
+                on={layout === "stacked"}
+                bleed={inlineTestimony}
+                filled={!inlineTestimony}
+              >
+                <Chapter
+                  id="your-input"
+                  question="Your Input"
+                  titleClass={SUB_HEAD}
+                  tightBody
+                  stickyHeading={stickyTop}
+                  bandHeading={mode === "tabbed"}
+                  // Beside the heading of the section it is about, which is
+                  // the section holding the thing it reports on.
+                  action={
+                    <p
+                      className={`flex items-center gap-[7px] font-body text-sm text-ink leading-[1.5] ${
+                        fresh && ownEnding
+                          ? "animate-rise [animation-delay:120ms] motion-reduce:animate-none"
+                          : ""
+                      }`}
+                    >
+                      <Check
+                        aria-hidden
+                        className={`w-[14px] h-[14px] shrink-0 text-positive-ink ${
+                          fresh && ownEnding
+                            ? "animate-pop [animation-delay:300ms] motion-reduce:animate-none"
+                            : ""
+                        }`}
+                        strokeWidth={2.5}
+                      />
+                      Your input is on the record.
+                    </p>
+                  }
+                >
+                  <div>
+                    <OwnSubmission items={feedItems} accounts={feedAccounts} />
+                    {/* Under the card, as a footnote to it: what this
+                        section is, and where the same entry can be found in
+                        the record everybody else reads. */}
+                    <p className="mt-[12px] font-body text-sm text-ink-mid leading-[1.5]">
+                      This section is only visible to you. You can also find
+                      your post below in the public record.
+                      {/* Only where they co-signed: words of their own always
+                          stand in the list, and the setting this is about has
+                          nothing to say about them. */}
+                      {cosignOf
+                        ? " If your post has no additional content you can find it by changing your filters."
+                        : ""}
+                    </p>
+                  </div>
+                </Chapter>
+              </Boxed>
+            )}
             {show("input") && (
               <Boxed
                 on={layout === "stacked"}
@@ -3783,16 +4240,25 @@ function Detail({ c, style }: { c: CommitteeDetail; style: ReviewStyle }) {
                 <Chapter
                   id="input"
                   question="Public Input"
+                  hideQuestion={headedFeed}
                   titleClass={SUB_HEAD}
                   // Reading it inline, this is the way in. Reading it in the
                   // panel, the panel's header already has one and a second
                   // here would be two doors to the same room.
                   action={
-                    inlineTestimony ? <AddInput onClick={compose} /> : undefined
+                    inlineTestimony && !headedFeed ? (
+                      <AddInput
+                        onClick={compose}
+                        mine={sixOf(c).filter((m) => MINE[m.key])}
+                        posted={draft.posted}
+                      />
+                    ) : undefined
                   }
+                  //
                   stickyHeading={stickyTop}
                   bandHeading={mode === "tabbed"}
                   headingRef={inputBand.ref}
+                  headingData="input"
                   flush
                 >
                   {/* The conference pages' own feed, filtering and chipping on
@@ -3809,20 +4275,47 @@ function Detail({ c, style }: { c: CommitteeDetail; style: ReviewStyle }) {
                   {/* The filter row carries its own 16px of air above it,
                       for a feed that begins a section on its own. Here a
                       heading is already doing that, so the row's share comes
-                      back off. */}
+                      back off: the controls belong to the title above them,
+                      and a chapter's own gap is sized for prose starting
+                      under a question. The row's own padding is ten now
+                      rather than sixteen, so this gives back six less. */}
                   {inlineTestimony ? (
-                    <div className="-mt-[16px]">
+                    <div className="-mt-[18px]">
                       <SubmissionFeed
                         items={feedItems}
+                        fresh={fresh && !ownEnding}
                         accounts={feedAccounts}
                         subject={displayName(c.slug, c.short)}
                         pageSize={5}
                         includeTypeFilter
+                        confereeSeats={sixOf(c).map((m) => m.key)}
+                        map={
+                          <SentimentMap
+                            items={feedItems}
+                            conferees={sixOf(c).map((m) => m.key)}
+                          />
+                        }
                         includeFollowingFilter
                         // The filters stay reachable while the list runs past
                         // them, in both views: they come to rest under whatever
                         // the view has pinned above them.
                         stickyTop={underHeading(inputBand.h)}
+                        heading={
+                          headedFeed
+                            ? {
+                                title: "Public Input",
+                                action: (
+                                  <AddInput
+                                    onClick={compose}
+                                    mine={sixOf(c).filter((m) => MINE[m.key])}
+                                    posted={draft.posted}
+                                  />
+                                ),
+                              }
+                            : undefined
+                        }
+                        headingTop={stickyTop}
+                        onCosign={startCosign}
                       />
                     </div>
                   ) : (
@@ -3833,7 +4326,10 @@ function Detail({ c, style }: { c: CommitteeDetail; style: ReviewStyle }) {
                     // a page of its own and the map alone leaves the tab bar
                     // sitting over empty ground.
                     <div className={mode === "tabbed" ? "min-h-[500px]" : ""}>
-                      <PublicMap onOpenRail={openRailClean} />
+                      <PublicMap
+                        conferees={sixOf(c).map((m) => m.key)}
+                        onOpenRail={openRailClean}
+                      />
                     </div>
                   )}
                 </Chapter>
@@ -3953,6 +4449,7 @@ function Detail({ c, style }: { c: CommitteeDetail; style: ReviewStyle }) {
                     being dealt out five at a time. */}
                 <SubmissionFeed
                   items={feedItems}
+                  fresh={fresh && !ownEnding}
                   accounts={feedAccounts}
                   subject={displayName(c.slug, c.short)}
                   filter={position}
@@ -3965,6 +4462,7 @@ function Detail({ c, style }: { c: CommitteeDetail; style: ReviewStyle }) {
                   onCountChange={setRailCount}
                   onFilteredChange={setRailFiltered}
                   resetSignal={railReset}
+                  onCosign={startCosign}
                 />
               </div>
             ),
@@ -3974,17 +4472,89 @@ function Detail({ c, style }: { c: CommitteeDetail; style: ReviewStyle }) {
             // The pane style draws the review in this same view, so the header
             // names whichever of the two steps is showing rather than calling
             // both of them the form.
-            title: paneReview ? reviewTitle(draft.posted) : "Add Public Input",
+            // Not "Cosign" on the co-sign step: the button inside says that,
+            // and the same word as a title and as an act read as two things
+            // with one name. The title says what the panel is for, and on a
+            // co-sign it says what the press would mean.
+            // One title for the panel whichever way the reader came to it:
+            // filing their own words and co-signing somebody else's are the
+            // same act under your rules, so the header says so.
+            title: paneReview
+              ? reviewTitle(draft.posted, !!cosignLetter)
+              : "Add Your Input",
             content: (
-              <div className="flex-1 min-h-0 flex flex-col px-[var(--rail-pad,18px)] pt-[12px] pb-[22px]">
+              <div
+                className={`flex-1 min-h-0 px-[var(--rail-pad,18px)] pt-[12px] pb-[22px] ${
+                  // Reading and writing at once, but only where there is room
+                  // for both. Below lg the panel is a sheet the width of the
+                  // phone, so the letter goes above the form and the column
+                  // scrolls, which is the same two things in the order a
+                  // narrow screen can hold them.
+                  wideCosign
+                    ? "flex flex-col gap-[20px] lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,calc(var(--rail-w)-36px))] lg:gap-x-[32px] lg:gap-y-0"
+                    : "flex flex-col"
+                }`}
+              >
+                {wideCosign && cosignLetter && (
+                  /* The same well the bill text sits in: a sunken tray holding
+                     a sheet. What is being signed is a document, and reading a
+                     document on the same surface as the form you are filling
+                     in makes the two one thing.
+
+                     The scroll is the sheet's, not the column's: these run to
+                     six paragraphs and a list of thirty-one names, and the
+                     tray should stay put while the page of it moves.
+
+                     Lifted into the header's band, which is empty on this
+                     side: the title and its controls are pinned over the form
+                     column, so the letter would otherwise start half a header
+                     below the top of a panel it has all to itself. */
+                  <div className="min-h-0 flex-1 lg:flex-none lg:h-auto lg:-mt-[48px] flex bg-sunken border border-line rounded-card p-[16px] sm:p-[24px]">
+                    <div className="mx-auto w-full max-w-[68ch] overflow-y-auto scrollbar-always bg-surface shadow-popover rounded-[3px] px-[28px] py-[30px] sm:px-[40px] sm:py-[38px]">
+                      {/* The same head the feed gives this account: the
+                          portrait, the name with its type mark, the position,
+                          and what the account is. A bare name over a letter
+                          was the one place on these pages where a filing did
+                          not visibly belong to anybody. */}
+                      <div className="flex items-start gap-[12px] pb-[18px] mb-[20px] border-b border-line">
+                        <AccountAvatar
+                          account={cosignLetter.account}
+                          size={44}
+                        />
+                        <div className="min-w-0 flex-1">
+                          <p className="flex flex-wrap items-center gap-x-[8px] gap-y-[4px] font-body font-semibold text-base text-ink">
+                            {cosignLetter.name}
+                            <AccountTypeIcon
+                              type={cosignLetter.account.userType}
+                            />
+                            <PositionChip position={cosignLetter.position} />
+                          </p>
+                          <p className="mt-[2px] font-body text-sm text-ink-faint">
+                            {cosignLetter.account.descriptor}
+                          </p>
+                        </div>
+                        <p className="shrink-0 font-body text-xs text-ink-mid">
+                          {cosignLetter.date}
+                        </p>
+                      </div>
+                      <p className="font-body text-sm text-ink leading-[1.7] whitespace-pre-line">
+                        {cosignLetter.body}
+                      </p>
+                    </div>
+                  </div>
+                )}
                 {paneReview ? (
                   <ReviewPane
                     draft={draft}
                     onChange={patchDraft}
                     six={sixOf(c)}
                     subject={displayName(c.slug, c.short)}
+                    cosign={cosignLetter}
+                    noWords={cosignNoWords}
                     onBack={toEditing}
-                    onPost={post}
+                    // Every reading in the panel ends the same way: away, and
+                    // standing in front of what was filed.
+                    onPost={postCosign}
                     onClose={closeReview}
                     onSeeOthers={readOthers}
                   />
@@ -3997,13 +4567,22 @@ function Detail({ c, style }: { c: CommitteeDetail; style: ReviewStyle }) {
                     draft={draft}
                     onChange={patchDraft}
                     six={sixOf(c)}
+                    signing={cosignAsked}
+                    onSigning={setCosignAsked}
+                    skipReview={directCosign && !!cosignLetter}
+                    letterShown={wideCosign}
+                    noWords={cosignNoWords}
+                    onNoWords={setCosignNoWords}
                     onCancel={
                       inlineTestimony
                         ? collapseRail
                         : () => showView(RAIL_DEFAULT)
                     }
-                    onReview={toReview}
+                    onReview={
+                      directCosign && cosignLetter ? postCosign : toReview
+                    }
                     active={railView[layout] === "compose"}
+                    cosign={cosignLetter}
                   />
                 )}
               </div>
@@ -4029,6 +4608,8 @@ function Detail({ c, style }: { c: CommitteeDetail; style: ReviewStyle }) {
         addLabel="Add Public Input"
         onResize={setRailWidth}
         onResizeEnd={endRailResize}
+        expanded={cosignRoute && panelFull}
+        onExpandedChange={cosignRoute ? setPanelFull : undefined}
       />
 
       {/* Style two. Over the page rather than in it, so the form the reader

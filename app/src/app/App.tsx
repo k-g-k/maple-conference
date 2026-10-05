@@ -43,6 +43,13 @@ import IconSample from "./components/icon-sample";
  */
 function ToTop() {
   const { pathname } = useLocation();
+  // The browser puts a reload back where the reader left off, which is right
+  // for a page somebody is reading and wrong for one being worked on: every
+  // refresh landed part way down the feed. Hash links still work, because the
+  // browser honours those separately.
+  useEffect(() => {
+    if ("scrollRestoration" in history) history.scrollRestoration = "manual";
+  }, []);
   useEffect(() => {
     if (window.location.hash.slice(1).includes("#")) return;
     window.scrollTo(0, 0);
@@ -84,6 +91,83 @@ export default function App() {
           <Route
             path="conferenceCommittees/:slug"
             element={<ConferenceCommittee />}
+          />
+          {/* The co-sign experiment. The same committee page, with the one
+              thing that is being built switched on, so the route everybody
+              else is looking at stays as it was. Delete the route and the
+              feature goes with it. */}
+          <Route
+            path="conferenceCommittees/:slug/cosign"
+            element={<ConferenceCommittee style="pane" />}
+          />
+          {/* A second copy of that route, so one reading can be worked on
+              while the other stays beside it to compare against. */}
+          <Route
+            path="conferenceCommittees/:slug/cosign-2"
+            element={<ConferenceCommittee style="pane" />}
+          />
+          {/* The same again with the band at the foot of the card instead of
+              over it, so the two placements can be compared. */}
+          <Route
+            path="conferenceCommittees/:slug/cosign-3"
+            element={<ConferenceCommittee style="pane" />}
+          />
+          {/* A fourth, started as a copy of the second. */}
+          <Route
+            path="conferenceCommittees/:slug/cosign-4"
+            element={<ConferenceCommittee style="pane" />}
+          />
+          {/* A fifth, started as a copy of the second. */}
+          <Route
+            path="conferenceCommittees/:slug/cosign-5"
+            element={<ConferenceCommittee style="pane" />}
+          />
+          {/* A sixth: the fifth with the section's title, the map and the
+              filters drawn as one card. */}
+          <Route
+            path="conferenceCommittees/:slug/cosign-6"
+            element={<ConferenceCommittee style="pane" />}
+          />
+          {/* A seventh: the map in a column beside the list. */}
+          <Route
+            path="conferenceCommittees/:slug/cosign-7"
+            element={<ConferenceCommittee style="pane" />}
+          />
+          {/* An eighth, started as a copy of the fifth: a different flow to
+              try without disturbing the reading it came from. */}
+          <Route
+            path="conferenceCommittees/:slug/cosign-8"
+            element={<ConferenceCommittee style="pane" />}
+          />
+          {/* A ninth: the eighth, landing on the reader's own section rather
+              than the public one, so the two endings can be compared. */}
+          <Route
+            path="conferenceCommittees/:slug/cosign-9"
+            element={<ConferenceCommittee style="pane" />}
+          />
+          {/* A tenth: the ninth with the position bar off, its legend kept. */}
+          <Route
+            path="conferenceCommittees/:slug/cosign-10"
+            element={<ConferenceCommittee style="pane" />}
+          />
+          {/* The ninth, kept beside it under a name rather than a number: the
+              same flow with the shape of the input over the list. */}
+          <Route
+            path="conferenceCommittees/:slug/cosign-viz"
+            element={<ConferenceCommittee style="pane" />}
+          />
+          {/* The second co-sign experiment: the same record shown as a quote
+              rather than as a signature, so the two readings can be compared
+              side by side. "repost" is a placeholder name. */}
+          <Route
+            path="conferenceCommittees/:slug/repost"
+            element={<ConferenceCommittee style="pane" />}
+          />
+          {/* The fourth: no words of your own. Your name against somebody
+              else's letter, as agreement rather than as a filing. */}
+          <Route
+            path="conferenceCommittees/:slug/endorse"
+            element={<ConferenceCommittee style="pane" />}
           />
           {/* Style two: the review over the page, with the form behind it. */}
           <Route

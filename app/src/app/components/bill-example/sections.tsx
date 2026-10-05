@@ -48,6 +48,16 @@ function Mark({ name }: { name: string }) {
 const url = (n: string) =>
   `https://malegislature.gov/Bills/194/${n.replace(".", "")}`;
 
+/**
+ * The same bill on MAPLE.
+ *
+ * Same shape as the General Court's own URL, the number without its dot,
+ * confirmed against the live site rather than assumed: `/bills/194/S2581`
+ * resolves, `/bills/194/S.2581` does not.
+ */
+const mapleUrl = (n: string) =>
+  `https://www.mapletestimony.org/bills/194/${n.replace(".", "")}`;
+
 /** Whether a sponsor string names a committee rather than a person. */
 const isCommittee = (name: string) => /\bCommittee\b/.test(name);
 
@@ -161,15 +171,30 @@ export function WhatItDoes({ bill }: { bill: BillRecord }) {
             posted.
           </Missing>
         )}
-        <a
-          href={url(bill.number)}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-[4px] mt-[14px] font-body font-semibold text-sm underline decoration-dotted underline-offset-[4px] text-official-ink hover:text-official"
-        >
-          Read {bill.number} on malegislature.gov
-          <ArrowUpRight className="w-[13px] h-[13px] no-underline" />
-        </a>
+        {/* Both records of the same document, side by side: the legislature's
+            own page, which is the text, and MAPLE's, which is the text plus
+            whatever the public has filed on it. A reader who wants one
+            usually wants to know the other exists. */}
+        <span className="flex flex-wrap items-center gap-x-[20px] gap-y-[6px] mt-[14px]">
+          <a
+            href={url(bill.number)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-[4px] font-body font-semibold text-sm underline decoration-dotted underline-offset-[4px] text-official-ink hover:text-official"
+          >
+            Read {bill.number} on malegislature.gov
+            <ArrowUpRight className="w-[13px] h-[13px] no-underline" />
+          </a>
+          <a
+            href={mapleUrl(bill.number)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-[4px] font-body font-semibold text-sm underline decoration-dotted underline-offset-[4px] text-official-ink hover:text-official"
+          >
+            See {bill.number} on MAPLE
+            <ArrowUpRight className="w-[13px] h-[13px] no-underline" />
+          </a>
+        </span>
       </Span>
     </Chapter>
   );

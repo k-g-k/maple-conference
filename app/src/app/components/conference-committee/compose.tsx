@@ -17,7 +17,13 @@
 // it, which is as far as a prototype with no backend can honestly go.
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { Check, ChevronDown, CircleCheck, Star } from "lucide-react";
+import {
+  Check,
+  ChevronDown,
+  CircleCheck,
+  Star,
+  UsersRound,
+} from "lucide-react";
 
 import { Modal } from "../ballot";
 import { SubmissionEntry } from "./testimony";
@@ -28,8 +34,12 @@ import {
   MINE,
   MINE_FULL,
 } from "../../data/bill-lineage/members";
-import { CONFERENCE_POSITIONS } from "../../data/conference-committees/positions";
+import {
+  CONFERENCE_POSITIONS,
+  POSITIONS,
+} from "../../data/conference-committees/positions";
 import type { ConferencePosition } from "../../data/conference-committees/positions";
+import { PositionChip } from "./accounts";
 import type { ConferenceSubmission } from "../../data/conference-committees/testimony";
 import { VIEWER } from "../../data/conference-committees/testimony";
 
@@ -58,6 +68,18 @@ const COPY = {
   saving: "Saving…",
   saved: "Saved",
   toReview: "Review and Post",
+  // The same two steps named for what is actually being done on this path.
+  // "Post" is right for a filing of your own; signing somebody else's letter
+  // is a co-sign from the first press to the last, and the buttons say so.
+  toReviewCosign: "Review and Cosign",
+  reviewTitleCosign: "Review and Cosign",
+  postCosign: "Cosign",
+  cosignBack: "Cancel",
+  // Where the next step is the one that commits, this press only takes them
+  // there, so it says so rather than claiming the act twice.
+  cosignOn: "Continue",
+  cosignAgree: (org: string) =>
+    `I have read ${org}’s input and want to cosign it as my own.`,
   /** The one rule the form states, where the posting happens. The link is a
       placeholder: there is no page behind it in the prototype. */
   conduct: "All posts are governed by our ",
@@ -71,11 +93,36 @@ const COPY = {
   editLabel: "Edit",
   doneLabel: "Done",
   positionLabel: "Your position",
+  /** The co-sign form, where the position came with the letter. */
+  cosignLabel: "You are signing",
+  cosignNote:
+    "The words stay theirs. Their position is filed as yours, because that is what you are agreeing to.",
+  cosignBodyLabel: "Your Input",
+  cosignBodyAside: "Optional",
+
+  /** The writing step, once the offer has been taken. */
+  cosignFormTitle: "Add Your Words",
+  cosignPreviewLabel: "Preview",
+  cosignNoWords: "I do not want to add input of my own",
+  /** The step before the form: what co-signing this would do, and the press. */
+  cosignInvite:
+    "Add your name to this input. Its position is recorded as your own, and its words are filed under your name unchanged.",
+  cosignNext:
+    "Next you can add a line of your own about why it matters to you. Your cosign is public on MAPLE and counted for your district.",
+  cosignInviteNote:
+    "Your cosign is public on MAPLE and counted for your district.",
+  cosignPrompt:
+    "Why does this matter to you? One or two sentences in your own words will have more impact with lawmakers.",
   bodyLabel: "Your input",
   emptyBody: "You have not written anything yet.",
   emptyHint: "Write something first, then post it.",
   // A question, so it takes sentence case and the mark that makes it one.
   digest: "Include in MAPLE’s weekly email to the committee",
+  digestCosign: "Allow us to share your input with the committee",
+  /** The same offer to read more, naming both kinds of party that carry it.
+      Not the organisation by name: the page behind this covers how any of them
+      may use it, and one name promises a page about one. */
+  digestCosignMore: "Learn how MAPLE and trusted orgs share with lawmakers",
   // Only when it is off, so it reads as what is being turned down rather than
   // as a justification of something already chosen.
   // Two halves, because the star is a word in the middle of the sentence
@@ -94,12 +141,12 @@ const COPY = {
   // is for a reader one of whose own legislators is in the room, where the
   // cost of not being read is higher and the reason is different.
   digestOff:
-    "Are you sure? Each committee member receives a weekly roundup of the public’s input and yours will not be included.",
+    "Are you sure? Your input is valuable but will not be shared directly with lawmakers.",
   // The same opener as the general version, then the part that is only true
   // for a reader whose own legislator is in the room. That second sentence is
   // the only thing bolded, because it is the only thing that changes.
   digestOffLead:
-    "Are you sure? Each committee member receives a weekly roundup of the public’s input and yours will not be included.",
+    "Are you sure? Your input is valuable but will not be shared directly with lawmakers.",
   // Split where the badge goes: the mark closes the sentence, in place of the
   // full stop, against the weight it is the sign of.
   // Split at the badge: it sits between "Your" and "legislator", against the
@@ -149,7 +196,9 @@ export const STARTING_DRAFT = {
 } as const;
 
 /** Where a not-yet-posted card says its date. */
-const PREVIEW_DATE = "Not posted yet";
+// Nothing. The card is a preview inside a panel titled Review and Post, and a
+// corner saying it has not happened yet is the same fact a third time.
+const PREVIEW_DATE = "";
 const POSTED_DATE = "Just now";
 
 /**
@@ -286,8 +335,15 @@ export function ConferenceCompose({
   onChange,
   six,
   onCancel,
+  signing = false,
+  onSigning,
+  noWords = false,
+  onNoWords,
+  skipReview = false,
+  letterShown = false,
   onReview,
   active = false,
+  cosign,
 }: {
   draft: Draft;
   onChange: (patch: Partial<Draft>) => void;
@@ -303,10 +359,63 @@ export function ConferenceCompose({
    * when it is showing instead.
    */
   active?: boolean;
+  /**
+   * The letter being seconded, where this is a co-sign rather than a filing of
+   * the reader's own.
+   *
+   * Resolved by the page and handed in whole: the form shows what is being
+   * signed and drops the position control, because the position is the
+   * letter's and was copied onto the draft when the reader pressed Cosign.
+   */
+  /**
+   * Whether the reader has taken the offer on a co-sign.
+   *
+   * Held by the page rather than here, because the panel's own title changes
+   * with it and the title is drawn outside this component.
+   */
+  signing?: boolean;
+  onSigning?: (v: boolean) => void;
+  /**
+   * Whether they have said they are adding nothing of their own. Held by the
+   * page for the same reason as `signing`: the review step is drawn elsewhere
+   * and shows the entry this answer decides.
+   */
+  noWords?: boolean;
+  onNoWords?: (v: boolean) => void;
+  /**
+   * Two steps rather than three.
+   *
+   * Everything a reader is told before they commit is said on the step that
+   * asks them to, so the writing step ends in the act itself rather than in a
+   * review of a decision they have already made twice.
+   */
+  skipReview?: boolean;
+  /**
+   * Whether the letter is already open beside this, which the panel decides.
+   * Where it is, quoting four lines of it back is the same words twice and the
+   * card can get on with the asking.
+   */
+  letterShown?: boolean;
+  cosign?: {
+    name: string;
+    date: string;
+    position: ConferencePosition;
+    /** The letter itself, for the few lines the card shows of it. */
+    body: string;
+    /** How many have signed it, and how far into the six they reach. */
+    count: number;
+    inDistrict: number;
+    /** Whether one of the six represents the reader. */
+    yours: boolean;
+  };
 }) {
   // Pressing Post on nothing used to hand the reader a review of nothing, with
   // the refusal only visible once they got there. Now the refusal happens where
   // the press did: the button shakes and the field it needs goes red.
+  // The acknowledgment on the offer step, and whether a press has asked for
+  // it. Local, because nothing outside this step reads it.
+  const [agreed, setAgreed] = useState(false);
+  const [askedAgree, setAskedAgree] = useState(false);
   const [refused, setRefused] = useState(false);
   const [asking, setAsking] = useState(false);
   // Autosave, as the reader sees it. Nothing is sent anywhere: the draft is
@@ -370,7 +479,17 @@ export function ConferenceCompose({
     });
     return () => cancelAnimationFrame(id);
   }, [active]);
-  const empty = draft.body.trim().length === 0;
+  const written = draft.body.trim().length > 0;
+  /**
+   * Whether the step has been answered.
+   *
+   * Writing something answers it. On a co-sign, so does saying there is
+   * nothing to add: the field is optional and leaving it blank is a real
+   * choice, but it has to be a choice rather than the reader not having
+   * noticed the field. Filing input of your own has no such out, because
+   * there the words are the filing.
+   */
+  const empty = !written && !(cosign && noWords);
   const review = () => {
     if (!empty) return onReview();
     // The refusal happens on the thing that needs an answer, not on the button
@@ -384,49 +503,199 @@ export function ConferenceCompose({
     // nothing because the class never left.
     requestAnimationFrame(() => setAsking(true));
   };
+  // The offer, and nothing else in the panel. Returned before the form rather
+  // than drawn above it: the words, the field, the digest row and Review and
+  // Post are all parts of writing something, and a reader who has not yet
+  // agreed to sign has nothing to do with any of them.
+  if (cosign && !signing)
+    return (
+      // A confirmation, not a second form. The reader has pressed Cosign and
+      // this is the friction that makes sure they meant it: what they are
+      // signing, what signing does, and the press. Anything to fill in waits
+      // for the step after.
+      //
+      // `self-start`, because in the wide reading this is the second column of
+      // a grid and a grid item stretches to the row the letter sets.
+      <div className="shrink-0 self-start">
+        <div className="rounded-card border border-line bg-surface overflow-hidden">
+          {/* What is being signed, set as a heading rather than as a meta line.
+            It was the smallest, palest thing on a card that exists to ask
+            about it. */}
+          <div className="px-[22px] pt-[20px] pb-[16px]">
+            <p className="flex flex-wrap items-center gap-x-[8px] gap-y-[5px] font-display font-semibold text-lg text-ink leading-[1.3]">
+              {cosign.name}
+              <PositionChip position={cosign.position} />
+            </p>
+            {/* The date and the tally on one line, because both are facts about
+              the letter rather than things to weigh separately. */}
+            <p className="flex flex-wrap items-center gap-x-[7px] gap-y-[3px] mt-[7px] font-body text-sm text-ink-mid">
+              {cosign.date}
+              <span aria-hidden className="text-ink-faint">
+                ·
+              </span>
+              <span className="inline-flex items-center gap-[6px]">
+                <UsersRound
+                  aria-hidden
+                  className="w-[15px] h-[15px] shrink-0"
+                />
+                <span>
+                  <span className="font-bold text-ink">{cosign.count}</span>{" "}
+                  {cosign.count === 1 ? "constituent has" : "constituents have"}{" "}
+                  cosigned this
+                </span>
+              </span>
+            </p>
+          </div>
+          {/* A rule rather than a gap, so the asking is a section of its own and
+            not the fourth paragraph in a stack of seven. */}
+          <div className="border-t border-line px-[22px] py-[18px]">
+            <p className="font-body text-base text-ink leading-[1.55]">
+              {COPY.cosignInvite}
+            </p>
+            {/* Only where the letter is not already open beside this. Cut at a
+              word, not at a line: a clamped box left half a sentence standing
+              under the fold of its own tint. */}
+            {!letterShown && cosign.body && (
+              <p className="mt-[14px] rounded-control bg-wash px-[14px] py-[12px] font-body text-sm text-ink-mid leading-[1.6]">
+                {excerpt(cosign.body)}
+              </p>
+            )}
+            <p className="mt-[12px] font-body text-base text-ink leading-[1.55]">
+              {COPY.cosignNext}
+            </p>
+          </div>
+          {/* The terms and the press that accepts them, in one band rather than
+            two. No tint: the rules are the quietest thing here and a filled
+            strip made them the loudest, ahead of the button. */}
+          {/* The terms are the foot of the thing being read. White like the
+            rest of it: with the card outlined, the rule alone divides them,
+            and a fill made the quietest content the heaviest block. */}
+          {skipReview && (
+            <div className="border-t border-line px-[22px] py-[18px]">
+              <ReviewContext
+                draft={draft}
+                onChange={onChange}
+                six={six}
+                labelled={false}
+              />
+            </div>
+          )}
+        </div>
+        {/* Outside the card, with the press: the card is what is being read
+            and this is the reader answering for it. Said in the first person,
+            because it is their statement rather than the page's. */}
+        <label
+          className={`flex items-start gap-[12px] mt-[16px] rounded-control px-[12px] py-[10px] cursor-pointer hover:bg-wash transition-colors ${
+            askedAgree && !agreed ? "bg-wash" : ""
+          }`}
+        >
+          <input
+            type="checkbox"
+            checked={agreed}
+            onChange={() => {
+              setAgreed((v) => !v);
+              setAskedAgree(false);
+            }}
+            className="mt-[2px] w-[16px] h-[16px] shrink-0 accent-brand cursor-pointer"
+          />
+          <span
+            className={`flex-1 font-body font-light text-sm leading-[1.45] ${
+              askedAgree && !agreed ? "text-negative-ink" : "text-ink"
+            }`}
+          >
+            {COPY.cosignAgree(cosign.name)}
+          </span>
+        </label>
+        <button
+          onClick={() => (agreed ? onSigning?.(true) : setAskedAgree(true))}
+          // Dressed as disabled but pressable, the way the form's own primary
+          // is: the press is how the reader finds out what is missing.
+          aria-disabled={!agreed}
+          className={`w-full mt-[12px] rounded-control px-[22px] py-[11px] font-body font-semibold text-base text-ink-inverse cursor-pointer transition-colors ${
+            agreed ? "bg-brand hover:bg-brand-hover" : "bg-brand/40"
+          }`}
+        >
+          {skipReview ? COPY.cosignOn : COPY.postCosign}
+        </button>
+      </div>
+    );
+
   return (
     <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain lg:overflow-visible flex flex-col gap-[16px]">
       <div className="flex flex-col lg:flex-1 lg:min-h-0">
-        {/* One a row rather than a wrapping line of chips. Four of these are
-            sentences, not one-word stances, and on a panel's width they wrapped
-            into a block a reader had to pick apart. */}
-        <ComposeLabel>{COPY.positionLabel}</ComposeLabel>
-        <div className="flex flex-col gap-[8px] mb-[32px] lg:mb-[20px]">
-          {CONFERENCE_POSITIONS.map((o) => {
-            const on = draft.position === o.k;
-            return (
-              <button
-                key={o.k}
-                type="button"
-                onClick={() => onChange({ position: o.k })}
-                aria-pressed={on}
-                className={`w-full text-left rounded-control border px-[14px] py-[10px] font-body text-sm cursor-pointer transition-colors ${
-                  on
-                    ? // The chosen one keeps the weight, so the list reads as
-                      // one thing picked out of four rather than four things
-                      // set in the same voice.
-                      `font-semibold ${o.on}`
-                    : "font-light bg-[#fdfdff] border-line text-ink hover:bg-wash hover:border-line-strong"
-                }`}
-              >
-                {/* The sentence alone. No thumb: the form has room to state each
+        {cosign ? (
+          <>
+            {/* What this will look like in the feed, filling in as they type.
+                A co-sign is filed as their own input, and a preview is the
+                only thing on the page that says so rather than asserting
+                it. */}
+            <ComposeLabel>{COPY.cosignPreviewLabel}</ComposeLabel>
+            <div className="mb-[24px] lg:mb-[20px] rounded-control border border-line bg-surface">
+              <CosignPreview cosign={cosign} noWords={noWords} />
+            </div>
+          </>
+        ) : (
+          <>
+            {/* One a row rather than a wrapping line of chips. Four of these are
+                sentences, not one-word stances, and on a panel's width they
+                wrapped into a block a reader had to pick apart. */}
+            <ComposeLabel>{COPY.positionLabel}</ComposeLabel>
+            <div className="flex flex-col gap-[8px] mb-[32px] lg:mb-[20px]">
+              {CONFERENCE_POSITIONS.map((o) => {
+                const on = draft.position === o.k;
+                return (
+                  <button
+                    key={o.k}
+                    type="button"
+                    onClick={() => onChange({ position: o.k })}
+                    aria-pressed={on}
+                    className={`w-full text-left rounded-control border px-[14px] py-[10px] font-body text-sm cursor-pointer transition-colors ${
+                      on
+                        ? // The chosen one keeps the weight, so the list reads as
+                          // one thing picked out of four rather than four things
+                          // set in the same voice.
+                          `font-semibold ${o.on}`
+                        : "font-light bg-[#fdfdff] border-line text-ink hover:bg-wash hover:border-line-strong"
+                    }`}
+                  >
+                    {/* The sentence alone. No thumb: the form has room to state each
                     position in full, and the mark is for the filter row, where
                     a row of sentences would not fit. */}
-                {o.l}
-              </button>
-            );
-          })}
-        </div>
-        <ComposeLabel>{COPY.bodyLabel}</ComposeLabel>
+                    {o.l}
+                  </button>
+                );
+              })}
+            </div>
+          </>
+        )}
+        <ComposeLabel>
+          {cosign ? (
+            <>
+              {COPY.cosignBodyLabel}{" "}
+              {/* Set apart from the label rather than part of it: it says what
+                  the field costs, not what it is. */}
+              <span className="font-normal text-ink-faint">
+                {COPY.cosignBodyAside}
+              </span>
+            </>
+          ) : (
+            COPY.bodyLabel
+          )}
+        </ComposeLabel>
         <textarea
           ref={field}
           onAnimationEnd={() => setAsking(false)}
-          value={draft.body}
+          // Emptied while it is shut, not cleared: the words are still on the
+          // draft and come back the moment the box is unticked. Shown faint
+          // behind a disabled field they read as something being posted.
+          value={!!cosign && noWords ? "" : draft.body}
           onChange={(e) => {
             if (e.target.value.trim()) setRefused(false);
             onChange({ body: e.target.value });
           }}
-          placeholder={COPY.prompt}
+          placeholder={
+            !!cosign && noWords ? "" : cosign ? COPY.cosignPrompt : COPY.prompt
+          }
           // White on the panel's gray: the one place you are meant to type
           // should look like the one place you are meant to type.
           // Capped rather than filling: on a tall panel the field ran most of the
@@ -437,7 +706,13 @@ export function ConferenceCompose({
           // merely looked at: focusing an empty field has not answered the
           // thing the red is asking for.
           onFocus={undefined}
-          className={`h-[150px] lg:h-auto lg:flex-1 lg:min-h-0 lg:max-h-[280px] w-full resize-none bg-surface border rounded-control p-[12px] font-body text-[16px] sm:text-base text-ink leading-[1.55] placeholder:text-base placeholder:text-ink-mid focus:outline-none ${
+          // Shut while they have said they are adding nothing. The box and the
+          // field are two halves of one answer, and a field still taking words
+          // under a ticked box is the form disagreeing with itself.
+          disabled={!!cosign && noWords}
+          className={`h-[150px] lg:h-auto lg:flex-1 lg:min-h-0 lg:max-h-[280px] w-full resize-none border rounded-control p-[12px] font-body text-[16px] sm:text-base text-ink leading-[1.55] placeholder:text-base placeholder:text-ink-faint focus:outline-none disabled:bg-wash disabled:text-ink-faint disabled:placeholder:text-ink-faint disabled:cursor-not-allowed ${
+            !!cosign && noWords ? "" : "bg-surface"
+          } ${
             // The border carries the refusal. The placeholder is the field
             // telling you what to write, which is the same sentence whether or
             // not you have just been told off.
@@ -446,9 +721,51 @@ export function ConferenceCompose({
               : "border-line focus:border-brand"
           } ${asking ? "animate-ask motion-reduce:animate-none" : ""}`}
         />
-        <div className="shrink-0 mt-[14px]">
-          <DigestChoice draft={draft} onChange={onChange} six={six} />
-        </div>
+        {/* Always, once this is a co-sign. It used to go once there were words
+            in the field, which moved the two rows under it on the first
+            keystroke: a control that jumps away while somebody is typing is
+            worse than one that is simply not needed yet. */}
+        {cosign && (
+          /* The same row the digest choice below it is: a real checkbox in
+             the page's accent, the label at its weight, and the whole row a
+             hover target at the same inset. A hand-drawn box beside a native
+             one read as two different kinds of question. */
+          <label
+            className={`shrink-0 flex items-center gap-[12px] mt-[8px] rounded-control px-[12px] py-[10px] cursor-pointer hover:bg-wash transition-colors ${
+              refused ? "text-negative-ink" : ""
+            }`}
+          >
+            <input
+              type="checkbox"
+              checked={noWords}
+              onChange={() => {
+                onNoWords?.(!noWords);
+                setRefused(false);
+              }}
+              className="w-[16px] h-[16px] shrink-0 self-center accent-brand cursor-pointer"
+            />
+            <span
+              className={`flex-1 font-body font-light text-sm leading-[1.45] ${
+                refused ? "text-negative-ink" : "text-ink"
+              }`}
+            >
+              {COPY.cosignNoWords}
+            </span>
+          </label>
+        )}
+        {/* Nothing to share, nothing to ask about. Where the reader has said
+            they are adding no words of their own, the choice of whether those
+            words may be carried has no subject. */}
+        {!(cosign && noWords) && (
+          <div className="shrink-0 mt-[14px]">
+            <DigestChoice
+              draft={draft}
+              onChange={onChange}
+              six={six}
+              cosigning={!!cosign}
+            />
+          </div>
+        )}
       </div>
 
       <div
@@ -473,6 +790,17 @@ export function ConferenceCompose({
             )}
             {save === "saving" ? COPY.saving : COPY.saved}
           </span>
+        )}
+        {/* A way out beside the way on, where there is no draft to delete:
+            the press next to it files something, and a step that offers only
+            that is a corner. */}
+        {cosign && !showDelete && (
+          <button
+            onClick={onCancel}
+            className="font-body font-semibold text-sm text-ink-mid hover:text-ink cursor-pointer px-[12px] py-[14px] sm:px-[8px] sm:py-[8px]"
+          >
+            {COPY.cosignBack}
+          </button>
         )}
         {showDelete && (
           <button
@@ -500,7 +828,11 @@ export function ConferenceCompose({
               : "bg-brand text-ink-inverse hover:bg-brand-hover"
           }`}
         >
-          {COPY.toReview}
+          {skipReview
+            ? COPY.postCosign
+            : cosign
+              ? COPY.toReviewCosign
+              : COPY.toReview}
         </button>
       </div>
     </div>
@@ -523,13 +855,102 @@ function ReviewLabel({ children }: { children: ReactNode }) {
  * posted. One conversion, so the card a reader approved and the card that
  * arrives in the list cannot come out different.
  */
-export const asSubmission = (draft: Draft): ConferenceSubmission => ({
+/**
+ * What a co-sign will look like in the feed, drawn as it is written.
+ *
+ * The card the feed draws for somebody else's co-sign, with the reader's own
+ * account in it: their name, and the letter they are signing.
+ *
+ * The words are not mirrored into it. A preview that fills in as somebody
+ * types asks them to watch two places at once and turns the panel into a
+ * demonstration of itself; this says where the words will go and leaves the
+ * writing to the field.
+ *
+ * Built here rather than by reusing `SubmissionEntry`: that card carries a
+ * kebab, a date in the corner and a click-through to a submission that does
+ * not exist yet, and a preview with live controls in it invites a reader to
+ * press them.
+ */
+function CosignPreview({
+  cosign,
+  noWords,
+  body = "",
+}: {
+  cosign: { name: string; position: ConferencePosition };
+  /** Whether the reader has said they are adding nothing of their own. */
+  noWords: boolean;
+  /**
+   * The words themselves, where there are any to show.
+   *
+   * Empty while they are being written, so the card says where they will land
+   * rather than mirroring the field beside it; filled at the review, where
+   * what is being checked is the entry itself.
+   */
+  body?: string;
+}) {
+  return (
+    <div className="flex gap-[14px] px-[16px] pt-[14px] pb-[20px]">
+      <span className="shrink-0 flex items-center justify-center w-[36px] h-[36px] rounded-full bg-brand-soft font-body font-semibold text-xs text-brand-ink">
+        {VIEWER.initials}
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="flex flex-wrap items-center gap-[6px] font-body font-semibold text-base text-ink leading-none">
+          {VIEWER.name}
+          <span className="font-normal text-ink-mid">cosigned</span>
+          <span className="min-w-0 truncate">{cosign.name}</span>
+          <PositionChip position={cosign.position} />
+        </p>
+        <p className="mt-[8px] font-body text-xs text-ink-faint">
+          {VIEWER.descriptor}
+        </p>
+        {/* Set as the card sets a body, because that is what these lines are
+            standing in for. */}
+        {/* The card's own wordless line, with its last sentence standing in
+            for the words: what a reader sees here is what the entry says
+            before they write, and where what they write will land. */}
+        {/* Once they have said they are adding nothing, this stops describing
+            what will appear and shows it: the card's own wordless line, as
+            the feed will set it. */}
+        {body.trim() ? (
+          <p className="mt-[10px] font-body text-base text-ink leading-[1.55] whitespace-pre-line">
+            {body.trim()}
+          </p>
+        ) : noWords ? (
+          <p className="mt-[10px] font-body italic text-base text-ink-faint leading-[1.55]">
+            Each individual can provide input or cosign one position. This
+            individual decided not to publicly share additional input.
+          </p>
+        ) : (
+          <p className="mt-[10px] font-body text-base text-ink leading-[1.55]">
+            Each individual can provide input or cosign one position, with the
+            option to add their own words. This is where that message will
+            appear.
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export const asSubmission = (
+  draft: Draft,
+  /**
+   * The letter this was filed under, where it was a co-sign.
+   *
+   * Without it the card in the feed is a filing of the reader's own, which is
+   * the one thing a co-sign is not: it would stand with no letter named and no
+   * wordless line, and the count beside it would be claiming a signature the
+   * list cannot show.
+   */
+  cosignOf?: string | null,
+): ConferenceSubmission => ({
   // A stable id, because nothing else in the feed may collide with it.
   id: "cc-viewer-draft",
   userId: VIEWER.id,
   position: draft.position,
   date: draft.posted ? POSTED_DATE : PREVIEW_DATE,
   body: draft.body.trim(),
+  ...(cosignOf ? { cosignOf } : null),
 });
 
 /**
@@ -545,10 +966,17 @@ export function DigestChoice({
   onChange,
   six,
   locked = false,
+  cosigning,
 }: {
   draft: Draft;
   onChange: (patch: Partial<Draft>) => void;
   six: CommitteeMember[];
+  /**
+   * Whose words are being offered. Co-signing hands them to the organisation
+   * as well as to MAPLE, because the letter is theirs and a line added to it
+   * is something they may carry on with it.
+   */
+  cosigning?: boolean;
   /**
    * Shown but not answerable.
    *
@@ -588,7 +1016,7 @@ export function DigestChoice({
           }`}
         />
         <span className="flex-1 font-body font-light text-sm text-ink leading-[1.45]">
-          {COPY.digest}
+          {cosigning ? COPY.digestCosign : COPY.digest}
         </span>
         {/* Hard right, at the far end of the line the sentence starts: the words
           say what happens and the faces say who it happens to, so the two ends
@@ -605,7 +1033,7 @@ export function DigestChoice({
             type="button"
             className="font-body font-semibold text-xs text-brand-ink hover:text-brand underline decoration-dotted underline-offset-[3px] cursor-pointer"
           >
-            {COPY.digestOnMore}
+            {cosigning ? COPY.digestCosignMore : COPY.digestOnMore}
           </button>
         </p>
       ) : (
@@ -709,17 +1137,20 @@ export function ReviewSubmission({
   subject,
   six,
   onChange,
+  bare = false,
 }: {
   draft: Draft;
   subject: string;
   six: CommitteeMember[];
   /** Left off once posted, when there is nothing left to change. */
   onChange?: (patch: Partial<Draft>) => void;
+  /** The card alone, where the container names it already. */
+  bare?: boolean;
 }) {
   const empty = draft.body.trim().length === 0;
   return (
     <div>
-      {draft.posted ? (
+      {bare ? null : draft.posted ? (
         <p className="flex items-center gap-[6px] font-body font-semibold text-sm text-positive-ink mb-[10px]">
           <Check className="w-[15px] h-[15px] shrink-0" strokeWidth={2.5} />
           {COPY.postedStamp}
@@ -777,10 +1208,19 @@ export function ReviewContext({
   draft,
   onChange,
   six,
+  labelled = true,
 }: {
   draft: Draft;
   onChange: (patch: Partial<Draft>) => void;
   six: CommitteeMember[];
+  /**
+   * Whether the list announces itself.
+   *
+   * A review needs the heading, because the rules arrive among several other
+   * things. On the card that offers the co-sign they are the last thing in it
+   * and a heading over three bullets is a label on a label.
+   */
+  labelled?: boolean;
 }) {
   if (draft.posted)
     return (
@@ -802,7 +1242,7 @@ export function ReviewContext({
           line of text made it the loudest thing in the old form, ahead of what
           the reader came to write. */}
       <div>
-        <ReviewLabel>{COPY.rulesLabel}</ReviewLabel>
+        {labelled && <ReviewLabel>{COPY.rulesLabel}</ReviewLabel>}
         <ul className="list-disc list-outside pl-[16px] space-y-[8px] font-body text-xs text-ink-mid leading-[1.5] marker:text-ink-faint">
           {COPY.rules.map((r) => (
             <li key={r}>{r}</li>
@@ -839,6 +1279,8 @@ export function ReviewActions({
   onClose,
   onSeeOthers,
   stacked = false,
+  complete = false,
+  cosigning = false,
 }: {
   draft: Draft;
   onBack: () => void;
@@ -847,8 +1289,16 @@ export function ReviewActions({
   onSeeOthers: () => void;
   /** Full-width primary on its own line, for a container with no room across. */
   stacked?: boolean;
+  /**
+   * Postable although nothing is written. A co-sign whose signer has said they
+   * are adding no words of their own is finished, and the usual refusal would
+   * be asking them for the one thing they have already declined.
+   */
+  complete?: boolean;
+  /** Whether this review is of a co-sign, which names its own final press. */
+  cosigning?: boolean;
 }) {
-  const empty = draft.body.trim().length === 0;
+  const empty = !complete && draft.body.trim().length === 0;
   const quiet =
     "font-body font-semibold text-sm text-ink-mid hover:text-ink cursor-pointer px-[12px] py-[14px] sm:px-[8px] sm:py-[8px]";
   const primary =
@@ -888,11 +1338,11 @@ export function ReviewActions({
               {COPY.back}
             </button>
             <button
-              onClick={undefined}
+              onClick={onPost}
               disabled={empty}
               className={`${primary} ${stacked ? "w-full" : ""}`}
             >
-              {COPY.post}
+              {complete || cosigning ? COPY.postCosign : COPY.post}
             </button>
           </>
         )}
@@ -911,11 +1361,50 @@ export interface ReviewProps {
   onPost: () => void;
   onClose: () => void;
   onSeeOthers: () => void;
+  /** The letter being signed, where this review is of a co-sign. */
+  cosign?: { name: string; position: ConferencePosition };
+  /** Whether they said they were adding nothing of their own. */
+  noWords?: boolean;
+}
+
+/**
+ * A few lines of a letter, cut at a word.
+ *
+ * Long enough to be the letter rather than a label, short enough that the card
+ * asking about it is still the thing on screen.
+ */
+function excerpt(body: string, max = 260) {
+  const one = body.trim().replace(/\s+/g, " ");
+  if (one.length <= max) return one;
+  const cut = one.slice(0, max);
+  return cut.slice(0, cut.lastIndexOf(" ")) + "…";
+}
+
+/**
+ * What the card under it is, and what it is about.
+ *
+ * One line for both paths: filing your own words and co-signing somebody
+ * else's produce the same kind of entry on the same question, so the label
+ * over the preview should not say they are different things.
+ */
+function PreviewLabel({ subject }: { subject: string }) {
+  return (
+    <ComposeLabel>
+      {COPY.cosignPreviewLabel}{" "}
+      <em className="font-normal italic text-ink-mid">
+        {COPY.subjectPrefix.toLowerCase()} {subject}
+      </em>
+    </ComposeLabel>
+  );
 }
 
 /** The header a container puts above the review, in whichever state it is in. */
-export const reviewTitle = (posted: boolean) =>
-  posted ? COPY.postedTitle : COPY.reviewTitle;
+export const reviewTitle = (posted: boolean, cosigning = false) =>
+  posted
+    ? COPY.postedTitle
+    : cosigning
+      ? COPY.reviewTitleCosign
+      : COPY.reviewTitle;
 
 /**
  * Style one: the review as a second pane in the flyout.
@@ -933,18 +1422,49 @@ export function ReviewPane({
   onPost,
   onClose,
   onSeeOthers,
+  cosign,
+  noWords = false,
 }: ReviewProps) {
   return (
     <div className="h-full flex flex-col min-h-0">
       <div className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-[24px] pb-[20px]">
-        <ReviewContext draft={draft} onChange={onChange} six={six} />
-        <ReviewSubmission
-          draft={draft}
-          subject={subject}
-          six={six}
-          onChange={onChange}
-        />
-        <DigestChoice draft={draft} onChange={onChange} six={six} />
+        {/* The same card the writing step previewed, now with the words in
+            it. A co-sign is checked as the entry it will be, not as a
+            submission quoted back under a different heading; a filing of your
+            own gets the same label, so the two paths read alike. */}
+        {cosign ? (
+          <div>
+            <PreviewLabel subject={subject} />
+            <div className="rounded-control border border-line bg-surface">
+              <CosignPreview
+                cosign={cosign}
+                noWords={noWords}
+                body={draft.body}
+              />
+            </div>
+          </div>
+        ) : (
+          <div>
+            <PreviewLabel subject={subject} />
+            <ReviewSubmission
+              draft={draft}
+              subject={subject}
+              six={six}
+              onChange={onChange}
+              bare
+            />
+          </div>
+        )}
+        {/* No digest choice here. It is asked on the writing step, beside the
+            field it is about, and a review that asks it again is a second
+            chance to answer a question nobody changed their mind on. */}
+        {/* Last, under what they qualify, and well clear of it. Opening the
+            panel on the terms made the first thing a reader met the conditions
+            rather than the thing they wrote; sitting tight under the checkbox
+            made them read as part of that one question. */}
+        <div className="mt-[20px]">
+          <ReviewContext draft={draft} onChange={onChange} six={six} />
+        </div>
       </div>
       <div className="shrink-0 pt-[12px]">
         <ReviewActions
@@ -953,6 +1473,8 @@ export function ReviewPane({
           onPost={onPost}
           onClose={onClose}
           onSeeOthers={onSeeOthers}
+          complete={!!cosign && noWords}
+          cosigning={!!cosign}
         />
       </div>
     </div>

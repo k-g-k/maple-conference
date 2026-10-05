@@ -40,6 +40,16 @@ export interface ConferencePositionOption {
    * live with the pill that draws them, in the feed's `ASK_THUMB`.
    */
   ask: ConferenceAsk;
+  /**
+   * Fill and ink for a surface wearing this position: the chip on a card, and
+   * the band at the head of a co-signed letter.
+   *
+   * No border colour, unlike `on`. Those surfaces take the page's own line, so
+   * that the edge belongs to the thing it is drawn around rather than to what
+   * was asked for. The ink is a step deeper than `on`'s and damped in chroma,
+   * because it is read as text rather than seen as a state.
+   */
+  tone: string;
 }
 
 /** By key, for anything holding a position and needing its presentation. */
@@ -52,6 +62,7 @@ export const POSITIONS: Record<ConferencePosition, ConferencePositionOption> = {
     // are for or against an outcome, so they take the page's for and against.
     on: "bg-positive-soft border-positive text-positive-ink",
     ask: "bill",
+    tone: "bg-positive-soft text-positive-deep",
   },
   house: {
     k: "house",
@@ -61,6 +72,7 @@ export const POSITIONS: Record<ConferencePosition, ConferencePositionOption> = {
     // page, softened to a fill.
     on: "bg-user-soft border-user text-user-ink",
     ask: "bill",
+    tone: "bg-house-soft text-house-damped",
   },
   senate: {
     k: "senate",
@@ -68,6 +80,7 @@ export const POSITIONS: Record<ConferencePosition, ConferencePositionOption> = {
     short: "Senate version",
     on: "bg-official-soft border-official text-official-ink",
     ask: "bill",
+    tone: "bg-official-soft text-official-deep",
   },
   none: {
     k: "none",
@@ -75,6 +88,7 @@ export const POSITIONS: Record<ConferencePosition, ConferencePositionOption> = {
     short: "Pass nothing",
     on: "bg-negative-soft border-negative text-negative-ink",
     ask: "nothing",
+    tone: "bg-negative-soft text-negative-deep",
   },
 };
 

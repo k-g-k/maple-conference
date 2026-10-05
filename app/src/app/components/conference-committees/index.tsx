@@ -37,6 +37,7 @@ import {
 } from "../../data/conference-committees";
 import { MEETINGS } from "../../data/conference-committees/meetings";
 import { COMMITTEES } from "../../data/conference-committees/committees";
+
 import { BILLS } from "../../data/bills-194";
 import {
   REPEATERS,
@@ -1209,7 +1210,7 @@ function Rooms() {
         <span
           className={`relative shrink-0 w-[28px] h-[16px] rounded-full ${
             live ? "transition-colors motion-reduce:transition-none" : ""
-          } ${on ? "bg-[#3d9922]" : "bg-line-strong group-hover/sw:bg-ink-faint"}`}
+          } ${on ? "bg-switch-on" : "bg-line-strong group-hover/sw:bg-ink-faint"}`}
         >
           <span
             className={`absolute top-[2px] left-[2px] w-[12px] h-[12px] rounded-full bg-surface shadow-popover ${
@@ -1265,6 +1266,16 @@ function Rooms() {
           spot.current = { x: e.clientX, y: e.clientY };
           if (tipUp.current) place(tipEl.current, e.clientX, e.clientY, 20);
           else showTip(e.clientX, e.clientY, who === p.seat, true);
+        }}
+        // Leaving the entry lets it go, not only leaving the box around the
+        // six. The box is taller than the names in it, so the last one pointed
+        // at stayed ringed while the pointer sat in empty space under them.
+        // Crossing to another entry still reads as one move: the leave and the
+        // arrival land in the same tick, so nothing flickers between them.
+        onPointerLeave={() => {
+          if (!room) return;
+          setHoverPin(null);
+          hideTip();
         }}
 
         onClick={(e) => {
@@ -2594,11 +2605,11 @@ export function ConferenceCommittees() {
         {/* One paragraph. The mechanism, and the half that makes it matter:
             nobody watches, and neither chamber can amend what comes back. */}
         <p className="font-body text-base sm:text-lg text-ink leading-[1.55] mt-[6px] mb-[16px] pl-[4px] max-sm:pl-0">
-          In Massachusetts, when the House and the Senate pass different
-          versions of the same bill, six legislators, three from each chamber,
-          meet to reconcile them into one text. Both chambers then vote on that
-          text and, if passed, it becomes &ldquo;enacted&rdquo; and is sent to
-          the Governor to sign.
+          In Massachusetts, when the House and Senate pass different versions of
+          a bill, six legislators negotiate the final text in a conference
+          committee. It&rsquo;s the last point where a bill can still change,
+          and it&rsquo;s normally an opaque process. This is the group of
+          legislators determining the fate of these future laws.
         </p>
 
         {/* Everything else on this page is parked while the card below is

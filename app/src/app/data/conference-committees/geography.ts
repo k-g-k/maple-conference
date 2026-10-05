@@ -32,6 +32,20 @@ import { PHONE_FREE_LINEAGE as L } from "../bill-lineage";
 export const MAP_OUTLINE = L.geo.outline;
 
 /**
+ * One seat's cell, as polygon points, from whichever chamber holds it.
+ *
+ * For drawing an area rather than a dot. The cells are the same Voronoi cells
+ * the district maps are built from, so this is not a district's boundary and
+ * should not be drawn as though it were one: filled flat with no edge, a run of
+ * them reads as roughly here, which is all the geometry can support.
+ */
+export function seatCell(seat: string): string | undefined {
+  const cell = L.geo.senate[seat] ?? L.geo.house[seat];
+  if (!cell) return undefined;
+  return Array.isArray(cell) ? cell[0] : cell;
+}
+
+/**
  * How much the drawing is flattened on the y axis.
  *
  * The district map is taller in proportion than the ballot question's, and in a

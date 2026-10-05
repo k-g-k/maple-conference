@@ -15,7 +15,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
-import { Menu, Plus, X } from "lucide-react";
+import { ArrowUpRight, Menu, Plus, X } from "lucide-react";
 import { SourcesProvider, SynthSourcesNote } from "../ballot";
 import { SOURCES } from "../../data/tax-rebate-62f";
 import {
@@ -256,6 +256,20 @@ function Brief({ bill }: { bill: BillRecord }) {
           ))}
         </ul>
       ) : null}
+
+      {/* The same document on MAPLE. This page is a prototype of a bill page,
+          so the record it is a prototype of should be one press away: the
+          number without its dot, which is the path MAPLE's own bill pages
+          use. */}
+      <a
+        href={`https://www.mapletestimony.org/bills/194/${bill.number.replace(".", "")}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="inline-flex items-center gap-[4px] mt-[18px] font-body font-semibold text-sm underline decoration-dotted underline-offset-[4px] text-official-ink hover:text-official"
+      >
+        See {bill.number} on MAPLE
+        <ArrowUpRight className="w-[13px] h-[13px] no-underline" />
+      </a>
     </div>
   );
 }
@@ -277,16 +291,27 @@ function NoBill({ number }: { number?: string }) {
         <p className="font-body text-base text-ink-mid leading-[1.6] mt-[12px]">
           Only some of the 194th General Court's bills are bundled here.{" "}
           {shown && (
-            <a
-              href={`https://malegislature.gov/Bills/194/${shown.replace(".", "")}`}
-              target="_blank"
-              rel="noreferrer"
-              className="font-semibold underline decoration-dotted underline-offset-[3px] text-link hover:text-brand"
-            >
-              Read {shown} on malegislature.gov
-            </a>
+            <>
+              <a
+                href={`https://www.mapletestimony.org/bills/194/${shown.replace(".", "")}`}
+                target="_blank"
+                rel="noreferrer"
+                className="font-semibold underline decoration-dotted underline-offset-[3px] text-link hover:text-brand"
+              >
+                See {shown} on MAPLE
+              </a>
+              , or{" "}
+              <a
+                href={`https://malegislature.gov/Bills/194/${shown.replace(".", "")}`}
+                target="_blank"
+                rel="noreferrer"
+                className="font-semibold underline decoration-dotted underline-offset-[3px] text-link hover:text-brand"
+              >
+                read it on malegislature.gov
+              </a>
+            </>
           )}
-          {shown ? ", or go " : "Go "}
+          {shown ? ". Or go " : "Go "}
           <Link
             to="/conferenceCommittees"
             className="font-semibold underline decoration-dotted underline-offset-[3px] text-link hover:text-brand"

@@ -12,8 +12,11 @@ import { POSITIONS } from "../../data/conference-committees/positions";
 import { Hint } from "../ballot";
 
 /**
- * Initials in a disc. No uploaded images: nothing filed here is real, and a
- * logo would have to belong to somebody.
+ * The account's own mark where it has one, initials where it does not.
+ *
+ * Most of these accounts are placeholders, and a placeholder cannot carry a
+ * logo: a logo belongs to somebody. The two that are real do carry theirs, and
+ * the disc is the same disc either way, so a feed of both reads as one list.
  */
 export function AccountAvatar({
   account,
@@ -22,6 +25,18 @@ export function AccountAvatar({
   account: ConferenceAccount;
   size?: number;
 }) {
+  if (account.avatar) {
+    return (
+      <img
+        src={account.avatar}
+        alt=""
+        style={{ width: size, height: size }}
+        // Cover rather than contain: both marks are square and sit on their own
+        // ground, so the only thing the circle takes off them is the corners.
+        className="rounded-full object-cover bg-surface border border-line shrink-0"
+      />
+    );
+  }
   return (
     <div
       style={{ width: size, height: size }}
@@ -43,6 +58,7 @@ const ACCOUNT_TYPE_ICON: Record<
 > = {
   organization: { Icon: Megaphone, label: "Organization" },
   government: { Icon: Lectern, label: "Government office" },
+  // TEMPORARY: trying the ringed one. UserRound is what this was.
   individual: { Icon: UserRound, label: "Individual" },
 };
 
@@ -77,7 +93,7 @@ export function PositionChip({ position }: { position: ConferencePosition }) {
       // longest and the chip shares a line with a name in the submission card's
       // header, so at a panel's width a wrapped pill reads as two chips rather
       // than one and takes the whole line a step taller with it.
-      className={`${p.on} shrink-0 border px-[8px] py-[1px] rounded-pill font-body font-semibold text-2xs whitespace-nowrap`}
+      className={`${p.tone} shrink-0 px-[8px] py-[1px] rounded-pill font-body font-semibold text-2xs whitespace-nowrap`}
     >
       {p.short}
     </span>

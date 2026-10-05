@@ -13,12 +13,13 @@
 // it is correct in a panel, in a page column, and on a phone without anything
 // telling it which it is in.
 
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 
 export function ClampedText({
   text,
   lines = 6,
   className = "",
+  paragraphGap,
 }: {
   text: string;
   /** How many lines are shown before the control. */
@@ -29,6 +30,19 @@ export function ClampedText({
    * the font, the size and the leading rather than only the color.
    */
   className?: string;
+  /**
+   * The gap between paragraphs, in pixels, where a blank line is too much.
+   *
+   * Preformatted text spaces its paragraphs with a blank line, which is a
+   * whole line of the passage's own leading and reads as a hole in a letter
+   * set at this size. Given a number, the blank lines come out and a spacer of
+   * that height goes in instead.
+   *
+   * The measurer still measures the text with its blank lines, so the cap is
+   * reached a little early: the passage shows slightly less than its line
+   * count rather than slightly more, which is the right way to be wrong.
+   */
+  paragraphGap?: number;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [cutoff, setCutoff] = useState<number | null>(null);
@@ -74,7 +88,20 @@ export function ClampedText({
         className={`${className} absolute invisible pointer-events-none`}
       />
       <p className={className}>
-        {collapsed ? `${text.slice(0, cutoff).trimEnd()}… ` : `${text} `}
+        {paragraphGap === undefined
+          ? collapsed
+            ? `${text.slice(0, cutoff).trimEnd()}… `
+            : `${text} `
+          : (collapsed ? `${text.slice(0, cutoff).trimEnd()}… ` : `${text} `)
+              .split(/\n{2,}/)
+              .map((para, i) => (
+                <Fragment key={i}>
+                  {i > 0 && (
+                    <span className="block" style={{ height: paragraphGap }} />
+                  )}
+                  {para}
+                </Fragment>
+              ))}
         {cutoff !== null && (
           <button
             onClick={(e) => {

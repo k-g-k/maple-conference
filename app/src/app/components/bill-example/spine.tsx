@@ -189,6 +189,7 @@ export function StickyBand({
   top,
   narrowOnly,
   innerRef,
+  data,
   children,
 }: {
   /** Where it comes to rest. Left off, the band does not pin at all. */
@@ -204,11 +205,14 @@ export function StickyBand({
   /** For a page that has to know how tall the band is, because something
    *  below it comes to rest under it. */
   innerRef?: Ref<HTMLDivElement>;
+  /** A name on the band, so something outside it can find it to measure. */
+  data?: string;
   children: ReactNode;
 }) {
   return (
     <div
       ref={innerRef}
+      data-band={data}
       // The offset rides on a custom property rather than on `top` itself, so
       // a variant can take it away again. Set as `top` inline it could not be:
       // an inline style beats every class, and `relative` with a leftover
@@ -268,8 +272,10 @@ export function Chapter({
   narrowPin,
   bandHeading,
   headingRef,
+  headingData,
   titleClass,
   rail,
+  tightBody = false,
   children,
 }: {
   id: string;
@@ -308,6 +314,8 @@ export function Chapter({
   bandHeading?: boolean;
   /** Handed to the pinned band, for a page measuring what rests under it. */
   headingRef?: Ref<HTMLDivElement>;
+  /** A name on the heading band, for a measurement taken from outside it. */
+  headingData?: string;
   /** Override the heading's type, for a page trying a different face. */
   titleClass?: string;
   /**
@@ -316,11 +324,22 @@ export function Chapter({
    * moves left to make room.
    */
   rail?: ReactNode;
+  /**
+   * A heading that sits close to what it names.
+   *
+   * The default gap is set for a chapter of prose. A section whose whole body
+   * is one card wants the heading on top of it, or the two read as unrelated.
+   */
+  tightBody?: boolean;
   children?: ReactNode;
 }) {
   const heading = hideQuestion ? null : (
     <>
-      <div className="flex items-start justify-between gap-[20px]">
+      {/* Bottom edges rather than tops. The action is a line of text beside a
+          heading two or three sizes larger than it, and aligned at the top it
+          floated above the words it belongs with. The only chapter that
+          carries one is Public Input. */}
+      <div className="flex flex-wrap items-end justify-between gap-x-[20px] gap-y-[10px]">
         <div className="flex items-baseline gap-[14px] flex-wrap min-w-0">
           <h2
             id={`${id}-q`}
@@ -333,7 +352,7 @@ export function Chapter({
           </h2>
           {adornment}
         </div>
-        {action && <div className="shrink-0 mt-[4px]">{action}</div>}
+        {action && <div className="shrink-0 max-[580px]:w-full">{action}</div>}
       </div>
       {answer && <div className="mt-[16px]">{answer}</div>}
     </>
@@ -390,6 +409,7 @@ export function Chapter({
               top={stickyHeading}
               narrowOnly={narrowPin}
               innerRef={headingRef}
+              data={headingData}
             >
               {heading}
             </StickyBand>
@@ -402,7 +422,13 @@ export function Chapter({
           {body && (
             <div
               className={
-                heading ? (flush ? HEAD_GAP : "pt-[28px] sm:pt-[40px]") : ""
+                heading
+                  ? tightBody
+                    ? "pt-[14px] sm:pt-[16px]"
+                    : flush
+                      ? HEAD_GAP
+                      : "pt-[28px] sm:pt-[40px]"
+                  : ""
               }
             >
               {body}

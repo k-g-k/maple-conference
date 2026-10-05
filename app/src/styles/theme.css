@@ -44,6 +44,21 @@
      border stays after it; this is the moment that says where to look. */
   --animate-ask: ask 620ms ease-out;
 
+  /* The clause that arrives with the count, once the number has moved. Up and
+     in, the length of a glance, so the eye is drawn from the figure to what it
+     now says rather than finding the words already there. */
+  --animate-rise: rise 420ms ease-out both;
+
+  /* The count arriving at its new figure. Large enough to be watched: the
+     number is the only thing on the page that says what the reader just did,
+     and a half-step nobody notices says nothing at all. */
+  --animate-pop: pop 900ms cubic-bezier(0.2, 1.3, 0.4, 1) both;
+
+  /* The strip the count sits in, lit once in the page's own green and gone.
+     Inset rather than a background, so it tints whatever is under it and
+     leaves the strip's own fill alone when it finishes. */
+  --animate-lit: lit 1700ms ease-out both;
+
   /* ---------- Type ---------- */
   /* Lexend carries display and headings, Nunito body and UI: the professional
      and homegrown halves of the visual language. */
@@ -80,6 +95,10 @@
      neutral. */
   --color-ground: #f7f7f7;
   --color-surface: #ffffff;
+  /* A point off white. For a surface that holds other surfaces: the cards in
+     a section read as cards again when the thing behind them is not the same
+     white they are. */
+  --color-surface-tinted: #fcfcfc;
   --color-sunken: #e2e2e2;
 
   --color-inverse: #141413;
@@ -90,6 +109,10 @@
      sits between, for the places where mid is too present and faint reads as
      disabled. */
   --color-ink: #141413;
+  /* Between the two above, taken as the midpoint of their OKLab lightness
+     rather than of their channels, so it sits where the eye puts half way.
+     For text that has to carry more than ink-mid without going to full ink. */
+  --color-ink-midheavy: #40403d;
   --color-ink-mid: #73726c;
   --color-ink-muted: #94938d;
   --color-ink-faint: #b5b4ae;
@@ -161,12 +184,39 @@
   --color-official-edge: #93c5fd;
   --color-outside-edge: #86efac;
   --color-user-edge: #fdba74;
+
+  /* The House version's own orange, apart from the amber above.
+     `--color-user` is the provenance family's colour and it is also what the
+     star beside "your legislators" wears, so the House chip, its bar and its
+     dot on the map all read as that star. Turned from hue 86 to 48 and taken
+     darker and stronger with it: the hue shift alone still read as the same
+     gold at the size a legend dot is drawn. */
+  --color-house: #f27626;
+  --color-house-soft: #ffe4cf;
+  --color-house-damped: #683d26;
+  /* A warm brown wash, which the provenance family had no room for: `user` is
+     amber, so `user-soft` is yellow. Taken from the orange of `user-edge`
+     above and walked toward brown, which is what orange is once the light and
+     the chroma come out of it: a step darker than the other washes and a
+     little greyer, turned toward red. */
+  --color-orange-wash: #f3dcce;
   --color-ai-edge: #d8b4fe;
 
   /* Text links tinted by their source darken on hover rather than swapping
      colour, so each ink needs a deeper partner. */
   --color-outside-deep: #1f5c24;
+  /* The same step for the three families that had no deep partner: a drop of
+     0.102 in OKLab lightness, the distance between `outside-ink` and
+     `outside-deep` above, with the chroma taken to two thirds on the way down.
+     Colour at full strength reads as a link at this lightness; damped, it
+     reads as dark text that happens to carry its family's hue, which is what
+     a band of sentences needs. */
+  --color-positive-deep: #2c5a2d;
+  --color-official-deep: #2c5593;
+  --color-negative-deep: #7d2f2c;
   --color-user-deep: #6b4600;
+  /* The amber at the same damped step as the three above, for the same job. */
+  --color-user-damped: #604318;
   --color-ai-deep: #4c1d95;
 
   /* ---------- Valence ----------
@@ -180,6 +230,11 @@
   --color-positive: #76c353;
   --color-positive-soft: #e0f2d5;
   --color-positive-ink: #2e7d32;
+  /* A control that is on. Deeper than the positive green, which reports on a
+     position and has to sit beside three other hues in the same bar; this one
+     only ever means a switch is thrown. Was written into the committees page
+     by hand before it had a name. */
+  --color-switch-on: #3d9922;
 
   --color-negative: #b53333;
   --color-negative-soft: #f7dcdc;
@@ -318,6 +373,42 @@
   }
   to {
     opacity: 0.9;
+  }
+}
+
+@keyframes pop {
+  0% {
+    transform: scale(1);
+  }
+  28% {
+    transform: scale(1.85);
+    color: var(--color-positive-ink);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes lit {
+  0% {
+    box-shadow: inset 0 0 0 999px rgba(118, 195, 83, 0);
+  }
+  18% {
+    box-shadow: inset 0 0 0 999px rgba(118, 195, 83, 0.3);
+  }
+  100% {
+    box-shadow: inset 0 0 0 999px rgba(118, 195, 83, 0);
+  }
+}
+
+@keyframes rise {
+  0% {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 

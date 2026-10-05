@@ -164,6 +164,27 @@ export function useDrafted(): Set<string> {
   );
 }
 
+/**
+ * Which committees already have something on the record.
+ *
+ * The other half of the same question the list asks: a draft is work in
+ * progress, this is work finished, and a reader coming back to the list wants
+ * to know both without opening anything.
+ */
+export function usePosted(): Set<string> {
+  const ctx = useContext(DraftContext);
+  const sessions = ctx?.sessions ?? {};
+  return useMemo(
+    () =>
+      new Set(
+        Object.entries(sessions)
+          .filter(([, v]) => v.draft.posted)
+          .map(([slug]) => slug),
+      ),
+    [sessions],
+  );
+}
+
 /** One committee's session, created on demand. */
 function useSession(slug: string, open = false, view = "perspectives") {
   const ctx = useContext(DraftContext);
