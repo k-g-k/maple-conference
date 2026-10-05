@@ -2734,8 +2734,16 @@ const ANCHORS = () => [...CONTENTS.map((x) => x.id), "your-input"];
  * committee whose comparison has not been done yet should show what is known
  * rather than empty headings. Listed and linked either way.
  */
-/** TRIAL: the bill-kind chip, on while it is being looked at. */
-export const SHOW_BILL_KIND = true;
+/**
+ * TRIAL: the chip row under the committee title, parked.
+ *
+ * Flip to true to bring it back. The data behind it stays live either way:
+ * `COMMITTEE_TOPICS` in the data barrel still carries a tag list per
+ * committee, and economic development's eight are half MAPLE's own vocabulary
+ * and half coined here, which is part of why the row is off rather than
+ * shipped.
+ */
+export const SHOW_BILL_KIND = false;
 
 const SPARSE = new Set(["economic-development", "mass-ready"]);
 
