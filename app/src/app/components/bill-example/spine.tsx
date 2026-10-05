@@ -352,7 +352,10 @@ export function Chapter({
           </h2>
           {adornment}
         </div>
-        {action && <div className="shrink-0 max-[580px]:w-full">{action}</div>}
+        {/* No full width below 580. It was there to centre the control on its
+            own line, and the line it was taking was one it did not need: the
+            heading and a four-word link sit together at phone width. */}
+        {action && <div className="shrink-0">{action}</div>}
       </div>
       {answer && <div className="mt-[16px]">{answer}</div>}
     </>

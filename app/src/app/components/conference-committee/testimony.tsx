@@ -40,6 +40,7 @@ import {
 import { ClampedText, Hint, Modal, Pagination } from "../ballot";
 import { DEMO_SEATS } from "../../data/conference-committees/testimony";
 import { AccountAvatar, AccountTypeIcon, PositionChip } from "./accounts";
+import { useNarrow } from "../use-narrow";
 import type {
   ConferenceAccount,
   ConferenceAccountType,
@@ -413,6 +414,20 @@ export function OwnSubmission({
 /** The one setting in the panel that orders the feed rather than narrowing it. */
 const COPY_WORDLESS = "Show cosigns without content";
 
+/**
+ * A date with its month cut to three letters.
+ *
+ * On a phone the card's floor holds two dates and a count, and "October" and
+ * "September" are the words that push the pair onto three lines. Rendered as a
+ * second copy rather than measured, so the swap is a media query and not a
+ * layout read.
+ */
+const shortMonth = (d: string) =>
+  d.replace(
+    /\b(January|February|March|April|May|June|July|August|September|October|November|December)\b/,
+    (m) => (m.length > 4 ? `${m.slice(0, 3)}.` : m),
+  );
+
 /** The card the reader filed themselves, which no control may carry off. */
 export const OWN_ID = "cc-viewer-draft";
 
@@ -520,6 +535,25 @@ function Tally({ to, run }: { to: number; run: boolean }) {
   );
 }
 
+/**
+ * Below this, the card's furniture comes down with its type.
+ *
+ * The avatar and the two marks are drawn at a pixel size rather than in `em`,
+ * so a media query cannot reach them: the card reads the width once and hands
+ * the number down. 450 is where the name row drops to 14px, and the pieces
+ * beside it should not stay at the size they were set for a 16px line.
+ */
+const TIGHT = "(max-width: 450px)";
+
+/**
+ * And a step before that, at the width the rest of the site calls narrow.
+ *
+ * A phone in landscape and a small tablet are not where the header breaks, but
+ * they are where it stops having room to spare, so the row and the portrait
+ * come down a notch before anything has to be cut.
+ */
+const NARROW = "(max-width: 767px)";
+
 export function SubmissionEntry({
   t,
   accounts,
@@ -596,6 +630,8 @@ export function SubmissionEntry({
    */
   quoted?: { account: ConferenceAccount; of: ConferenceSubmission };
 }) {
+  const tight = useNarrow(TIGHT);
+  const narrow = useNarrow(NARROW);
   const user = accounts.find((u) => u.id === t.userId);
   const cosignedName = quoted?.account.name;
   if (!user) return null;
@@ -695,7 +731,9 @@ export function SubmissionEntry({
     // below this one the way it did while the card was only `relative`. So a
     // card holding an open menu lifts above its neighbours, which is the one
     // thing the container type took away.
-    <div className="@container relative p-[20px] rounded-control [&:has([role=menu])]:z-10">
+    // Tighter all round below 450, where 20px of padding on a 390px screen is
+    // a tenth of the card given to its own edges.
+    <div className="@container relative p-[20px] max-[450px]:p-[14px] rounded-control [&:has([role=menu])]:z-10">
       {/* Above the letter rather than under it, on the second reading only.
           What is being said is who stands behind this, and that belongs to
           the card before its words rather than after them.
@@ -727,8 +765,10 @@ export function SubmissionEntry({
       {/* Narrow, the avatar sits against the top of the name block rather than
           centred on it: there is a truncated name and a descriptor there, and
           centring a 40px disc on two lines of text leaves it floating. */}
-      <div className="relative flex items-start @[600px]:items-center gap-[14px] @[600px]:gap-[18px]">
-        <AccountAvatar account={user} />
+      {/* The portrait's own room comes in with the width: 18 beside a wide
+          card, 14 in the page's column, and 9 on a phone. */}
+      <div className="relative flex items-start @[600px]:items-center gap-[14px] max-[450px]:gap-[9px] @[600px]:gap-[18px]">
+        <AccountAvatar account={user} size={tight ? 26 : narrow ? 34 : 40} />
         <div className="flex-1 min-w-0">
           {/* Name, type and position wrap inside their own box; the date sits
               outside it so it always holds the top-right corner. */}
@@ -744,8 +784,34 @@ export function SubmissionEntry({
                    co-sign makes it a sentence with a chip in it, and every
                    item on it is set at one size so that centring them lines
                    the words up as well as the boxes. */
-                className={`flex gap-[6px] @[600px]:flex-wrap font-body font-semibold text-base text-ink leading-none ${
-                  isPlain(mode) && cosignedName ? "items-center" : "items-end"
+                // A size down below 450. The row is a name, a verb, another
+                // name and two marks, and at 16px the two names were being cut
+                // to four letters each to make room for the furniture between
+                // them.
+                // The size as a style rather than a utility: the row carries
+                // `text-base` for the wide reading, and a variant that has to
+                // beat it depends on which of the two Tailwind emits last.
+                // 16 at full width, 14 under 767, 13 under 450.
+                style={
+                  tight
+                    ? { fontSize: 13 }
+                    : narrow
+                      ? { fontSize: 14 }
+                      : undefined
+                }
+                className={`flex gap-[6px] max-[450px]:gap-[4px] @[600px]:flex-wrap font-body font-semibold text-base text-ink leading-none ${
+                  isPlain(mode) && cosignedName
+                    ? // Below 450 the sentence may break after "cosigned",
+                      // where the letter and its chip go to the next line
+                      // together. Allowed rather than forced: a short name and
+                      // a short letter still fit on one line, and the break is
+                      // only worth having when the alternative is cutting both.
+                      "items-center max-[767px]:flex-wrap max-[767px]:gap-y-[6px]"
+                    : // A filing of the account's own is a name and a chip, and
+                      // the chip is the shorter of the two: below 450 it takes
+                      // a line of its own and the name gets the width back,
+                      // rather than the name being cut to make room for it.
+                      "items-end max-[767px]:flex-wrap max-[767px]:gap-y-[6px]"
                 }`}
               >
                 {/* Plain text for now. The name should be a link to the
@@ -774,7 +840,10 @@ export function SubmissionEntry({
                     three of them, with the space under it coming from the line
                     below rather than from the name's own leading. */}
                 <span className="flex shrink-0">
-                  <AccountTypeIcon type={user.userType} />
+                  <AccountTypeIcon
+                    type={user.userType}
+                    size={tight ? 13 : narrow ? 14 : 16}
+                  />
                 </span>
                 {/* Always on, unlike the ballot pages' chip, which no-position
                     leaves off. All four of these are an ask, so there is no
@@ -804,6 +873,12 @@ export function SubmissionEntry({
                         its account's mark and its ask together. The rule runs
                         under the three of them; the verb before it is this
                         card's own and stays out. */}
+                    {/* The letter and its chip wrap one at a time, in that
+                        order: the chip is the last thing on the line and goes
+                        first, and the letter follows it down only if there is
+                        still not enough room. Grouped, the two went together
+                        and took a line off the card before the chip alone
+                        would have done. */}
                     <button
                       type="button"
                       onClick={() => onOpen?.(quoted.of.id)}
@@ -814,7 +889,11 @@ export function SubmissionEntry({
                          blue: at rest this is an account's name like the one
                          above it, and a name that turns blue on hover reads
                          as having been a link all along. */
-                      className="group flex min-w-0 items-center gap-[6px] border-b border-dotted border-line-strong hover:border-brand cursor-pointer transition-colors"
+                      // A button does not take the row's size on its own, so
+                      // it was holding 14px inside a line set at 12 and the
+                      // two names were a size apart.
+                      style={{ fontSize: "inherit" }}
+                      className="group flex min-w-0 mr-[3px] items-center gap-[6px] border-b border-dotted border-line-strong hover:border-brand cursor-pointer transition-colors"
                     >
                       <span className="min-w-0 truncate group-hover:text-brand transition-colors">
                         {cosignedName}
@@ -826,7 +905,10 @@ export function SubmissionEntry({
                           it stops under the mark rather than running a dot
                           past it. The chip gives the width back. */}
                       <span className="flex shrink-0 -mr-[3px] group-hover:text-brand transition-colors">
-                        <AccountTypeIcon type={quoted.account.userType} />
+                        <AccountTypeIcon
+                          type={quoted.account.userType}
+                          size={tight ? 13 : narrow ? 14 : 16}
+                        />
                       </span>
                     </button>
                     {/* The letter's own chip, which is where this card's
@@ -834,7 +916,12 @@ export function SubmissionEntry({
                         beside Ava: the ask belongs to what she signed. Outside
                         the rule, because a pill with a line under it reads as
                         a second control. */}
-                    <span className="flex shrink-0 ml-[3px]">
+                    {/* The three pixels the rule took back live on the end
+                        of the letter rather than on the front of the chip: a
+                        margin of its own travels with the chip when it wraps
+                        and left it standing three pixels off the edge on a
+                        line it had to itself. */}
+                    <span className="flex shrink-0">
                       <PositionChip position={quoted.of.position} />
                     </span>
                   </>
@@ -899,9 +986,14 @@ export function SubmissionEntry({
                   moved out of is empty there: the act went up into the band. */}
               {(!mode || isBanded(mode)) && (
                 <span
-                  className={`hidden @[600px]:inline font-body text-ink-mid whitespace-nowrap mr-[2px] ${
-                    isBanded(mode) ? "text-sm" : "text-xs"
-                  }`}
+                  // Faint only where a letter is still gathering names. With
+                  // a last-cosigned date at the foot there are two dates on
+                  // the card, and this is the one that never moves; with no
+                  // second date it is the only one, and the only date on a
+                  // card should not be the quietest thing on it.
+                  className={`hidden @[600px]:inline font-body whitespace-nowrap mr-[2px] ${
+                    t.cosignLatest ? "text-ink-faint" : "text-ink-mid"
+                  } ${isBanded(mode) ? "text-sm" : "text-xs"}`}
                 >
                   {t.date}
                 </span>
@@ -1063,9 +1155,27 @@ export function SubmissionEntry({
               date, on the right. Above the count rather than under it: the
               letter was filed before anybody signed it, and the two read in
               that order. */}
-          <div className="@[600px]:hidden flex items-center justify-end mt-[12px]">
-            <span className="font-body text-sm text-ink-mid whitespace-nowrap">
-              {t.date}
+          <div className="@[600px]:hidden flex items-center justify-end gap-[6px] mt-[12px] font-body text-sm text-ink-mid">
+            {/* Below 450 the two dates share this line rather than standing
+                on two of their own: the floor below holds the count, and a
+                third line for four words was most of the card's end.
+
+                The last signature leads, because it is the newer of the two
+                and the one the reader is here for; the filing's own date
+                follows it, where a reader looks only to place the letter. */}
+            {t.cosignLatest && mode !== "cosign4" && (
+              <span className="hidden max-[450px]:inline whitespace-nowrap">
+                Last cosigned {shortMonth(t.cosignLatest)}
+                <span aria-hidden className="ml-[6px] text-ink-faint">
+                  ·
+                </span>
+              </span>
+            )}
+            <span className="whitespace-nowrap">
+              <span className="max-[450px]:hidden">{t.date}</span>
+              <span className="hidden max-[450px]:inline">
+                {shortMonth(t.date)}
+              </span>
             </span>
           </div>
           {/* Not on the third reading: the band at the foot of the card is
@@ -1155,7 +1265,7 @@ export function SubmissionEntry({
                   </button>
                 ) : null
               ) : t.cosignLatest ? (
-                <span className="float-right ml-[12px] font-body text-sm text-ink-mid leading-[24px] whitespace-nowrap">
+                <span className="max-[450px]:hidden float-right ml-[12px] font-body text-sm text-ink-mid leading-[24px] whitespace-nowrap">
                   Last cosigned: {t.cosignLatest}
                 </span>
               ) : null}

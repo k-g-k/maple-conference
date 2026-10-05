@@ -93,7 +93,9 @@ export function PositionChip({ position }: { position: ConferencePosition }) {
       // longest and the chip shares a line with a name in the submission card's
       // header, so at a panel's width a wrapped pill reads as two chips rather
       // than one and takes the whole line a step taller with it.
-      className={`${p.tone} shrink-0 px-[8px] py-[1px] rounded-pill font-body font-semibold text-2xs whitespace-nowrap`}
+      // A size and a little padding off below 450, where it shares a line with
+      // a name set at 14px rather than 16.
+      className={`${p.tone} shrink-0 px-[8px] max-[450px]:px-[6px] py-[1px] rounded-pill font-body font-semibold text-2xs max-[450px]:text-[10px] whitespace-nowrap`}
     >
       {p.short}
     </span>
