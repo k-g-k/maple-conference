@@ -26,9 +26,16 @@
 //            SECTION 152-165  effective dates and implementation deadlines
 //
 //   S.3228   SECTION 1-2A     a supplemental APPROPRIATION from the Education
-//                             and Transportation Fund for FY2026. The House
-//                             bill has no equivalent. The Senate attached its
-//                             economic development bill to a supp budget.
+//                             and Transportation Fund for FY2026: $100m of
+//                             higher-education bridge funding. The Senate
+//                             attached its package to a supp budget.
+//                             NOT a House/Senate split on whether to spend
+//                             current-year money: the House does the same
+//                             thing by another route, expending $200m from
+//                             the Commonwealth Federal Matching fund in its
+//                             SECTION 139. Both backfill federal research
+//                             cuts; they differ on amount, on source fund,
+//                             and on whether private colleges get any.
 //            SECTION 3A       capital program, parallel to House SECTION 1-2
 //            SECTION 4-327    outside sections
 //            SECTION 328      bond authorization, $325,100,000

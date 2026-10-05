@@ -12,7 +12,7 @@
 
 import { useId, useMemo, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import type { CSSProperties } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import {
   useParams,
   useSearchParams,
@@ -358,7 +358,7 @@ const CHAMBER_MUTED: Record<string, string> = {
  * opening on plain focus so a tap gets it too.
  */
 function Term({ label, note }: { label: string; note: string[] }) {
-  const ref = useRef<HTMLButtonElement>(null);
+  const ref = useRef<HTMLSpanElement>(null);
   const [open, setOpen] = useState(false);
   // Down by default, up where there is not room below. The same rule the
   // source notes use, and for the same reason: a note that opens off the
@@ -377,13 +377,26 @@ function Term({ label, note }: { label: string; note: string[] }) {
     setOpen(true);
   };
   return (
-    <button
+    /* A span rather than a button, so a term of several words can break
+       across lines like the sentence around it. A button establishes its own
+       box and keeps its label on one line, which pushed "a set amount of
+       computing power" onto a line of its own mid-sentence. Keyboard and
+       screen-reader behaviour is kept by hand below. */
+    <span
       ref={ref}
-      type="button"
+      role="button"
+      tabIndex={0}
       onPointerEnter={show}
       onPointerLeave={() => setOpen(false)}
       onFocus={show}
       onBlur={() => setOpen(false)}
+      onKeyDown={(e) => {
+        if (e.key === "Escape") setOpen(false);
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          open ? setOpen(false) : show();
+        }
+      }}
       className="relative inline text-left cursor-default underline decoration-dotted decoration-line-strong underline-offset-[4px]"
     >
       {label}
@@ -407,7 +420,7 @@ function Term({ label, note }: { label: string; note: string[] }) {
           ))}
         </span>
       </span>
-    </button>
+    </span>
   );
 }
 
@@ -434,10 +447,22 @@ function Marked({
 function Answer({
   chamber,
   text,
+  note,
   notes,
 }: {
   chamber: string;
+  /** The chamber's position, or null where its bill is silent. */
   text: string | null;
+  /**
+   * What to say instead, where it is silent.
+   *
+   * Without this the silent side reads "Not in its bill" on every question it
+   * appears in, which tells the reader nothing about what that silence means:
+   * a chamber that considered a provision and left it out is not the same as
+   * one whose bill is about something else entirely. The data has carried this
+   * sentence all along in `snote` and `hnote`; it was never rendered.
+   */
+  note?: string;
   notes?: Record<string, string[]>;
 }) {
   return (
@@ -450,11 +475,19 @@ function Answer({
         {chamber}
       </p>
       <p
+        /* Faint italic is reserved for the bare fallback, which carries no
+           information and should read as an absence. A note the author wrote
+           is content: it says what the silence means, so it is set like any
+           other position rather than grayed out of the way. */
         className={`font-body text-sm min-[390px]:text-base leading-[1.4] mt-[2px] ${
-          text ? "text-ink" : "text-ink-faint italic"
+          text || note ? "text-ink" : "text-ink-faint italic"
         }`}
       >
-        {text ? <Marked text={lead(text)} notes={notes} /> : "Not in its bill"}
+        {text ? (
+          <Marked text={lead(text)} notes={notes} />
+        ) : (
+          (note ?? `Not in the ${chamber} bill`)
+        )}
       </p>
     </div>
   );
@@ -478,8 +511,8 @@ function Open({ o, order }: { o: OpenQuestion; order: string[] }) {
       </p>
 
       <div className="flex gap-[24px] mt-[12px]">
-        <Answer chamber="Senate" text={o.s} notes={o.notes} />
-        <Answer chamber="House" text={o.h} notes={o.notes} />
+        <Answer chamber="Senate" text={o.s} note={o.snote} notes={o.notes} />
+        <Answer chamber="House" text={o.h} note={o.hnote} notes={o.notes} />
       </div>
 
       {hasMore && (
@@ -1504,6 +1537,7 @@ function Scan({
                       <Answer
                         chamber={ch}
                         text={ch === "Senate" ? o.s : o.h}
+                        note={ch === "Senate" ? o.snote : o.hnote}
                         notes={o.notes}
                       />
                     </div>
@@ -2718,11 +2752,35 @@ const SPARSE_KEEP = ["committee", "decided", "lobbying", "input", "text"];
  * Why a sparse committee's page stops where it does.
  *
  * Said on the page rather than left as an absence: a committee card with
- * nothing under it reads as a page that failed to load. Both of these are bond
- * bills, which is the actual reason, so they share the sentence.
+ * nothing under it reads as a page that failed to load.
+ *
+ * Keyed by slug rather than shared, because the two sparse committees are now
+ * sparse for different reasons. Mass Ready carries three settled items and
+ * three questions. Economic development carries twelve of each, covering the
+ * structural differences and the provisions only one chamber wrote, but not
+ * the hundreds of individual authorizations underneath them. A note saying
+ * there is no list to show would contradict the list printed right below it.
  */
-const SPARSE_NOTE =
-  "This one is a spending bill. The House and Senate versions run to hundreds of authorisations and differ in most of them, usually over an amount or over which local project is named, so there is no short list of unresolved questions to show. The six in the room are still the people who decide it.";
+const FEEDBACK = "#feedback";
+
+const SPARSE_NOTE: Record<string, ReactNode> = {
+  "mass-ready":
+    "This one is a spending bill. The House and Senate versions run to hundreds of authorizations and differ in most of them, usually over an amount or over which local project is named, so there is no short list of unresolved questions to show. The six in the room are still the people who decide it.",
+  "economic-development": (
+    <>
+      These are the two longest bills in any of the twelve conferences, 225
+      pages in the House and 337 in the Senate. Below are some of the places
+      where the House and Senate text differ. Notice something missing or wrong?{" "}
+      <a
+        href={FEEDBACK}
+        className="font-semibold underline decoration-dotted underline-offset-[4px] text-link hover:text-brand"
+      >
+        Send us feedback
+      </a>
+      .
+    </>
+  ),
+};
 
 const CONTENTS = [
   { id: "committee", label: "Committee" },
@@ -4172,8 +4230,8 @@ function Detail({ c, style }: { c: CommitteeDetail; style: ReviewStyle }) {
                       is the section's whole content, and on one with a few
                       items it says why there are only a few. */}
                   {sparse && (
-                    <p className="font-body text-sm text-ink-mid leading-[1.65] border-l-2 border-line-strong pl-[16px] mb-[28px]">
-                      {SPARSE_NOTE}
+                    <p className="font-body text-sm text-ink-mid leading-[1.65] border-l-2 border-line-strong pl-[16px] mb-[16px]">
+                      {SPARSE_NOTE[c.slug]}
                     </p>
                   )}
                   <Scan

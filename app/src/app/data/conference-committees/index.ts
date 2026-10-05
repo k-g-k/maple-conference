@@ -775,6 +775,16 @@ export const COMMITTEE_TOPICS: Record<string, string[]> = {
     "Energy efficiency and conservation",
     "Higher education",
   ],
+  "economic-development": [
+    "Government information and archives",
+    "Transportation safety",
+    "Housing supply and affordability",
+    "Internet, web applications, social media",
+    "Employee pensions",
+    "Juvenile crime and gang violence",
+    "Labor-management relations",
+    "Income tax credits",
+  ],
   "mass-ready": [
     "Pollution control and abatement",
     "Water quality",
