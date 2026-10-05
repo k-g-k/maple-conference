@@ -260,6 +260,14 @@ export function Rail({
                 <Plus className="w-[18px] h-[18px]" />
               </button>
             )}
+            {/* The full-screen toggle, taken off the header while the
+                co-sign readings are being judged: the width the panel opens at
+                is part of what is being judged, and a reader who folds it back
+                is comparing something else.
+
+                The page still sets `expanded`, so the panel opens where it is
+                told to; this is only the control that let it be changed.
+
             {onExpandedChange && (
               <button
                 onClick={() => onExpandedChange(!expanded)}
@@ -274,6 +282,8 @@ export function Rail({
                 )}
               </button>
             )}
+
+            */}
             {isDefault ? (
               // As a sheet there is no strip to fold onto and no page left
               // showing, so minimize and close are the same act and the control

@@ -1770,6 +1770,8 @@ function Row({
 function Rail({
   current,
   composing = false,
+  drafts = true,
+  reading = "",
   hidden = false,
   label,
   href,
@@ -1782,6 +1784,16 @@ function Rail({
    *  a draft you are not looking at, so it comes back the moment the form is
    *  put away, even without leaving the page. */
   composing?: boolean;
+  /**
+   * Whether unfinished work is marked.
+   *
+   * Off on the co-sign readings: those start empty by design, so a word in the
+   * list pointing at a draft on another reading of the same committee is
+   * pointing somewhere the reader cannot get to from here.
+   */
+  drafts?: boolean;
+  /** Which reading the list is reporting on, as a session-key suffix. */
+  reading?: string;
   current: string;
   label: boolean;
   /**
@@ -1791,8 +1803,8 @@ function Rail({
    */
   href: (slug: string) => string;
 }) {
-  const drafted = useDrafted();
-  const posted = usePosted();
+  const drafted = useDrafted(reading);
+  const posted = usePosted(reading);
   return (
     // In the flow, not absolute. The page below the nav widens by exactly the
     // rail plus its gap, so the rail lands in what would otherwise be margin
@@ -1862,7 +1874,10 @@ function Rail({
                       />
                     </span>
                   ) : (
-                    (!on || !composing) &&
+                    // On the committee being read as well, and while its form
+                    // is open: the mark says there are words waiting here, and
+                    // that stays true whether or not they are on screen.
+                    drafts &&
                     drafted.has(x.slug) && (
                       // A word rather than a glyph, because an icon says there
                       // is something here without saying it is unfinished and
@@ -2873,7 +2888,14 @@ function Detail({ c, style }: { c: CommitteeDetail; style: ReviewStyle }) {
   const meetings = MEETINGS[c.slug] ?? [];
   const navigate = useNavigate();
   const location = useLocation();
-  const [draft, patchDraft] = useDraft(c.slug);
+  // Each reading keeps its own words. `/cosign` and `/cosign-viz` are the same
+  // committee and two different prototypes, and a draft written in one showing
+  // up in the other made every comparison start from somebody else's work.
+  const sessionKey = (() => {
+    const tail = location.pathname.match(/\/(cosign(?:-\d+|-viz)?)$/)?.[1];
+    return tail ? `${c.slug}@${tail}` : c.slug;
+  })();
+  const [draft, patchDraft] = useDraft(sessionKey);
   /**
    * What the full-page review sent the reader back with.
    *
@@ -2973,7 +2995,7 @@ function Detail({ c, style }: { c: CommitteeDetail; style: ReviewStyle }) {
   // conference does not shut the one you were writing on, and coming back
   // finds it open on the form with your own words still in it.
   const { rail, setRail, railView, setRailView } = useRail(
-    c.slug,
+    sessionKey,
     returning,
     returning ? "compose" : RAIL_DEFAULT,
   );
@@ -3858,6 +3880,8 @@ function Detail({ c, style }: { c: CommitteeDetail; style: ReviewStyle }) {
           label={false}
           href={committeeHref}
           composing={composing}
+          drafts={!cosignRoute}
+          reading={sessionKey.slice(c.slug.length)}
           hidden={panelOpen}
         />
 
@@ -4284,6 +4308,7 @@ function Detail({ c, style }: { c: CommitteeDetail; style: ReviewStyle }) {
                       <SubmissionFeed
                         items={feedItems}
                         fresh={fresh && !ownEnding}
+                        offerCosign={!draft.body.trim() && !draft.posted}
                         accounts={feedAccounts}
                         subject={displayName(c.slug, c.short)}
                         pageSize={5}
@@ -4450,6 +4475,7 @@ function Detail({ c, style }: { c: CommitteeDetail; style: ReviewStyle }) {
                 <SubmissionFeed
                   items={feedItems}
                   fresh={fresh && !ownEnding}
+                  offerCosign={!draft.body.trim() && !draft.posted}
                   accounts={feedAccounts}
                   subject={displayName(c.slug, c.short)}
                   filter={position}

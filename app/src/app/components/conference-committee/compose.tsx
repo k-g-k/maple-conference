@@ -192,7 +192,7 @@ const COPY = {
  */
 export const STARTING_DRAFT = {
   position: "pass",
-  body: "",
+  body: "I am not concerned about the topics that are unresolved. What I care about already exists in both bills. I care most that this law passes as soon as possible.",
 } as const;
 
 /** Where a not-yet-posted card says its date. */
@@ -444,7 +444,16 @@ export function ConferenceCompose({
     if (save === "saved") setEverSaved(true);
   }, [save, everSaved]);
   const field = useRef<HTMLTextAreaElement>(null);
+  // Whether anything has actually been typed. A committee whose form opens
+  // with words already in it would otherwise report a save for a draft nobody
+  // wrote: the note is the page saying the reader's change was kept, and on
+  // the first render there has been no change.
+  const touched = useRef(false);
   useEffect(() => {
+    if (!touched.current) {
+      touched.current = true;
+      return;
+    }
     if (!draft.body.trim()) return setSave("none");
     // Nothing while the keys are going, then the answer 1.2s after they stop:
     // the 500ms it takes to know they have stopped, plus the .7s the "Saving"

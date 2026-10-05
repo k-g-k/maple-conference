@@ -77,16 +77,34 @@ export interface Draft {
 /**
  * The one committee that opens with something already written.
  *
- * Phone-free schools is the page the prototype is walked through, so its form
- * is filled in and the flow can be shown without typing. Every other committee
- * opens empty, which is what a reader actually meets, and which is also the
- * only way the empty-field refusal can be seen at all.
+ * Phone-free schools is the page the prototype is walked through, and it opens
+ * empty: the co-sign flow is what that page is for now, and a form with
+ * somebody's words already in it is a form nobody can be shown co-signing.
+ *
+ * Health worker safety takes the filled one instead, under its own slug,
+ * `workplace-violence`. It is the page with no
+ * letters on it, so the form is the only thing there to look at, and the words
+ * are the ones this prototype started with: a reader who does not care which
+ * chamber wins, only that something passes.
  */
-const PREFILLED = "phone-free-schools";
+const PREFILLED = ["workplace-violence"];
+
+/**
+ * The committee a session key belongs to.
+ *
+ * A key is the slug, and on a reading that keeps its own state the reading
+ * after it: `phone-free-schools@cosign`. Anything that reports on committees
+ * rather than on sessions reads the slug back out of it.
+ */
+export const slugOf = (key: string) => key.split("@")[0];
 
 export const emptyDraft = (slug: string): Draft => ({
   slug,
-  ...(slug === PREFILLED
+  // The plain reading only. A co-sign route opens on somebody else's letter
+  // and the form is what the reader writes under it; words already sitting
+  // there belong to a different walkthrough and withdraw the co-sign offer
+  // before it has been made.
+  ...(!slug.includes("@") && PREFILLED.includes(slugOf(slug))
     ? STARTING_DRAFT
     : { position: STARTING_DRAFT.position, body: "" }),
   digest: true,
@@ -150,18 +168,29 @@ export function DraftProvider({ children }: { children: ReactNode }) {
  * Drafts are per committee and survive going to look at another one, which is
  * no use if nothing says where they are. The list reads this to mark them.
  */
-export function useDrafted(): Set<string> {
+export function useDrafted(reading = ""): Set<string> {
   const ctx = useContext(DraftContext);
   const sessions = ctx?.sessions ?? {};
-  return useMemo(
-    () =>
-      new Set(
-        Object.entries(sessions)
-          .filter(([, v]) => v.draft.body.trim() && !v.draft.posted)
-          .map(([slug]) => slug),
-      ),
-    [sessions],
-  );
+  return useMemo(() => {
+    const marked = new Set(
+      Object.entries(sessions)
+        .filter(([key]) => key === slugOf(key) + reading)
+        .filter(([, v]) => v.draft.body.trim() && !v.draft.posted)
+        .map(([key]) => slugOf(key)),
+    );
+    // The prefilled committee counts before anybody has been to it. A session
+    // is only created on the first visit, so without this the words sit in
+    // that form with nothing in the list saying where they are, which is the
+    // one thing the mark exists to do.
+    // The prefilled committees count before anybody has been to them, under
+    // whichever reading: a session is keyed by reading, so "none yet" means no
+    // key of theirs has been created at all.
+    for (const slug of PREFILLED) {
+      const key = slug + reading;
+      if (!sessions[key] && emptyDraft(key).body.trim()) marked.add(slug);
+    }
+    return marked;
+  }, [sessions, reading]);
 }
 
 /**
@@ -171,17 +200,21 @@ export function useDrafted(): Set<string> {
  * progress, this is work finished, and a reader coming back to the list wants
  * to know both without opening anything.
  */
-export function usePosted(): Set<string> {
+export function usePosted(reading = ""): Set<string> {
   const ctx = useContext(DraftContext);
   const sessions = ctx?.sessions ?? {};
   return useMemo(
     () =>
       new Set(
         Object.entries(sessions)
+          // This reading only. The same committee read two ways is two
+          // prototypes, and a mark earned in one saying something about the
+          // other is the list reporting on a page the reader cannot see.
+          .filter(([key]) => key === slugOf(key) + reading)
           .filter(([, v]) => v.draft.posted)
-          .map(([slug]) => slug),
+          .map(([key]) => slugOf(key)),
       ),
-    [sessions],
+    [sessions, reading],
   );
 }
 

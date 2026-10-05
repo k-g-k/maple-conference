@@ -1977,6 +1977,7 @@ export function SubmissionFeed({
   onFilterChange,
   onCountChange,
   fresh = false,
+  offerCosign = true,
   onFilteredChange,
   resetSignal = 0,
   onCosign,
@@ -2018,6 +2019,13 @@ export function SubmissionFeed({
   /** How many entries the current filters leave on screen, for chrome outside
       the feed that wants to say so. */
   onCountChange?: (n: number) => void;
+  /**
+   * Whether co-signing is still available.
+   *
+   * Off once the reader has words of their own waiting, which the page knows
+   * and the feed does not.
+   */
+  offerCosign?: boolean;
   /**
    * Something was filed a moment ago.
    *
@@ -2367,8 +2375,9 @@ export function SubmissionFeed({
   const mine = narrowed2.find((t) => t.id === OWN_ID);
   // Each individual can provide input or cosign one position. Once they have
   // done either, the offer is spent, so every card stops making it rather than
-  // making one the page would have to refuse.
-  const filed = items.some((t) => t.id === OWN_ID);
+  // making one the page would have to refuse. A draft counts: words of their
+  // own already written are the other half of the same choice.
+  const filed = items.some((t) => t.id === OWN_ID) || !offerCosign;
   // Ticked, there is no grouping at all and they fall back into date order
   // among everything else, which is where a reader looking for one by date
   // expects to find it. Unticked, they go to the end, each half keeping the
