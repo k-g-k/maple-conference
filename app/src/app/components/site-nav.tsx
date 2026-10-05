@@ -6,8 +6,8 @@
 // Colours and hover values are the ones in the MAPLE repo
 // (`$maple-brand-primary`, `.desktop-navbar-link`), not approximations.
 
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Fragment, useState } from "react";
+import { Link, useLocation } from "react-router-dom";
 import { Menu, TreePine, X } from "lucide-react";
 
 /**
@@ -20,12 +20,25 @@ import { Menu, TreePine, X } from "lucide-react";
  * on: it is the only one with bill text and a lobbying register behind it.
  */
 const HOME = "/conferenceCommittees/phone-free-schools";
-const NAV: { label: string; to: string }[] = [
-  { label: "Conference Explorer", to: "/conferenceCommittees" },
-  { label: "Committees", to: HOME },
-  // Straight to the feed, which is the part of those two being compared.
-  { label: "Cosign", to: `${HOME}/cosign#input` },
-  { label: "Cosign-Viz", to: `${HOME}/cosign-viz#input` },
+/**
+ * What each item is lit by.
+ *
+ * The reading rather than the address: the links all open Phone-Free Schools,
+ * but a reader who walks to another committee from the list on the left is
+ * still in the same prototype, and the bar should go on saying which one.
+ */
+const NAV: { label: string; to: string; at: RegExp; rule?: true }[] = [
+  {
+    label: "Conference Explorer",
+    to: "/conferenceCommittees",
+    at: /^\/conferenceCommittees\/?$/,
+  },
+  { label: "Committees", to: HOME, at: /^\/conferenceCommittees\/[^/]+$/ },
+  // Straight to the feed, which is the part of those two being compared. The
+  // rule marks where the bar stops being the site and starts being the two
+  // readings of one page.
+  { label: "Cosign", to: `${HOME}/cosign#input`, at: /\/cosign$/, rule: true },
+  { label: "Cosign-Viz", to: `${HOME}/cosign-viz#input`, at: /\/cosign-viz$/ },
 ];
 
 /** MAPLE's `$maple-brand-primary`, the same value links use. */
@@ -46,6 +59,10 @@ export function SiteNav({
   sticky?: boolean;
 }) {
   const [open, setOpen] = useState(false);
+  // Which of the four the reader is on. Read off the path alone, so a fragment
+  // or a query cannot stop an item recognising its own page.
+  const { pathname } = useLocation();
+  const here = (at: RegExp) => at.test(pathname);
   // The one ladder these pages climb, written down where the bar that sits
   // in the middle of it can be read:
   //
@@ -94,15 +111,28 @@ export function SiteNav({
             rather than trailing the wordmark. */}
           <nav className="hidden lg:flex lg:ml-auto items-center gap-[2px]">
             {NAV.map((n) => (
-              <Link
-                key={n.label}
-                to={n.to}
-                // Nothing lit. The bar marks where you can go, not where you
-                // are, and a page can sit under more than one of these.
-                className="font-body text-base rounded-control px-[12px] py-[6px] cursor-pointer transition-colors hover:bg-white/[0.12]"
-              >
-                {n.label}
-              </Link>
+              <Fragment key={n.label}>
+                {n.rule && (
+                  <span
+                    aria-hidden
+                    className="mx-[8px] h-[18px] w-px bg-white/25"
+                  />
+                )}
+                <Link
+                  to={n.to}
+                  aria-current={here(n.at) ? "page" : undefined}
+                  // The one you are on is lit. Four prototypes of the same
+                  // committee look alike at a glance, so the bar has to say
+                  // which one is on screen.
+                  className={`font-body text-base rounded-control px-[12px] py-[6px] cursor-pointer transition-colors ${
+                    here(n.at)
+                      ? "bg-white/[0.18] font-semibold"
+                      : "hover:bg-white/[0.12]"
+                  }`}
+                >
+                  {n.label}
+                </Link>
+              </Fragment>
             ))}
           </nav>
           <button
@@ -144,7 +174,10 @@ export function SiteNav({
                   key={n.label}
                   to={n.to}
                   onClick={() => setOpen(false)}
-                  className="text-left font-body text-base py-[10px]"
+                  aria-current={here(n.at) ? "page" : undefined}
+                  className={`text-left font-body text-base py-[10px] ${
+                    here(n.at) ? "font-semibold" : ""
+                  }`}
                 >
                   {n.label}
                 </Link>
