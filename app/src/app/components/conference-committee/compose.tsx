@@ -170,7 +170,7 @@ const COPY = {
   postedStamp: "Posted just now",
   postedDigest: "It will go in this week’s update to the conferees.",
   postedRevise: "You can revise it later. Earlier versions stay on the record.",
-  close: "Close",
+  close: "Cancel",
   seeOthers: "Read what others are saying",
 
   /** The page style only, which is the one place there is room for a sentence. */
@@ -435,14 +435,21 @@ export function ConferenceCompose({
     vv.addEventListener("resize", read);
     return () => vv.removeEventListener("resize", read);
   }, []);
-  const [everSaved, setEverSaved] = useState(false);
-  const [showDelete, setShowDelete] = useState(
+  const [everSaved, setEverSaved] = useState(
     () => (cosign ? draft.cosignBody : draft.body).trim().length > 0,
   );
   useEffect(() => {
-    if (save === "none" && everSaved) setShowDelete(true);
     if (save === "saved") setEverSaved(true);
-  }, [save, everSaved]);
+  }, [save]);
+  // Whether there are keystrokes the save has not caught up with. `save` is
+  // "none" both before a change and after the note has gone, so it cannot tell
+  // those two apart on its own.
+  const [pending, setPending] = useState(false);
+  // The two share the left of the row and take turns: while anything is being
+  // typed or reported there is no draft to settle, and the way to throw one
+  // away is not the thing to be offering mid-keystroke. It returns when the
+  // note has gone.
+  const showDelete = everSaved && save === "none" && !pending;
   const field = useRef<HTMLTextAreaElement>(null);
   // Whether anything has actually been typed. A committee whose form opens
   // with words already in it would otherwise report a save for a draft nobody
@@ -454,14 +461,20 @@ export function ConferenceCompose({
       touched.current = true;
       return;
     }
-    if (!(cosign ? draft.cosignBody : draft.body).trim())
+    if (!(cosign ? draft.cosignBody : draft.body).trim()) {
+      setPending(false);
       return setSave("none");
+    }
+    setPending(true);
     // Nothing while the keys are going, then the answer 1.2s after they stop:
     // the 500ms it takes to know they have stopped, plus the .7s the "Saving"
     // step used to fill. The wait is what makes it read as a save rather than
     // as a label that was always there.
     setSave("none");
-    const saved = setTimeout(() => setSave("saved"), 1200);
+    const saved = setTimeout(() => {
+      setPending(false);
+      setSave("saved");
+    }, 1200);
     // Fading, not vanishing. It pops in because appearing is the event; going
     // is not, so it goes quietly. The state stays "fading" for the length of
     // the transition and only then clears, since an unmounted element has
@@ -790,54 +803,58 @@ export function ConferenceCompose({
             : "sticky bottom-0 bg-ground pt-[14px] pb-[env(safe-area-inset-bottom)]"
         }`}
       >
-        {save !== "none" && (
-          // Far left, on the buttons' own line: it reports on the thing the
-          // buttons act on, and a line of its own would make it an event.
-          <span
-            className={`mr-auto inline-flex items-center gap-[5px] font-body text-xs text-ink-mid transition-opacity duration-500 motion-reduce:transition-none ${
-              save === "fading" ? "opacity-0" : "opacity-100"
-            }`}
-          >
-            {save !== "saving" && (
-              // Filled, in the page's own positive green: the mark is the
-              // answer, and an outline reads as one more thing in progress.
-              <CircleCheck className="w-[14px] h-[14px] text-surface fill-positive-ink" />
-            )}
-            {save === "saving" ? COPY.saving : COPY.saved}
-          </span>
-        )}
-        {/* A way out beside the way on, where there is no draft to delete:
-            the press next to it files something, and a step that offers only
-            that is a corner. */}
-        {cosign && !showDelete && (
-          <button
-            onClick={onCancel}
-            className="font-body font-semibold text-sm text-ink-mid hover:text-ink cursor-pointer px-[12px] py-[14px] sm:px-[8px] sm:py-[8px]"
-          >
-            {COPY.cosignBack}
-          </button>
-        )}
-        {showDelete && (
-          <button
-            // It says delete, so it deletes: the words go and the position
-            // goes back to the default, and then the form is put away. Closing
-            // without deleting is what the panel's own control does.
-            onClick={() => {
-              // Whichever of the two this panel is writing. Deleting a
-              // co-sign's words should not empty a filing of the reader's own
-              // waiting on the same committee.
-              onChange(
-                cosign
-                  ? { cosignBody: "" }
-                  : { body: "", position: STARTING_DRAFT.position },
-              );
-              onCancel();
-            }}
-            className="font-body font-semibold text-sm text-ink-mid hover:text-ink cursor-pointer px-[12px] py-[14px] sm:px-[8px] sm:py-[8px]"
-          >
-            {COPY.cancel}
-          </button>
-        )}
+        {/* Far left, on the buttons' own line: both of these report on the
+            thing the buttons act on, and a line of their own would make
+            either of them an event. */}
+        <span className="mr-auto inline-flex items-center">
+          {save !== "none" && (
+            <span
+              className={`inline-flex items-center gap-[5px] font-body text-xs text-ink-mid transition-opacity duration-500 motion-reduce:transition-none ${
+                save === "fading" ? "opacity-0" : "opacity-100"
+              }`}
+            >
+              {save !== "saving" && (
+                // Filled, in the page's own positive green: the mark is the
+                // answer, and an outline reads as one more thing in progress.
+                <CircleCheck className="w-[14px] h-[14px] text-surface fill-positive-ink" />
+              )}
+              {save === "saving" ? COPY.saving : COPY.saved}
+            </span>
+          )}
+          {showDelete && (
+            <button
+              // It says delete, so it deletes: the words go and the position
+              // goes back to the default, and then the form is put away. Closing
+              // without deleting is what the panel's own control does.
+              onClick={() => {
+                // Whichever of the two this panel is writing. Deleting a
+                // co-sign's words should not empty a filing of the reader's own
+                // waiting on the same committee.
+                onChange(
+                  cosign
+                    ? // The letter goes with the words. Deleting the draft ends
+                      // the co-sign, rather than leaving the panel held on a
+                      // letter with nothing written under it.
+                      { cosignBody: "", cosignOf: null }
+                    : { body: "", position: STARTING_DRAFT.position },
+                );
+                onCancel();
+              }}
+              className="font-body font-semibold text-sm text-ink-mid hover:text-ink cursor-pointer -ml-[12px] px-[12px] py-[14px] sm:-ml-[8px] sm:px-[8px] sm:py-[8px]"
+            >
+              {COPY.cancel}
+            </button>
+          )}
+        </span>
+        {/* The way out, beside the way on. It puts the panel away and leaves
+            whatever is written where it is; throwing the draft away is the
+            other control, at the other end of the row. */}
+        <button
+          onClick={onCancel}
+          className="font-body font-semibold text-sm text-ink-muted hover:text-ink cursor-pointer px-[12px] py-[14px] sm:px-[8px] sm:py-[8px]"
+        >
+          {COPY.close}
+        </button>
         <button
           onClick={review}
           // Dressed as disabled but still pressable, because a truly disabled
@@ -1360,8 +1377,14 @@ export function ReviewActions({
           </>
         ) : (
           <>
-            <button onClick={onBack} className={quiet}>
+            {/* Far left, where the writing step keeps Delete Draft: both are
+                the way back out of the thing in front of you, and the two
+                steps should not move that control between them. */}
+            <button onClick={onBack} className={`mr-auto ${quiet}`}>
               {COPY.back}
+            </button>
+            <button onClick={onClose} className={`${quiet} text-ink-muted`}>
+              {COPY.close}
             </button>
             <button
               onClick={onPost}

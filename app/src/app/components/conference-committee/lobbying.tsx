@@ -539,7 +539,7 @@ export function LobbyingDisclosures({
           </>
         ) : (
           <Span>
-            <p className="font-body text-sm text-ink-mid leading-[1.65] max-w-[74ch] border-l-2 border-line-strong pl-[16px]">
+            <p className="font-body text-sm text-ink-mid leading-[1.65] border-l-2 border-line-strong pl-[16px]">
               {empty}
             </p>
           </Span>

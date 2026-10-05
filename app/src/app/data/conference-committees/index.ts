@@ -687,4 +687,111 @@ export const displayName = (slug: string, short: string) =>
  * index and the detail page's rail, so the two cannot disagree about what
  * opens.
  */
-export const NOT_LINKED = new Set(["economic-development"]);
+export const NOT_LINKED = new Set<string>([]);
+
+/**
+ * What kind of bill a conference is reconciling.
+ *
+ * Read off the texts rather than assumed: a bond bill is one that carries the
+ * authorisation formula, "the state treasurer shall ... issue and sell bonds of
+ * the commonwealth", together with a schedule of line items keyed by account
+ * number. Three of the twelve do, and all three also amend the General Laws in
+ * their outside sections, so the label says which kind of bill it is rather
+ * than claiming it is only that.
+ *
+ * It matters to a reader because the two kinds differ in what a conference can
+ * even disagree about: a policy bill parts over rules, a bond bill over amounts
+ * and over which local projects are named.
+ */
+/**
+ * MAPLE's own subject tags for the bills in each conference.
+ *
+ * Read off the bill pages and written down here, because they are served from
+ * MAPLE's Firestore and this prototype has no access to it. The union of both
+ * chambers' tags, in the order they were first met and with duplicates
+ * dropped: the two texts are the same question, so a tag on either is a tag on
+ * the conference.
+ *
+ * One conference has no tags on either bill and is absent here rather than
+ * carrying an empty list: economic development. One half of a pair having none
+ * is normal, H.4361 is an example, and the other half carries the
+ * conference.
+ */
+export const COMMITTEE_TOPICS: Record<string, string[]> = {
+  "workplace-violence": [
+    "Healthcare workforce",
+    "Health care costs",
+    "Worker safety and health",
+    "Employee leave",
+    "Assault and harassment offenses",
+  ],
+  "phone-free-schools": [
+    "Elementary and secondary education",
+    "Mental health",
+    "Curriculum and standards",
+    "Internet, web applications, social media",
+  ],
+  "data-privacy": [
+    "Internet, web applications, social media",
+    "Government information and archives",
+  ],
+  "public-records": [
+    "Budget process",
+    "Government studies and investigations",
+    "Government information and archives",
+  ],
+  "ballot-question-finance": [
+    "Government information and archives",
+    "Government studies and investigations",
+    "Lobbying and campaign finance",
+  ],
+  "energy-affordability": [
+    "Public utilities and utility rates",
+    "Energy efficiency and conservation",
+    "Renewable energy sources",
+  ],
+  "pets-act": [
+    "Crimes against animals and natural resources",
+    "Housing discrimination",
+    "Housing supply and affordability",
+    "Homelessness and emergency shelter",
+  ],
+  "teacher-benefits": [
+    "Employee benefits",
+    "Employee pensions",
+    "Pension and retirement benefits",
+    "Teachers and educators",
+  ],
+  "primary-care": [
+    "Health facilities and institutions",
+    "Mental health",
+    "Health insurance and coverage",
+    "Health care costs",
+    "Healthcare workforce",
+  ],
+  "bright-act": [
+    "Housing supply and affordability",
+    "Educational facilities and institutions",
+    "Energy efficiency and conservation",
+    "Higher education",
+  ],
+  "mass-ready": [
+    "Pollution control and abatement",
+    "Water quality",
+    "Environmental assessment, monitoring, research",
+    "Forests, forestry, trees",
+    "Public parks",
+  ],
+};
+
+const BOND = new Set(["bright-act", "economic-development", "mass-ready"]);
+
+export type BillKind = "policy" | "bond";
+
+export const billKind = (slug: string): BillKind =>
+  BOND.has(slug) ? "bond" : "policy";
+
+export const BILL_KIND_LABEL: Record<BillKind, string> = {
+  policy: "Policy bill",
+  bond: "Bond bill",
+};

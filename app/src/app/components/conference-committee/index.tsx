@@ -107,6 +107,7 @@ import {
   type AccountTypeFilter,
 } from "./testimony";
 import { AccountAvatar, AccountTypeIcon, PositionChip } from "./accounts";
+import { CommitteeTopics } from "./kind";
 import { SentimentMap } from "./sentiment-map";
 import {
   DEMO_ACCOUNTS,
@@ -250,21 +251,29 @@ function ConferenceByline({
   const phrase =
     SUBJECT[slug] ??
     (house ? BILL_TITLES[house]?.replace(/^An Act\s+/i, "") : undefined);
-  // Drawn as links and going nowhere, for now.
+  // Each number goes to its own bill on MAPLE. Out to the live site rather
+  // than to the bill page this prototype carries: that one is a different
+  // prototype's and holds one bill, and a sentence naming two of them should
+  // send a reader to both.
   //
-  // The two numbers are part of the sentence and the page reads wrong without
-  // them marked, but neither destination is right yet: the bill pages this
-  // prototype carries are a different prototype's, and sending a reader out to
-  // the General Court mid-sentence ends the visit. They stay inert until there
-  // is somewhere of our own to send them.
-  //
-  // To restore: a number in `BILL_BY_SLUG` goes to `/bills/${slugFor(n)}`, and
-  // anything else to `https://malegislature.gov/Bills/194/` with the dot
-  // stripped out of the number.
+  // A new tab, since this is leaving the prototype mid-sentence and the
+  // conference page is what they were reading.
   const linkClass =
     "font-semibold underline decoration-dotted underline-offset-[3px] text-link hover:text-brand";
-  const bill = (n?: string) =>
-    n ? <span className={linkClass}>{n}</span> : null;
+  const bill = (n?: string) => {
+    if (!n) return null;
+    // Every bill on these pages is a real one, whether or not this prototype
+    // carries its text: the text is what the Bill Text section needs, and the
+    // link only needs the number.
+    const href = mapleBillUrl(n);
+    return href ? (
+      <a href={href} target="_blank" rel="noreferrer" className={linkClass}>
+        {n}
+      </a>
+    ) : (
+      <span className={linkClass}>{n}</span>
+    );
+  };
   // One sentence with the resolving as the means rather than the purpose:
   // what the committee is for is passing the act, and reconciling the two
   // texts is how.
@@ -2011,6 +2020,7 @@ function TitlePicker({
         <h1 className="min-w-0 font-body font-bold text-[28px] @[700px]:text-[40px] leading-[1.2] text-[#0b1a4d] text-balance">
           {displayName(slug, short)}
         </h1>
+
         <ChevronDown
           aria-hidden
           strokeWidth={2.5}
@@ -2570,6 +2580,10 @@ function Contents({
   const [seen, setActive] = useState(sections[0]?.id ?? "");
   const active = picked ?? seen;
   const barRef = useRef<HTMLDivElement>(null);
+  // Nothing to choose between, so nothing to choose with. A bar of one tab
+  // marks where you are on a page with nowhere else to be, and as a contents
+  // list it is a list of one.
+  const only = sections.length < 2;
   useEffect(() => {
     if (picked) return;
     /**
@@ -2610,6 +2624,7 @@ function Contents({
       window.removeEventListener("resize", read);
     };
   }, [sections, picked]);
+  if (only) return null;
   return (
     <div
       ref={barRef}
@@ -2677,6 +2692,37 @@ const SUB_HEAD =
  * `#your-input` that behaved like no anchor at all.
  */
 const ANCHORS = () => [...CONTENTS.map((x) => x.id), "your-input"];
+
+/**
+ * Committees whose page is the committee card and nothing else.
+ *
+ * The sections under it are written by hand against the two bill texts, and a
+ * committee whose comparison has not been done yet should show what is known
+ * rather than empty headings. Listed and linked either way.
+ */
+/** TRIAL: the bill-kind chip, on while it is being looked at. */
+export const SHOW_BILL_KIND = true;
+
+const SPARSE = new Set(["economic-development", "mass-ready"]);
+
+/**
+ * What a sparse committee still shows.
+ *
+ * All of it, for now: the note inside "What needs to be resolved?" is what
+ * says the comparison is thin, so the rest of the page has nothing to hide.
+ * Put ids in here to park the sections they name again.
+ */
+const SPARSE_KEEP = ["committee", "decided", "lobbying", "input", "text"];
+
+/**
+ * Why a sparse committee's page stops where it does.
+ *
+ * Said on the page rather than left as an absence: a committee card with
+ * nothing under it reads as a page that failed to load. Both of these are bond
+ * bills, which is the actual reason, so they share the sentence.
+ */
+const SPARSE_NOTE =
+  "This one is a spending bill. The House and Senate versions run to hundreds of authorisations and differ in most of them, usually over an amount or over which local project is named, so there is no short list of unresolved questions to show. The six in the room are still the people who decide it.";
 
 const CONTENTS = [
   { id: "committee", label: "Committee" },
@@ -2984,7 +3030,7 @@ function Detail({ c, style }: { c: CommitteeDetail; style: ReviewStyle }) {
   // Held per committee rather than per page, so going to look at another
   // conference does not shut the one you were writing on, and coming back
   // finds it open on the form with your own words still in it.
-  const { rail, setRail, railView, setRailView } = useRail(
+  const { rail, setRail, railView, setRailView, full, setFull } = useRail(
     sessionKey,
     returning,
     returning ? "compose" : RAIL_DEFAULT,
@@ -3028,7 +3074,10 @@ function Detail({ c, style }: { c: CommitteeDetail; style: ReviewStyle }) {
    * drag only takes the room from the page behind it, which is where the
    * letter is.
    */
-  const [panelFull, setPanelFull] = useState(false);
+  // Remembered per committee and reading rather than held here, so the width
+  // the reader last left the panel at is the width it comes back at.
+  const panelFull = full;
+  const setPanelFull = setFull;
   /** When the corner is not the page's to spend on three stacked switches. */
   const tightControls = narrowControls || panelOpen;
   // The default follows the room available; a press overrides it for good.
@@ -3076,7 +3125,8 @@ function Detail({ c, style }: { c: CommitteeDetail; style: ReviewStyle }) {
    * wrote, and this is what they wrote it under. The composer reads it to know
    * whose position it is inheriting.
    */
-  const [cosignOf, setCosignOf] = useState<string | null>(null);
+  const cosignOf = draft.cosignOf;
+  const setCosignOf = (id: string | null) => patchDraft({ cosignOf: id });
   const forHere = DEMO_TESTIMONY.filter(
     (t) => !t.committee || t.committee === c.slug,
   );
@@ -3228,6 +3278,9 @@ function Detail({ c, style }: { c: CommitteeDetail; style: ReviewStyle }) {
       applyRailWidth(null);
       openWhen("min");
     });
+  // Unfinished work of either kind: words of the reader's own, or words
+  // written under somebody else's letter.
+  const anyDraft = !!(draft.body.trim() || draft.cosignBody.trim());
   const compose = () =>
     holdAnchor(() => {
       // Opening the form on a submission that is already on the record is
@@ -3236,10 +3289,17 @@ function Detail({ c, style }: { c: CommitteeDetail; style: ReviewStyle }) {
       // was approved, and a card left standing while its words are being
       // rewritten is the one way to break it.
       if (draft.posted) patchDraft({ posted: false });
-      // The plus is a filing of the reader's own, so it leaves co-sign mode,
-      // and with it the window: there is no letter to put beside the form.
-      setCosignOf(null);
-      setPanelFull(false);
+      // The plus is a filing of the reader's own, so it leaves co-sign mode
+      // and the window with it: there is no letter to put beside the form.
+      //
+      // Unless there are words waiting under a letter. A co-sign in progress
+      // is a draft like any other, and the way out of it is to delete it
+      // rather than to have it quietly dropped by pressing the plus.
+      const held = !!draft.cosignOf && draft.cosignBody.trim().length > 0;
+      if (!held) setCosignOf(null);
+      // Whatever width it was last left at, which the session remembers. The
+      // plus is a way back to what you were writing, not a decision about how
+      // much of the window that wants.
       setReview(false);
       showView("compose");
       openWhen("open");
@@ -3252,7 +3312,11 @@ function Detail({ c, style }: { c: CommitteeDetail; style: ReviewStyle }) {
    */
   // Whether the reader has agreed to cosign and moved on to writing. Here
   // rather than in the composer, because the panel's title changes with it.
-  const [cosignAsked, setCosignAsked] = useState(false);
+  const [askedNow, setCosignAsked] = useState(false);
+  // Words already written mean the offer was taken, whatever this mount knows:
+  // coming back to a co-sign in progress lands on the form rather than on the
+  // card asking whether they meant it.
+  const cosignAsked = askedNow || draft.cosignBody.trim().length > 0;
   // Whether they have said they are adding no words of their own. Here too,
   // because the review shows the entry that answer decides.
   const [cosignNoWords, setCosignNoWords] = useState(false);
@@ -3280,20 +3344,34 @@ function Detail({ c, style }: { c: CommitteeDetail; style: ReviewStyle }) {
   /** Put your name to a letter: the same panel the plus opens, on that letter. */
   const startCosign = (id: string) =>
     holdAnchor(() => {
-      setCosignOf(id);
       setCosignAsked(false);
       setCosignNoWords(false);
+      // A new letter is a new co-sign. The words belong to the letter they
+      // were written under, so they do not follow the reader to the next one.
+      //
+      // Returning to the letter already in progress keeps them: the press is
+      // then a way back to the draft rather than the start of a new one.
+      // One patch, not three. Each call builds from the draft this render
+      // closed over, so a second one undoes whatever the first had set: the
+      // letter was being written and then overwritten by the position.
+      //
+      // The position is recorded as the reader's own, copied from the letter
+      // at the moment they sign. A later change by the organisation does not
+      // rewrite what anybody agreed to.
+      const t = feedItems.find((x) => x.id === id);
+      patchDraft({
+        cosignOf: id,
+        // Returning to the letter already in progress keeps the words; a
+        // different letter is a different co-sign and starts empty.
+        ...(id === draft.cosignOf ? null : { cosignBody: "" }),
+        ...(t ? { position: t.position } : null),
+        ...(draft.posted ? { posted: false } : null),
+      });
       // Open on the whole window. Signing is reading and writing at once, and
       // the column can only hold the writing half, so the reader would have to
       // ask for the letter before they could see what they were putting their
       // name to. Collapsing is still one press away.
       setPanelFull(true);
-      // The position is recorded as the reader's own, copied from the letter
-      // at the moment they sign. A later change by the organisation does not
-      // rewrite what anybody agreed to.
-      const t = feedItems.find((x) => x.id === id);
-      if (t) patchDraft({ position: t.position });
-      if (draft.posted) patchDraft({ posted: false });
       setReview(false);
       showView("compose");
       openWhen("open");
@@ -3301,10 +3379,11 @@ function Detail({ c, style }: { c: CommitteeDetail; style: ReviewStyle }) {
   // The tabs a layout offers, and which one is open. Card has no Committee
   // tab: its card sits above the bar rather than in a section you pick.
   const hasLobbying = orgLobbying(c.senateBill?.n, c.houseBill?.n).length > 0;
-  const tabs =
+  const tabs = (
     layout === "stacked"
       ? CONTENTS
-      : CONTENTS.filter((x) => x.id !== "committee");
+      : CONTENTS.filter((x) => x.id !== "committee")
+  ).filter((x) => !SPARSE.has(c.slug) || SPARSE_KEEP.includes(x.id));
   // Opened on the public input when the full-page review sent the reader back
   // to read the list, since in this view that section is a page of its own.
   const [tab, setTab] = useState(landedOnFeed ? "input" : tabs[0].id);
@@ -3312,7 +3391,13 @@ function Detail({ c, style }: { c: CommitteeDetail; style: ReviewStyle }) {
     if (!tabs.some((x) => x.id === tab)) setTab(tabs[0].id);
   }, [tabs, tab]);
   /** Scroll lays every section out; tabbed shows the one that is open. */
-  const show = (id: string) => mode === "scroll" || tab === id;
+  // Everything below the committee card, parked for one committee while its
+  // comparison is written. The card itself still draws, so the page says who
+  // is in the room rather than reading as a committee that does not exist.
+  // Take the slug out of `SPARSE` to bring the rest of it back.
+  const sparse = SPARSE.has(c.slug);
+  const show = (id: string) =>
+    (!sparse || SPARSE_KEEP.includes(id)) && (mode === "scroll" || tab === id);
   // Picking a tab takes the page to the section's resting place: the header and
   // the card scroll away and the bar comes to rest at the top. Without
   // it a reader who has scrolled down lands mid-page on the new section, and
@@ -3934,7 +4019,14 @@ function Detail({ c, style }: { c: CommitteeDetail; style: ReviewStyle }) {
             </div>
           </div>
           <div className="z-20 -mx-[32px] px-[32px] bg-ground/95 backdrop-blur">
-            <div className="@container pb-[24px]">
+            <div
+              className={`@container ${
+                // The bar used to sit under this and carry its own height. With
+                // one tab it is not drawn, and the padding that cleared it is
+                // then a hole between the subtitle and the first card.
+                tabs.length < 2 ? "pb-[8px]" : "pb-[24px]"
+              }`}
+            >
               <p className="font-body text-xl @[980px]:text-2xl text-ink-mid leading-[1.4] mt-[10px]">
                 <ConferenceByline
                   slug={c.slug}
@@ -3942,6 +4034,14 @@ function Detail({ c, style }: { c: CommitteeDetail; style: ReviewStyle }) {
                   senate={rec?.senate}
                 />
               </p>
+              {/* TRIAL: what kind of bill this conference is reconciling,
+                  under the byline the way the bill page puts its subject tags
+                  under its own. One line to delete here and one in the
+                  explorer's rows, plus `kind.tsx` and the `BOND` set in the
+                  data if it goes for good. */}
+              {SHOW_BILL_KIND && (
+                <CommitteeTopics slug={c.slug} className="mt-[14px]" />
+              )}
             </div>
           </div>
 
@@ -4067,6 +4167,15 @@ function Detail({ c, style }: { c: CommitteeDetail; style: ReviewStyle }) {
                   stickyHeading={oneColumn ? pinnedTop : undefined}
                   flush
                 >
+                  {/* Inside the section it is about, above whatever of the
+                      comparison exists. On a committee with nothing in it this
+                      is the section's whole content, and on one with a few
+                      items it says why there are only a few. */}
+                  {sparse && (
+                    <p className="font-body text-sm text-ink-mid leading-[1.65] border-l-2 border-line-strong pl-[16px] mb-[28px]">
+                      {SPARSE_NOTE}
+                    </p>
+                  )}
                   <Scan
                     c={c}
                     card={layout === "card"}
@@ -4624,7 +4733,14 @@ function Detail({ c, style }: { c: CommitteeDetail; style: ReviewStyle }) {
         onResize={setRailWidth}
         onResizeEnd={endRailResize}
         expanded={cosignRoute && panelFull}
-        onExpandedChange={cosignRoute ? setPanelFull : undefined}
+        // Not while the acknowledgment is up: that step is the letter and a
+        // question about it, and the control to fold the letter away is not
+        // one of the answers. It arrives with the form.
+        onExpandedChange={
+          cosignRoute && (!cosignLetter || cosignAsked)
+            ? setPanelFull
+            : undefined
+        }
       />
 
       {/* Style two. Over the page rather than in it, so the form the reader

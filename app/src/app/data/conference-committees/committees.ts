@@ -123,7 +123,7 @@ export interface CommitteeDetail {
   conferees: { senate: ConfereeDetail[]; house: ConfereeDetail[] };
 }
 
-export const COMMITTEES: CommitteeDetail[] = [
+const FILED: CommitteeDetail[] = [
   {
     slug: "phone-free-schools",
     short: "Phone-free schools",
@@ -1821,6 +1821,14 @@ export const COMMITTEES: CommitteeDetail[] = [
     short: "Economic development",
     title: "Economic development bill",
     subtitle: "Innovation, housing production, research, small business.",
+    senateBill: {
+      n: "S.3228",
+      u: "https://malegislature.gov/Bills/194/S3228.pdf",
+    },
+    houseBill: {
+      n: "H.5576",
+      u: "https://malegislature.gov/Bills/194/H5576.pdf",
+    },
     since: "2026",
     checked: "August 6, 2026",
     conferees: {
@@ -2143,6 +2151,31 @@ export const COMMITTEES: CommitteeDetail[] = [
       ],
     },
   },
+];
+
+/**
+ * The three that go last, in this order.
+ *
+ * All three authorise borrowing, where the two texts differ in hundreds of
+ * places and most of the differences are dollar amounts and named local
+ * projects; two of them have no comparison written at all. They are listed and
+ * they open, but a reader running down the twelve should meet the ones with
+ * something to read first.
+ */
+const TAIL = ["bright-act", "mass-ready", "economic-development"];
+
+/**
+ * The twelve, in reading order.
+ *
+ * One array, read by the explorer's list and by the rail down the side of a
+ * committee page, so the two cannot disagree about the order.
+ */
+export const COMMITTEES: CommitteeDetail[] = [
+  ...FILED.filter((c) => !TAIL.includes(c.slug)),
+  // In the order `TAIL` names them, not the order they were filed in.
+  ...TAIL.map((slug) => FILED.find((c) => c.slug === slug)).filter(
+    (c): c is CommitteeDetail => !!c,
+  ),
 ];
 
 /** By slug, since that is how a page arrives. */

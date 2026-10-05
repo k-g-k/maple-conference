@@ -72,6 +72,13 @@ export interface Draft {
    * them is a submission of their own.
    */
   cosignBody: string;
+  /**
+   * Which letter those words were written under, or nothing.
+   *
+   * On the draft rather than in the page's own state, so a co-sign left part
+   * way through is still there when the reader comes back to the committee.
+   */
+  cosignOf: string | null;
 }
 
 /**
@@ -121,6 +128,7 @@ export const emptyDraft = (slug: string): Draft => ({
   email: true,
   posted: false,
   cosignBody: "",
+  cosignOf: null,
 });
 
 /**
@@ -138,12 +146,22 @@ export interface Session {
   /** Per layout, because the two readings keep their own panel. */
   rail: Record<"card" | "stacked", "open" | "min">;
   railView: Record<"card" | "stacked", string>;
+  /**
+   * Whether the panel was last left filling the window.
+   *
+   * Kept with the draft rather than decided fresh each time: a reader who
+   * folded the letter away should not have to fold it away again every time
+   * they come back to what they were writing, and one who kept it should not
+   * have to ask for it twice.
+   */
+  full: boolean;
 }
 
 const emptySession = (slug: string, open: boolean, view: string): Session => ({
   draft: emptyDraft(slug),
   rail: { card: open ? "open" : "min", stacked: open ? "open" : "min" },
   railView: { card: view, stacked: view },
+  full: false,
 });
 
 const DraftContext = createContext<{
@@ -186,7 +204,13 @@ export function useDrafted(reading = ""): Set<string> {
     const marked = new Set(
       Object.entries(sessions)
         .filter(([key]) => key === slugOf(key) + reading)
-        .filter(([, v]) => v.draft.body.trim() && !v.draft.posted)
+        // Either kind of unfinished work: words of their own, or words
+        // written under somebody else's letter.
+        .filter(
+          ([, v]) =>
+            (v.draft.body.trim() || v.draft.cosignBody.trim()) &&
+            !v.draft.posted,
+        )
         .map(([key]) => slugOf(key)),
     );
     // The prefilled committee counts before anybody has been to it. A session
@@ -252,6 +276,8 @@ export function useRail(slug: string, open: boolean, view: string) {
     setRail: (next: Session["rail"]) => update({ rail: next }),
     railView: session.railView,
     setRailView: (next: Session["railView"]) => update({ railView: next }),
+    full: session.full,
+    setFull: (next: boolean) => update({ full: next }),
   };
 }
 
