@@ -1770,7 +1770,6 @@ function Row({
 function Rail({
   current,
   composing = false,
-  drafts = true,
   reading = "",
   hidden = false,
   label,
@@ -1784,14 +1783,6 @@ function Rail({
    *  a draft you are not looking at, so it comes back the moment the form is
    *  put away, even without leaving the page. */
   composing?: boolean;
-  /**
-   * Whether unfinished work is marked.
-   *
-   * Off on the co-sign readings: those start empty by design, so a word in the
-   * list pointing at a draft on another reading of the same committee is
-   * pointing somewhere the reader cannot get to from here.
-   */
-  drafts?: boolean;
   /** Which reading the list is reporting on, as a session-key suffix. */
   reading?: string;
   current: string;
@@ -1877,7 +1868,6 @@ function Rail({
                     // On the committee being read as well, and while its form
                     // is open: the mark says there are words waiting here, and
                     // that stays true whether or not they are on screen.
-                    drafts &&
                     drafted.has(x.slug) && (
                       // A word rather than a glyph, because an icon says there
                       // is something here without saying it is unfinished and
@@ -3880,7 +3870,6 @@ function Detail({ c, style }: { c: CommitteeDetail; style: ReviewStyle }) {
           label={false}
           href={committeeHref}
           composing={composing}
-          drafts={!cosignRoute}
           reading={sessionKey.slice(c.slug.length)}
           hidden={panelOpen}
         />

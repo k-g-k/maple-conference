@@ -437,7 +437,7 @@ export function ConferenceCompose({
   }, []);
   const [everSaved, setEverSaved] = useState(false);
   const [showDelete, setShowDelete] = useState(
-    () => draft.body.trim().length > 0,
+    () => (cosign ? draft.cosignBody : draft.body).trim().length > 0,
   );
   useEffect(() => {
     if (save === "none" && everSaved) setShowDelete(true);
@@ -454,7 +454,8 @@ export function ConferenceCompose({
       touched.current = true;
       return;
     }
-    if (!draft.body.trim()) return setSave("none");
+    if (!(cosign ? draft.cosignBody : draft.body).trim())
+      return setSave("none");
     // Nothing while the keys are going, then the answer 1.2s after they stop:
     // the 500ms it takes to know they have stopped, plus the .7s the "Saving"
     // step used to fill. The wait is what makes it read as a save rather than
@@ -472,7 +473,7 @@ export function ConferenceCompose({
       clearTimeout(fading);
       clearTimeout(gone);
     };
-  }, [draft.body, draft.position, draft.digest]);
+  }, [draft.body, draft.cosignBody, draft.position, draft.digest]);
   useEffect(() => {
     // A frame's wait: the panel is sliding in, and focusing mid-transition
     // makes the browser scroll to the field before it has arrived.
@@ -488,7 +489,12 @@ export function ConferenceCompose({
     });
     return () => cancelAnimationFrame(id);
   }, [active]);
-  const written = draft.body.trim().length > 0;
+  // The words this panel is working on: a co-sign writes to its own field, so
+  // a half-finished one is not mistaken for a filing of the reader's own.
+  const words = cosign ? draft.cosignBody : draft.body;
+  const setWords = (v: string) =>
+    onChange(cosign ? { cosignBody: v } : { body: v });
+  const written = words.trim().length > 0;
   /**
    * Whether the step has been answered.
    *
@@ -697,10 +703,10 @@ export function ConferenceCompose({
           // Emptied while it is shut, not cleared: the words are still on the
           // draft and come back the moment the box is unticked. Shown faint
           // behind a disabled field they read as something being posted.
-          value={!!cosign && noWords ? "" : draft.body}
+          value={!!cosign && noWords ? "" : words}
           onChange={(e) => {
             if (e.target.value.trim()) setRefused(false);
-            onChange({ body: e.target.value });
+            setWords(e.target.value);
           }}
           placeholder={
             !!cosign && noWords ? "" : cosign ? COPY.cosignPrompt : COPY.prompt
@@ -817,7 +823,14 @@ export function ConferenceCompose({
             // goes back to the default, and then the form is put away. Closing
             // without deleting is what the panel's own control does.
             onClick={() => {
-              onChange({ body: "", position: STARTING_DRAFT.position });
+              // Whichever of the two this panel is writing. Deleting a
+              // co-sign's words should not empty a filing of the reader's own
+              // waiting on the same committee.
+              onChange(
+                cosign
+                  ? { cosignBody: "" }
+                  : { body: "", position: STARTING_DRAFT.position },
+              );
               onCancel();
             }}
             className="font-body font-semibold text-sm text-ink-mid hover:text-ink cursor-pointer px-[12px] py-[14px] sm:px-[8px] sm:py-[8px]"
@@ -958,7 +971,9 @@ export const asSubmission = (
   userId: VIEWER.id,
   position: draft.position,
   date: draft.posted ? POSTED_DATE : PREVIEW_DATE,
-  body: draft.body.trim(),
+  // A co-sign files the words written under the letter; a filing of the
+  // reader's own files theirs.
+  body: (cosignOf ? draft.cosignBody : draft.body).trim(),
   ...(cosignOf ? { cosignOf } : null),
 });
 
@@ -1307,7 +1322,9 @@ export function ReviewActions({
   /** Whether this review is of a co-sign, which names its own final press. */
   cosigning?: boolean;
 }) {
-  const empty = !complete && draft.body.trim().length === 0;
+  const empty =
+    !complete &&
+    (cosigning ? draft.cosignBody : draft.body).trim().length === 0;
   const quiet =
     "font-body font-semibold text-sm text-ink-mid hover:text-ink cursor-pointer px-[12px] py-[14px] sm:px-[8px] sm:py-[8px]";
   const primary =
@@ -1448,7 +1465,7 @@ export function ReviewPane({
               <CosignPreview
                 cosign={cosign}
                 noWords={noWords}
-                body={draft.body}
+                body={draft.cosignBody}
               />
             </div>
           </div>

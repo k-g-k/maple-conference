@@ -62,6 +62,16 @@ export interface Draft {
   /** Whether it also goes to the reader's own two legislators, by email. */
   email: boolean;
   posted: boolean;
+  /**
+   * Words added to somebody else's letter, kept apart from your own filing.
+   *
+   * The two forms are the same panel and used to write to the same field, so a
+   * co-sign part way through put "draft" against the committee in the list and
+   * withdrew the co-sign offer from every other letter on the page. They are
+   * two different things a reader can be in the middle of, and only one of
+   * them is a submission of their own.
+   */
+  cosignBody: string;
 }
 
 /**
@@ -110,6 +120,7 @@ export const emptyDraft = (slug: string): Draft => ({
   digest: true,
   email: true,
   posted: false,
+  cosignBody: "",
 });
 
 /**
