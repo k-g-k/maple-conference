@@ -457,7 +457,7 @@ function Answer({
   /**
    * What to say instead, where it is silent.
    *
-   * Without this the silent side reads "Not in its bill" on every question it
+   * Without this the silent side reads "Not in the bill" on every question it
    * appears in, which tells the reader nothing about what that silence means:
    * a chamber that considered a provision and left it out is not the same as
    * one whose bill is about something else entirely. The data has carried this
@@ -487,14 +487,23 @@ function Answer({
         {text ? (
           <Marked text={lead(text)} notes={notes} />
         ) : (
-          (note ?? `Not in the ${chamber} bill`)
+          (note ?? "Not in the bill")
         )}
       </p>
     </div>
   );
 }
 
-function Open({ o, order }: { o: OpenQuestion; order: string[] }) {
+function Open({
+  o,
+  order,
+  asked = false,
+}: {
+  o: OpenQuestion;
+  order: string[];
+  /** Which reading this list is in, so each position gets the text written for it. */
+  asked?: boolean;
+}) {
   const hasMore =
     (o.s && o.s !== lead(o.s)) ||
     (o.h && o.h !== lead(o.h)) ||
@@ -512,8 +521,18 @@ function Open({ o, order }: { o: OpenQuestion; order: string[] }) {
       </p>
 
       <div className="flex gap-[24px] mt-[12px]">
-        <Answer chamber="Senate" text={o.s} note={o.snote} notes={o.notes} />
-        <Answer chamber="House" text={o.h} note={o.hnote} notes={o.notes} />
+        <Answer
+          chamber="Senate"
+          text={asked ? (o.sAsked ?? o.s) : o.s}
+          note={o.snote}
+          notes={o.notes}
+        />
+        <Answer
+          chamber="House"
+          text={asked ? (o.hAsked ?? o.h) : o.h}
+          note={o.hnote}
+          notes={o.notes}
+        />
       </div>
 
       {hasMore && (
@@ -709,11 +728,11 @@ function Hearings({
           has never met in public is the more interesting fact, and a section
           that vanishes reads as missing data rather than as an answer. */}
       {meetings.length === 0 && (
-        // What the record supports is that nothing was noticed, which is not
+        // What the record supports is that nothing was disclosed, which is not
         // the same claim as that nothing happened. A conference can meet
         // without filing a notice and nothing published would show it.
         <p className="font-body text-sm text-ink-mid">
-          No meeting has been noticed.
+          No hearings have been disclosed.
         </p>
       )}
       {/* The description's own metrics, 16px at 1.6, so every row is the same
@@ -1526,7 +1545,15 @@ function Scan({
                     >
                       <Answer
                         chamber={ch}
-                        text={ch === "Senate" ? o.s : o.h}
+                        text={
+                          ch === "Senate"
+                            ? asked
+                              ? (o.sAsked ?? o.s)
+                              : o.s
+                            : asked
+                              ? (o.hAsked ?? o.h)
+                              : o.h
+                        }
                         note={ch === "Senate" ? o.snote : o.hnote}
                         notes={o.notes}
                       />
@@ -2729,7 +2756,7 @@ const ANCHORS = () => [...CONTENTS.map((x) => x.id), "your-input"];
 // and economic development's eight are half MAPLE's own vocabulary and half
 // coined here, which is why it is off in the build.
 
-const SPARSE = new Set(["economic-development", "mass-ready"]);
+const SPARSE = new Set(["economic-development", "mass-ready", "bright-act"]);
 
 /**
  * What a sparse committee still shows.
@@ -2755,18 +2782,43 @@ const SPARSE_KEEP = ["committee", "decided", "lobbying", "input", "text"];
  */
 const FEEDBACK = "#feedback";
 
+/** One link style for the notes, so they cannot drift apart. */
+const FEEDBACK_LINK =
+  "font-semibold underline decoration-dotted underline-offset-[4px] text-link hover:text-brand";
+
 const SPARSE_NOTE: Record<string, ReactNode> = {
-  "mass-ready":
-    "This one is a spending bill. The House and Senate versions run to hundreds of authorizations and differ in most of them, usually over an amount or over which local project is named, so there is no short list of unresolved questions to show. The six in the room are still the people who decide it.",
   "economic-development": (
     <>
-      These are the two longest bills in any of the twelve conferences, 225
-      pages in the House and 337 in the Senate. Below are some of the places
-      where the House and Senate text differ. Notice something missing or wrong?{" "}
-      <a
-        href={FEEDBACK}
-        className="font-semibold underline decoration-dotted underline-offset-[4px] text-link hover:text-brand"
-      >
+      This list may be incomplete. At 225 pages in the House and 337 in the
+      Senate, these are the longest bills any of the twelve conferences is
+      working from. Below are some of the places where the House and Senate text
+      differ. Notice something missing or wrong?{" "}
+      <a href={FEEDBACK} className={FEEDBACK_LINK}>
+        Send us feedback
+      </a>
+      .
+    </>
+  ),
+  "mass-ready": (
+    <>
+      This list may be incomplete. The two bills run 188 pages in the House and
+      166 in the Senate, and the hundreds of local authorizations they each name
+      are not compared here. Below are some of the places where the House and
+      Senate text differ. Notice something missing or wrong?{" "}
+      <a href={FEEDBACK} className={FEEDBACK_LINK}>
+        Send us feedback
+      </a>
+      .
+    </>
+  ),
+  "bright-act": (
+    <>
+      This bill borrows against the income surtax to pay for deferred
+      maintenance and decarbonization at the Commonwealth&rsquo;s 29 public
+      college and university campuses. This list may be incomplete: below are
+      some of the places where the House and Senate text differ. Notice
+      something missing or wrong?{" "}
+      <a href={FEEDBACK} className={FEEDBACK_LINK}>
         Send us feedback
       </a>
       .
@@ -4304,7 +4356,12 @@ function Detail({ c, style }: { c: CommitteeDetail; style: ReviewStyle }) {
                     <Span>
                       <ul className="flex flex-col gap-[10px] max-w-[92ch]">
                         {c.open?.map((o) => (
-                          <Open key={o.q} o={o} order={order} />
+                          <Open
+                            key={o.q}
+                            o={o}
+                            order={order}
+                            asked={unresolved === "questions"}
+                          />
                         ))}
                       </ul>
                     </Span>

@@ -53,17 +53,47 @@ export interface Tie {
   w: string;
 }
 
-/** One thing the two bills do not agree on. */
+/**
+ * One thing the two bills do not agree on.
+ *
+ * Write the two positions to stand under `topic`, not under `q`. The list a
+ * reader scans is topics, and a collapsed card shows the topic with the two
+ * positions under it; the question is behind the chevron. A position written
+ * as an answer reads as a non sequitur in the place it actually appears, and
+ * one that restates the topic wastes the only sentence the card shows.
+ *
+ * So: under "Teachers who take a state education job", the position is "Keeps
+ * teacher status and stays in the teachers' retirement system", not "A teacher
+ * who moves to DESE keeps teacher status" and never "No."
+ */
 export interface OpenQuestion {
   q: string;
   /** The subject in a few words, for a list you scan before you read. */
   topic?: string;
   kind: OpenKind;
-  /** The Senate's position, or null where the Senate bill is silent. */
+  /**
+   * The Senate's position, or null where the Senate bill is silent.
+   *
+   * Written to stand under `topic`, which is how the stacked reading prints
+   * it: topic above, two positions under it, question behind the chevron.
+   */
   s: string | null;
+  /**
+   * The same position, written as an answer to `q`.
+   *
+   * The card reading presses on the question instead of the topic, and a
+   * position written for the topic reads as a non sequitur under a question
+   * (and the other way round). Both readings are real, so both get their own
+   * sentence rather than one being made to serve twice. Falls back to `s`
+   * where it is not given, which is right for a position that happens to read
+   * the same either way.
+   */
+  sAsked?: string;
   sc?: string;
-  /** The House's position, or null where the House bill is silent. */
+  /** The House's position, or null where the House bill is silent. Written for `topic`. */
   h: string | null;
+  /** The House position written for `q`. Falls back to `h`. See `sAsked`. */
+  hAsked?: string;
   hc?: string;
   snote?: string;
   hnote?: string;
@@ -1231,61 +1261,181 @@ const FILED: CommitteeDetail[] = [
     short: "BRIGHT Act",
     title: "Modernizing every public college campus, and how much to borrow",
     subtitle:
-      "Both chambers back a Fair Share-funded bond to fix and decarbonize all 29 public higher-ed campuses. They agree on the mechanism and differ mainly on the size of the authorization.",
+      "Both chambers back a surtax-funded bond to repair and decarbonize public higher education, and seven of their eight funding accounts carry identical figures. They disagree on how the borrowing is secured: the Senate creates a dedicated fund of its own with a trust behind it, the House pledges the fund the surtax already feeds.",
     senateBill: { n: "S.2993", u: "https://malegislature.gov/Bills/194/S2993" },
     houseBill: { n: "H.4769", u: "https://malegislature.gov/Bills/194/H4769" },
     since: "April 2026",
-    checked: "September 28, 2026",
-    textRead: false,
+    checked: "October 6, 2026",
+    textRead: true,
     claim:
-      "about $66 million apart on how much to borrow, with the Senate the higher of the two",
+      "the Senate securing the bonds on a new dedicated fund and the House on the one the surtax already feeds",
     settled: [
       {
-        p: "Fair Share revenue backs new special obligation bonds",
-        d: "Both bills finance the program with special obligation bonds backed by the voter-approved Fair Share surtax, issued for a term of up to 30 years, modeled on the transportation fund approach.",
-        c: "s47",
+        p: "Seven of the eight funding accounts carry identical figures",
+        d: "$1,250,000,000 for state university and community college maintenance, $1,250,000,000 for UMass, $100,000,000 for housing and mixed-use conversion, $80,000,000 for decarbonization, $120,000,000 for labs and voc-tech partnerships, $30,000,000 for campus master plans, and $275,000,000 for the Huntington Tower at MassArt. Only the earmark account differs.",
+        c: "s97",
       },
       {
-        p: "Every public campus is covered",
-        d: "All 15 community colleges, 9 state universities and the UMass system.",
-        c: "s46",
+        p: "Two thirds of the money is maintenance, split evenly",
+        d: "$2,500,000,000 of the schedule goes to deferred maintenance, modernization and decarbonization, divided equally between UMass and the state universities and community colleges.",
+        c: "s98",
       },
       {
-        p: "Deferred maintenance, modernization and decarbonization",
-        d: "Both direct the bulk of the money at the maintenance backlog, modern labs and classrooms, and cutting fossil-fuel reliance.",
-        c: "s47",
+        p: "A separate $170,000,000 for grants and technology, identical in both",
+        d: "$50,000,000 for an administration and finance capital grant program, $20,000,000 for technology, and $100,000,000 for career technical education, carried by its own bond authorization of the same size in each bill.",
+        c: "s97",
+      },
+      {
+        p: "The bond terms are the same",
+        d: "Special obligations rather than general obligations, named the Public Higher Education Capital Expenditure Act of 2025 on their face, a term up to 30 years, payable no later than June 30, 2070, and outside the statutory debt and debt service limits.",
+        c: "s98",
+      },
+      {
+        p: "The campus money comes out of discretionary surtax spending",
+        d: "Both reduce the Education and Transportation Fund's annual spending threshold by the higher education set-aside, so this is not new revenue on top of what the surtax already funds.",
+        c: "s97",
+      },
+      {
+        p: "A new process for selling surplus campus property",
+        d: "Both add chapter 7C section 34A: a trustee veto within 60 days, notice to municipal officials and local legislators, a public hearing above 2 acres, inspector general review of the appraisal, and filings to the ways and means committees 15 days before closing.",
+        c: "s98",
+      },
+      {
+        p: "An annual capital report, due every December 31",
+        d: "Both require decarbonization and deferred-maintenance progress, a system-wide forecast of needs and funding gaps, committed against expended dollars, a per-project tracker, and outcome metrics down to square footage and metric tons of CO2e avoided. First one due March 1, 2027 in both.",
+        c: "s97",
+      },
+      {
+        p: "DCAMM can hand smaller projects to the State College Building Authority",
+        d: "Control and supervision of structural or mechanical projects under $10,000,000 may be delegated, in word-for-word identical text, and the Authority's board gains two non-voting members drawn from the state university and community college presidents.",
+        c: "s98",
       },
     ],
     open: [
       {
-        topic: "Authorization amount",
-        q: "How much should the bill authorize?",
-        kind: "calibrate",
-        s: "Authorizes about $3.71 billion, with $125 million a year in Fair Share revenue dedicated to campus capital.",
-        sc: "s46",
-        h: "Authorizes about $3.65 billion, with $100 million a year in Fair Share revenue dedicated to campus capital.",
-        hc: "s47",
-        why: "About $66 million apart on the total, and $25 million a year apart on the dedicated surtax revenue behind it. Both set aside roughly $2.5 billion of the total for deferred maintenance.",
+        topic: "What stands behind the bonds",
+        q: "If the surtax comes in light one year, who gets paid first?",
+        kind: "tool",
+        s: "Creates a new Commonwealth Public Higher Education Capital Projects Fund, credits it with $125,000,000 of surtax a year, and impresses that money with a trust for the bondholders, with the bonds payable solely from it. The surtax reaches this fund before the transportation set-aside, and the fund pays debt service first, deferred maintenance second, and named projects third.",
+        sAsked:
+          "The bondholders, out of a fund that exists only for them. The Senate writes $125,000,000 a year into a new fund held in trust, reached before the transportation set-aside, and nothing else can be paid from it until debt service is covered.",
+        sc: "s97",
+        h: "Pledges the existing Education and Transportation Fund and caps annual debt service at $100,000,000, a figure defined in the statute without a fund of its own. It also folds the Education and Transportation Innovation and Capital Fund into the pledged fund so the pledge can reach it.",
+        hAsked:
+          "Whoever the existing Education and Transportation Fund pays, with campus debt service capped at $100,000,000 a year inside it. The House creates no separate fund and no trust, so higher education borrowing competes with everything else that fund carries.",
+        hc: "s98",
+        why: "The page has said these two agree on the mechanism. They do not. One builds a segregated fund with a trust and a priority order ahead of transportation; the other sets a borrowing ceiling against the fund the surtax already feeds. The annual set-aside also differs by $25,000,000.",
         ties: [],
       },
       {
-        topic: "Property sale proceeds",
-        q: "Where do proceeds from selling or leasing campus property go?",
+        topic: "How much it borrows",
+        q: "What is the headline number?",
+        kind: "calibrate",
+        s: "Authorizes $3,541,400,000, which matches its own funding schedule to the dollar.",
+        sc: "s97",
+        h: "Authorizes $3,105,000,000, which is $436,400,000 less than the Senate and, oddly, $370,450,000 less than the House's own schedule totals.",
+        hc: "s98",
+        why: "The gap between the two authorizations is $436,400,000. The House figure also does not reconcile with its own accounts, by exactly the size of its earmark account, which is a drafting problem the conference has to resolve whatever number it lands on.",
+        ties: [],
+      },
+      {
+        topic: "Size of the earmark account",
+        q: "How much is committed up front to projects named in the bill?",
+        kind: "calibrate",
+        s: "$436,400,000 across 26 named projects, the largest of them $30,000,000, shared by three: Northern Essex career and technical education, the Sullivan building at Salem State, and the Whittemore library at Framingham State.",
+        sc: "s97",
+        h: "$370,450,000 across 29 named projects, $65,950,000 less than the Senate, with a quarter of it in one line: $100,000,000 for a human health hub at Westfield State.",
+        hc: "s98",
+        why: "Every other account in both bills is identical, so this one account carries the entire difference between them. The House concentrates; the Senate spreads.",
+        ties: [],
+      },
+      {
+        topic: "Campuses named in only one bill",
+        q: "Which campuses have only one chamber behind them?",
         kind: "include",
-        s: "A floor amendment directs proceeds from a public college's sold or leased land or buildings back to the institution that sold it.",
-        sc: "s46",
-        h: "Proceeds go into a new Higher Education Property Disposition Fund held centrally under chapter 29.",
-        hc: "s47",
-        why: "The same money, sent to different places: back to the campus that sold the property, or into a central fund.",
+        s: "Names six the House does not: North Shore, Cape Cod, Berkshire, and Holyoke community colleges, the Massachusetts College of Liberal Arts, and UMass Dartmouth. It also funds the schooner Ernestina-Morrissey and the UMass Amherst marine station at Gloucester.",
+        sAsked:
+          "Six on the Senate side alone, from North Shore and Cape Cod community colleges to UMass Dartmouth, plus a schooner and a marine station the House does not fund.",
+        sc: "s97",
+        h: "Names three the Senate does not: Westfield State at $100,000,000, UMass Lowell at $25,000,000, and Bay Path University, a private college, at $400,000 across two lines.",
+        hAsked:
+          "Three on the House side alone, including a $100,000,000 line for Westfield State and $400,000 for Bay Path University, which is private.",
+        hc: "s98",
+        why: "Eighteen institutions appear in both lists, six only in the Senate's and three only in the House's. Nine campuses are therefore one chamber's project rather than an agreed one, and the House list reaches a private college in a public higher education bond bill.",
+        ties: [],
+      },
+      {
+        topic: "Proceeds from selling campus property",
+        q: "A campus sells a building. Who gets the money?",
+        kind: "tool",
+        s: "Proceeds go into the new capital projects fund and are then made available to the campus that sold the property, with no restriction on what it may spend them on.",
+        sAsked:
+          "The campus that sold it, through the new fund, with no strings on how it spends the money.",
+        sc: "s97",
+        h: "Proceeds go into a new Higher Education Property Disposition Fund the DCAMM commissioner administers, spendable without appropriation only on decarbonization, deferred maintenance and critical repairs including accessibility, anywhere in the system. No share is reserved for the selling campus.",
+        hAsked:
+          "A central fund any campus can draw on, restricted to repairs, accessibility and decarbonization. The campus that sold the building gets no claim on the proceeds.",
+        hc: "s98",
+        why: "Same proceeds, opposite incentives. The Senate gives a campus a reason to sell; the House gives the system a reason to.",
+        ties: [],
+      },
+      {
+        topic: "Who counts as a community college",
+        q: "Should private colleges draw on community college programs?",
+        kind: "include",
+        s: null,
+        h: "Folds private nonprofit colleges carrying a federal minority-serving designation, plus Quincy College, into the community college segment for Department of Higher Education programs, naming the SUCCESS equity program and the free community college program.",
+        hAsked:
+          "Yes, for two kinds: private nonprofits with a federal minority-serving designation, and Quincy College, which is a city department. Both would reach programs including free community college.",
+        hc: "s98",
+        why: "The only section in either bill that changes which institutions count as public community colleges rather than which buildings get money, and it reaches the free community college program rather than the capital program.",
+        ties: [],
+      },
+      {
+        topic: "A plan for the worst repair jobs",
+        q: "Does anyone list the biggest repair jobs before the money moves?",
+        kind: "include",
+        s: null,
+        snote:
+          "Not in the Senate bill, which relies on the annual report both chambers create. That one forecasts system-wide needs with no dollar threshold and no project-level plan, and the first is not due until March 2027.",
+        h: "Requires a report within 90 days naming every deferred-maintenance project above $50,000,000 at UMass, the state universities or the community colleges, with a five-year timeline, a per-project plan, a total cost, and a breakdown of design and consultant spending.",
+        hAsked:
+          "The House says yes, within 90 days: every project above $50,000,000, with a five-year repair timeline and a cost breakdown for each.",
+        hc: "s98",
+        why: "Both bills get the same annual report, so the question is only whether the worst of the backlog is itemized up front. Neither bill states what the statewide backlog actually is.",
+        ties: [],
+      },
+      {
+        topic: "Spreading the grant money",
+        q: "Must the $150,000,000 in grants be spread across regions?",
+        kind: "include",
+        s: "Requires both grant programs to consider equitable distribution among the UMass, state university and community college segments, and equitable geographic distribution across the state.",
+        sAsked:
+          "Yes. Both programs must consider equitable distribution across the three segments and across the state geographically.",
+        sc: "s97",
+        h: null,
+        hnote:
+          "Not in the House bill, which funds both programs at the same amounts through the same agencies and attaches no distribution requirement.",
+        why: "$150,000,000 of competitive grants with the same administering secretaries either way. The Senate language gives a shut-out campus or region something to point at; without it the awards are discretionary.",
         ties: [],
       },
     ],
     unverified: [],
     context: [
       {
-        h: "Where it came from",
-        p: "Filed by Governor Healey in January 2025 to unlock capital for campuses she described as suffering historic underinvestment since the 1970s. The House passed it 148–5 in November 2025; the Senate passed it unanimously in February 2026.",
-        c: "s46",
+        h: "The House bond section does not match the House schedule",
+        p: "Both bills share an identical base of $3,105,000,000 across their seven non-earmark accounts. The Senate adds its $436,400,000 earmark account and authorizes the sum, $3,541,400,000. The House adds a $370,450,000 earmark account and authorizes $3,105,000,000, the base alone. The House earmarks were added by floor amendment on November 18, 2025, the day the bill passed 148 to 5, and the bond section was not conformed. It is a drafting gap in the engrossed bill rather than a stale copy, and the conference has to close it whatever number it lands on.",
+        c: "s98",
+      },
+      {
+        h: "Fair Share is not in either bill",
+        p: "Neither text uses the phrase. Both draw on the 4 percent income surtax under Article XLIV, which is what the nickname refers to, but the bills speak only of income surtax revenue.",
+        c: "s97",
+      },
+      {
+        h: "Neither bill names the campuses",
+        p: "Eligibility runs entirely through \u201cpublic institution of higher education\u201d as defined in chapter 15A. No campus count appears in either text, so a reader cannot tell from the bills which institutions the program covers.",
+        c: "s98",
       },
     ],
     conferees: {
@@ -1709,57 +1859,184 @@ const FILED: CommitteeDetail[] = [
     short: "PETS Act",
     title: "Animal welfare both chambers want, minus the pet-shop ban",
     subtitle:
-      "Both chambers passed animal-welfare bills near-unanimously and share most of the package. The Senate's signature provision \u2014 banning pet-shop sales of dogs, cats and rabbits \u2014 is the one the House dropped.",
+      "Both chambers passed animal-welfare bills near-unanimously and overlap on four subjects: public housing pet programs, research animals, the welfare fund, and animal testing. The Senate's signature provision, banning pet-shop sales of dogs and cats, is the one the House dropped, and the House added pet insurance rules, veterinary technician licensing and kennel oversight the Senate has not voted on.",
     senateBill: { n: "S.3028", u: "https://malegislature.gov/Bills/194/S3028" },
     houseBill: { n: "H.5589", u: "https://malegislature.gov/Bills/194/H5589" },
     since: "July 2026",
-    checked: "September 21, 2026",
-    textRead: false,
+    checked: "October 6, 2026",
+    textRead: true,
     claim:
-      "the House removing the Senate's ban on pet shops selling dogs, cats and rabbits",
+      "the Senate banning pet-shop sales of dogs and cats, and the House adding pet insurance rules, veterinary licensing and kennel oversight the Senate has not voted on",
     settled: [
       {
-        p: "No breed, size or weight discrimination in pet insurance",
-        d: "Both bar homeowners and renters insurers from refusing or non-renewing a policy based on a dog's breed, size or weight.",
-        c: "s55",
+        p: "Animal cruelty fines feed the Homeless Animal Prevention and Care Fund",
+        d: "Fines assessed under chapter 129 section 37 are deposited into the fund, and the fund's revenue list picks them up. Identical language in both.",
+        c: "s95",
       },
       {
-        p: "Cruelty citations expanded to all household pets",
-        d: "Both expand the civil citation for cruel conditions from dogs to all household pets.",
-        c: "s55",
+        p: "Public housing cannot ban pets outright",
+        d: "No blanket prohibition, no discrimination on a pet's breed, size, weight or appearance, no declawing as a condition, and no eviction for having a pet that follows the rules. Both chambers, same list.",
+        c: "s96",
       },
       {
-        p: "Pet-friendly state-aided public housing",
-        d: "Both require a uniform pet-ownership program for state-aided public housing and bar size- or breed-based limits.",
-        c: "s54",
+        p: "The public housing pet deposit is capped at $160 or one month's rent, whichever is less",
+        d: "The same figure and the same formula in both, inside the same list of things a facility may reasonably require: number of pets by unit size, spay or neuter, a care plan with an emergency contact, and registration.",
+        c: "s95",
       },
       {
-        p: "Alternatives to animal testing for cosmetics and household goods",
-        d: "Both end unnecessary animal testing for non-medical products while continuing to allow medical research.",
-        c: "s55",
+        p: "Research facilities must try to place surviving dogs and cats",
+        d: "After testing that does not require euthanasia, the facility assesses the animal and must make a reasonable effort to offer it to a rescue before euthanizing. Each facility holds an agreement with at least one rescue and must vet that rescue first. Word for word in both.",
+        c: "s96",
+      },
+      {
+        p: "The same four exemptions from the adoption duty",
+        d: "A behavioral or medical defect posing a public risk, disease or injury or congenital condition, placement with an employee as a permanent home, or an animal under 8 weeks still needing maternal care. The attending veterinarian decides.",
+        c: "s95",
+      },
+      {
+        p: "The same liability shield for placing facilities",
+        d: "No duty of care owed to the rescue or the adopter, and no liability for injury, property damage or loss resulting from the placement.",
+        c: "s96",
+      },
+      {
+        p: "Animal testing is barred where a valid alternative exists, and medical research is exempt",
+        d: "Both create chapter 140 section 174I with the same eight definitions, direct the public health commissioner to set alternative-method standards weighing the OECD guidelines, and exempt medical research.",
+        c: "s95",
+      },
+      {
+        p: "Rescue organizations and research facilities are redefined the same way",
+        d: "\u201cAnimal rescue organization\u201d is rewritten and \u201canimal shelter\u201d struck; \u201cproduct testing facility\u201d and \u201cresearch institution\u201d replace the old \u201cresearch facility.\u201d Identical in both.",
+        c: "s96",
       },
     ],
     open: [
       {
         topic: "Pet shop sales ban",
-        q: "Ban commercial pet-shop sales of dogs, cats and rabbits?",
+        q: "Where would somebody get a puppy instead?",
         kind: "include",
-        s: "Ends the puppy-mill-to-pet-shop pipeline by cutting off commercial sales of dogs, cats and rabbits in pet stores, while letting shops sell supplies and partner with shelters.",
-        sc: "s54",
-        h: "No ban: the House Ways and Means redraft dropped it, and a floor amendment to restore it was withdrawn. House leaders said they chose to focus on cruelty penalties and licensing instead.",
-        hc: "s55",
-        why: "The Senate's hallmark provision and the whole reason a conference is needed. Retailers opposed the ban; animal-welfare groups back it.",
+        s: "Licensed pet shops lose the right to sell or offer for sale a dog or cat, facing civil penalties of up to $1,000, $2,500 and $5,000 for a first, second, and third or later offense, plus suspension or revocation of the license. A shop may still give floor space to a shelter showing animals for adoption as long as it holds no ownership interest, and every advertisement counts as a separate violation.",
+        sAsked:
+          "No, selling or offering one becomes a violation carrying up to $1,000, $2,500 and $5,000 for a first, second, and third or later offense, and the shop can lose its license. It may still host a shelter\u2019s adoption animals if it has no ownership interest in them.",
+        sc: "s95",
+        h: null,
+        why: "The provision the conference is actually about. The Senate closes the retail channel for dogs and cats; the House does not touch it. Neither bill reaches breeders or direct and online sales, so the channel closing is narrower than it sounds.",
         ties: [],
       },
       {
         topic: "Seizure and cruelty penalties",
-        q: "Add a seizure protocol and stronger cruelty penalties?",
+        q: "What happens to an animal whose keeper is not caring for it?",
+        kind: "tool",
+        s: "An animal control officer cites the keeper directly, with fines of up to $50, then $200, then $500, and on a third offense the animal can be impounded at the owner\u2019s expense or taken away for good. The offense is keeping a pet in cruel conditions, defined to cover excessive waste, non-potable water, inadequate food, no protection from weather, and for dogs, inhumane chaining at any time.",
+        sAsked:
+          "An animal control officer writes a citation, starting at a warning or $50 and rising to $200 and $500. On a third offense the animal can be impounded at the owner\u2019s expense or taken away entirely, and no court is involved at any point.",
+        sc: "s95",
+        h: "An officer petitions a district court, which must hear it within 10 days and can then order the keeper to provide care, hand the animal to the enforcing authority, or have it euthanized, and can bar that person from keeping any animal at all. The standard is animal neglect, defined as failing to provide adequate food, water, shelter or veterinary care, or keeping the animal in an unsanitary environment.",
+        hAsked:
+          "An officer takes it to a district court, which must hear it within 10 days. A judge finding neglect can order care, take the animal, order it euthanized, remove the person\u2019s other animals and bar them from keeping animals in future. There is no fine.",
+        hc: "s96",
+        why: "Both chambers answer the same situation and neither copied the other. The Senate built a ladder an animal control officer can climb the same day, with money at the bottom and the animal at the top. The House built a court process with no fine at all, where the only outcomes are the animal\u2019s. Speed against due process, and the House version says nothing about who pays for the animal\u2019s care while the case runs.",
+        ties: [],
+      },
+      {
+        topic: "Pet fees in private rentals",
+        q: "Does the state look at what private landlords charge for a pet?",
+        kind: "include",
+        s: "The housing office must study pet fees across state-aided and privately owned rental housing: how common they are, how large, their effect on housing stability for pet-owning households, their relationship to pets being given up at shelters, and what fee limits in other states have done. Due December 31, 2027.",
+        sAsked:
+          "It studies them: the housing office must report by December 31, 2027 on how common and how large pet fees are in private rentals, and on whether they drive people to give their pets up.",
+        sc: "s95",
+        h: null,
+        why: "Both chambers cap a public housing pet deposit at $160 and neither reaches a private landlord, which is where most renters live. The Senate at least orders somebody to find out what private pet fees are doing to pet owners; the House stops at the cap.",
+        ties: [],
+      },
+      {
+        topic: "Who in public housing may keep a pet",
+        q: "Which public housing residents get the right to keep a pet?",
+        kind: "include",
+        s: "Every resident of state-aided public housing who can reasonably care for a pet, with the elderly named as one group among all such residents rather than as the limit. A facility may still refuse a dog a municipality has declared a nuisance or dangerous, or one with a known history of biting.",
+        sAsked:
+          "Any resident who can reasonably care for one. Age is not a condition.",
+        sc: "s95",
+        h: "Residents 60 and older, with the program scoped to public housing as defined in chapter 121B. A facility may refuse only a dog a municipality has formally declared dangerous, with no nuisance declaration and no bite history as grounds.",
+        hAsked:
+          "Only residents 60 and older, with everyone younger left outside the program entirely.",
+        hc: "s96",
+        why: "The same program, reaching either everybody in state-aided public housing or only its older residents, which decides how many households the bill actually touches. The two also differ on which dogs a facility can turn away: the Senate gives three grounds including an undeclared bite history, the House only a dog the town has already declared dangerous.",
+        ties: [],
+      },
+      {
+        topic: "Service animals in ride-hailing",
+        q: "What happens when a driver refuses a rider with a service animal?",
         kind: "include",
         s: null,
-        snote: "Not established as a distinct Senate provision.",
-        h: "Adds a new protocol to seize animals in neglect cases, and strengthens animal-cruelty penalties and licensing.",
-        hc: "s55",
-        why: "The House's own additions, which it substituted for the sales ban.",
+        h: "Rideshare companies must build an in-app feature telling the driver that a rider will have a service animal, and the driver and the company each face fines of $500, $750 and $1,000 for a first, second and third refusal, imposed by the Department of Public Utilities.",
+        hAsked:
+          "The driver and the company are each fined, $500 for a first refusal, $750 for a second and $1,000 after that. The app also has to warn the driver in advance so the refusal is less likely to happen at the curb.",
+        hc: "s96",
+        why: "The only service animal provision in either bill. Everything else in both is about pets, which are not the same thing in law, and the Senate bill contains no service animal language at all.",
+        ties: [],
+      },
+      {
+        topic: "Licensing the veterinary workforce",
+        q: "Who besides a veterinarian is licensed to do veterinary work?",
+        kind: "include",
+        s: null,
+        h: "Veterinary technicians become state-licensed, and only licensees may use the title. The registration board is restructured to four veterinarians, three licensed technicians and two public members, and must define which duties a veterinarian may assign to a licensed technician rather than an unlicensed assistant. A no-degree pathway by national exam plus on-the-job hours runs until 2031, when everyone in scope must be licensed.",
+        hAsked:
+          "Veterinary technicians, under a new license only holders may claim. The board that writes the rules gains three technician seats, and a route in by exam and work hours stays open until 2031 for people already doing the job.",
+        hc: "s96",
+        why: "A workforce licensing regime inside an animal welfare bill, twelve of the House bill's sections. It decides who can legally do the work in a field short of staff, and the Senate has not voted on it.",
+        ties: [],
+      },
+      {
+        topic: "Kennel oversight",
+        q: "What does the public get to know about the kennel boarding their dog?",
+        kind: "include",
+        s: null,
+        h: "Municipal kennel lists must carry license status, owner name, maximum dogs permitted, the last inspection date, the last passing inspection date, and for commercial boarding kennels the number of injuries that drew enforcement in the last year, with fines for a licensing authority that does not comply. Kennels may not accept unlicensed dogs, must keep sale records for 36 months, and an inspector is directed to pull the license of a kennel not kept sanitary and humane.",
+        hAsked:
+          "Whether it is licensed, how many dogs it may hold, when it was last inspected, when it last passed, and how many injuries drew enforcement there in the past year. A town that does not publish it can be fined.",
+        hc: "s96",
+        why: "Fourteen House sections on an industry the Senate bill does not mention. The injury disclosure is the part with teeth: it makes a kennel's record public before somebody leaves a dog there.",
+        ties: [],
+      },
+      {
+        topic: "Pet insurance consumer protections",
+        q: "What must a pet insurer tell a buyer before they sign?",
+        kind: "include",
+        s: null,
+        h: "Pet insurers must disclose every exclusion for preexisting, hereditary, congenital and chronic conditions, publish a standalone disclosure in at least 12-point type, give buyers 30 days to return a policy for a full refund, and carry the burden of proving a preexisting-condition exclusion applies. Waiting periods are capped at 30 days for illness, banned outright for accidents, and waivable by a vet exam; wellness programs may not be sold as insurance.",
+        hAsked:
+          "Every exclusion for a preexisting, hereditary, congenital or chronic condition, in a standalone disclosure set in at least 12-point type. The buyer gets 30 days to return the policy for a full refund, and if the insurer later denies a claim as preexisting, it has to prove it.",
+        hc: "s96",
+        why: "A consumer protection chapter written into an animal welfare bill, and the Senate has not voted on any of it. Cost of care is the reason people give up pets, which makes this closer to the bill's purpose than its placement suggests.",
+        ties: [],
+      },
+      {
+        topic: "Dog breed in home insurance",
+        q: "Can an insurer price or refuse a home policy over the dog's breed?",
+        kind: "include",
+        s: "Homeowners and renters insurers, and the joint underwriting association, may not consider a dog's breed or mixture of breeds when writing, renewing, cancelling or pricing a policy, and may not ask about breed at all. They may still ask about a municipal dangerous-dog declaration or a known bite history.",
+        sAsked:
+          "No, breed cannot be used to write, renew, cancel or price a homeowners or renters policy, and the insurer cannot even ask. A dangerous-dog declaration or a known bite history is still fair to consider.",
+        sc: "s95",
+        h: null,
+        why: "Breed-based underwriting is how a housing protection gets undone: both bills bar a housing authority from discriminating on breed, and without this an insurer still can. The House barred it in housing and left it standing in insurance.",
+        ties: [],
+      },
+      {
+        topic: "Reach of the animal testing ban",
+        q: "Which products can no longer be tested on animals?",
+        kind: "include",
+        s: "Covers cosmetics and household products, their formulations, chemicals and ingredients, and bites whenever a valid alternative test method exists with no agency standing in the way. Regulations are due within 180 days of passage.",
+        sAsked:
+          "Cosmetics and household products, including their formulations and ingredients. The ban applies the moment a valid alternative exists, without waiting for anyone to certify it.",
+        sc: "s95",
+        h: "Covers every product, formulation, chemical and ingredient with no category limit, but only where the public health commissioner has determined a valid alternative exists. The section takes effect 180 days after the act, with regulations due by a fixed date.",
+        hAsked:
+          "Every product, with no category limit at all. The catch is that the ban only bites once the public health commissioner has determined an alternative is valid, so its reach depends on an agency acting.",
+        hc: "s96",
+        why: "The House ban is wider on paper and narrower in practice: it covers everything but waits on a commissioner's determination, while the Senate covers two categories and applies on its own. A conference can take the House's scope with the Senate's trigger, or the reverse, and those are very different laws.",
         ties: [],
       },
     ],
@@ -1769,6 +2046,26 @@ const FILED: CommitteeDetail[] = [
         h: "A decade of consensus, minus one fight",
         p: "The PETS Act is an omnibus combining nearly a decade of animal-welfare bills. The Senate passed it 38\u20130 in March; the House passed its version 151\u20131 in July. Both share most provisions \u2014 the disagreement is narrow but high-profile.",
         c: "s54",
+      },
+      {
+        h: "The ban never lost a vote",
+        p: "In July the House Ways and Means committee recommended the Senate bill ought to pass with an amendment striking out all after the enacting clause and inserting the text of H.5581. That is how the pet shop ban left the bill: the House did not vote it down, it replaced the whole text and the ban went with it.",
+        c: "s54",
+      },
+      {
+        h: "Most of these conferences start with a substitution",
+        p: "It is the usual move, not a slight. House Ways and Means did the same to the Mass Ready Act and the primary care bill, and Senate Ways and Means did it to the House teacher benefits bill. In four of the five, one chamber struck the other\u2019s text entirely and inserted its own, which is why the two versions diverge so widely rather than line by line.",
+        c: "s54",
+      },
+      {
+        h: "Neither bill appropriates a dollar",
+        p: "Both create a statewide public housing pet program, and the House also builds a licensing system for veterinary technicians and an advisory group, with no funding line anywhere. The only dollar figures in either bill are penalties and the $160 deposit cap.",
+        c: "s95",
+      },
+      {
+        h: "The retail ban is narrower than it sounds",
+        p: "It reaches dogs and cats sold through licensed pet shops. Neither bill mentions rabbits, birds or any other species, and neither touches breeders or direct and online sales, which is how most animals in Massachusetts already change hands.",
+        c: "s95",
       },
     ],
     conferees: {
@@ -2100,58 +2397,102 @@ const FILED: CommitteeDetail[] = [
     short: "Teacher benefits",
     title: "A second chance at RetirementPlus, and who gets it",
     subtitle:
-      "Both chambers agree on the fix: give teachers who missed the 2001 RetirementPlus window a second chance to buy in. They differ on who qualifies, how long they get, and how the buy-back is calculated.",
+      "Both chambers agree on the fix: give teachers who missed the 2001 RetirementPlus window a second chance to buy in. They differ on who qualifies, how long they get, and what the buy-back costs, and the House added three sections on teachers who leave the classroom for a state education job that the Senate has not voted on.",
     senateBill: { n: "S.3109", u: "https://malegislature.gov/Bills/194/S3109" },
     houseBill: { n: "H.4361", u: "https://malegislature.gov/Bills/194/H4361" },
     since: "July 2026",
-    checked: "September 21, 2026",
-    textRead: false,
+    checked: "October 6, 2026",
+    textRead: true,
     claim:
-      "differing on who qualifies for a second chance at RetirementPlus and how the buy-back is calculated",
+      "differing on who qualifies for a second chance at RetirementPlus and what the buy-back costs",
     settled: [
       {
         p: "A one-time second chance to opt into RetirementPlus",
-        d: "Both give teachers who missed the original enrollment a new window to join the enhanced pension program that later hires receive automatically.",
-        c: "s57",
+        d: "Both give teachers who missed the original enrollment a new window to join the enhanced pension program that later hires receive automatically. Both cover the teachers' retirement system and the Boston retirement system.",
+        c: "s93",
       },
       {
-        p: "Enrollees pay a make-up contribution plus interest",
-        d: "Both require newly enrolling teachers to pay what they would have contributed, with assumed actuarial interest, and direct the retirement systems to notify eligible teachers.",
-        c: "s57",
+        p: "Enrollees contribute at 11 percent",
+        d: "Identical in both: anyone taking the second chance contributes at 11 percent under section 22 of chapter 32 going forward.",
+        c: "s94",
+      },
+      {
+        p: "The retirement systems must go find the people this applies to",
+        d: "Both require the teachers' and Boston retirement systems to notify eligible active and inactive members and to inform school districts. The House adds a 90-day deadline for doing it; the Senate sets none.",
+        c: "s93",
       },
     ],
     open: [
       {
-        topic: "Eligibility",
-        q: "Who is eligible for the second chance?",
+        topic: "Who qualifies",
+        q: "Does a teacher who turned this down in 2010 get another look?",
         kind: "calibrate",
-        s: "Reaches only teachers who missed the original 2001 six-month enrollment window.",
-        sc: "s58",
-        h: "Reaches anyone who missed opting in, whether in 2001 or at any time before September 1, 2025, a broader group.",
-        hc: "s58",
-        why: "The single biggest difference: how many teachers the fix reaches, and how much it costs the pension system.",
+        s: "Reaches teachers who did not elect, or declined, before July 1, 2001, and leaves who counts as a teacher to the definition already in chapter 32.",
+        sAsked:
+          "No, the Senate reopens only the 2001 decision, so a teacher who declined later is still out.",
+        sc: "s93",
+        h: "Reaches teachers who did not elect, or declined, at any point up to September 1, 2025, and names school nurses in the bill rather than leaving them to the chapter 32 definition.",
+        hAsked:
+          "Yes, the House reopens any decision made up to September 1, 2025, and names school nurses as covered.",
+        hc: "s94",
+        why: "The widest practical difference between the two bills. The Senate reopens the 2001 decision; the House reopens every decision made since. How many people that is, and what it costs the pension system, is the argument.",
+        ties: [],
+      },
+      {
+        topic: "What the buy-back costs",
+        q: "How far back does a teacher have to pay?",
+        kind: "calibrate",
+        s: "Runs back to July 1, 2001, charged as the gap between 11 percent and what was actually withheld, plus actuarial interest compounding annually. Payable in one sum or in installments.",
+        sAsked:
+          "Back to July 1, 2001, paying the gap between 11 percent and what was withheld, plus interest compounding annually.",
+        sc: "s93",
+        h: "Runs back to the date the member joined the retirement system, which for a long-serving teacher is further back than 2001. Charged at 11 percent, with no interest named, and a member may be required to pay rather than must.",
+        hAsked:
+          "Back to the day they joined the system, which for a long-serving teacher is further than 2001. No interest is named, and the bill says a member may be required to pay rather than must.",
+        hc: "s94",
+        why: "Two separate questions inside one provision: how many years a teacher pays for, and whether interest is charged on top. The Senate is the more precisely drafted and the House the more open-ended, which is not the same as the cheaper.",
         ties: [],
       },
       {
         topic: "Opt-in window",
-        q: "How long is the opt-in window?",
+        q: "How long does a teacher have to decide?",
         kind: "calibrate",
-        s: "The window runs through June 30, 2027.",
-        sc: "s58",
-        h: "The window runs 180 days from the law's effective date.",
-        hc: "s58",
-        why: "",
+        s: "Runs from the effective date through June 30, 2027, a fixed end date.",
+        sAsked:
+          "Until June 30, 2027, however long that turns out to be from the day the bill passes.",
+        sc: "s93",
+        h: "Runs 180 days from the effective date, so the deadline moves with the signing.",
+        hAsked: "180 days, counted from whenever the bill is signed.",
+        hc: "s94",
+        why: "A fixed date is easier to publicize and easier to miss if the bill passes late. 180 days is the same length of notice whenever it passes.",
         ties: [],
       },
       {
-        topic: "Buy-back formula",
-        q: "How is the buy-back calculated?",
-        kind: "calibrate",
-        s: "Sets a precise formula for retroactive contributions and assumed interest.",
-        sc: "s58",
-        h: "Leaves the buy-back formula less specified.",
-        hc: "s58",
-        why: "The formula determines what each teacher pays and the cost to the Commonwealth; the Senate is more detailed, and the teachers' unions have raised cost concerns about the latest version.",
+        topic: "Teachers who take a state education job",
+        q: "Does a teacher who moves to DESE stop being a teacher?",
+        kind: "include",
+        s: null,
+        snote:
+          "Not in the Senate bill. The Senate replaced the House text outright and kept only the RetirementPlus reopening.",
+        h: "Keeps teacher status and stays in the teachers’ or Boston retirement system, with no break in service. Anyone already moved to the state employees’ system is reinstated on paying the difference in contributions, and retires in group 1.",
+        hAsked:
+          "No, they keep teacher status and stay in the teachers’ or Boston retirement system, treated as having had no break in service. A teacher already moved to the state employees’ system is reinstated on paying the difference, and retires in group 1.",
+        hc: "s94",
+        why: "A separate subject riding in the same bill, and the Senate cut it. Because S.3109 is a replacement text for H.4361 rather than a bill of its own, dropping these provisions was a decision the Senate made rather than a subject it never reached.",
+        ties: [],
+      },
+      {
+        topic: "Backing out",
+        q: "What happens if a teacher opts in and then cannot finish?",
+        kind: "include",
+        s: "The election is irrevocable, and a teacher who does nothing is treated as having affirmatively declined. A teacher who opts in, pays, and then does not complete the creditable service requirement is reimbursed the extra contributions with regular interest.",
+        sAsked:
+          "They are reimbursed the extra contributions with regular interest, though the election itself cannot be undone, and a teacher who never responds counts as having declined.",
+        sc: "s93",
+        h: null,
+        hnote:
+          "Not in the House bill, which says nothing about reversing an election or about refunding a teacher who pays in and does not qualify in the end.",
+        why: "The Senate wrote the exits and the House did not. Whether that silence is deliberate or an omission is the kind of thing a conference settles quietly, and it decides what happens to a teacher who buys in and then leaves early.",
         ties: [],
       },
     ],
@@ -2161,6 +2502,11 @@ const FILED: CommitteeDetail[] = [
         h: "A long-stalled fix",
         p: "An administrative ruling held that teachers who missed the 2001 deadline could not join even without notice. The House favored a fix for years and it died in the Senate three times; the Senate joined this session after heavy constituent correspondence.",
         c: "s57",
+      },
+      {
+        h: "One bill replaced the other",
+        p: "These two are not parallel drafts. The House passed H.4361 in July 2025; the Senate reported S.3109 in June 2026 as a new text for that same bill, replacing it outright. So the Senate version is not a bill that happens to be shorter, it is the House bill rewritten, and everything the Senate left out it left out on purpose.",
+        c: "s94",
       },
     ],
     conferees: {

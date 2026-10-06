@@ -470,4 +470,34 @@ export const SOURCES: Record<string, Source> = {
     d: "House bill 5562 as amended and passed to be engrossed July 8, 2026, 264 sections. Read directly for this comparison. The legislature publishes no machine-readable text for this one, so it was extracted from the PDF.",
     u: "https://malegislature.gov/Bills/194/H5576.pdf",
   },
+  s93: {
+    t: "S.3109, Senate engrossed text",
+    d: "The Senate RetirementPlus bill, a single act with no section numbering. Read in full for this comparison; text bundled in this prototype.",
+    u: "https://malegislature.gov/Bills/194/S3109",
+  },
+  s94: {
+    t: "H.4361, House engrossed text",
+    d: "The House teacher benefits bill, four sections. Sections 1 to 3 cover teachers employed by DESE or the Executive Office of Education; section 4 is the RetirementPlus reopening. Read in full for this comparison. Extracted from the General Court PDF, which publishes no machine-readable text for this number.",
+    u: "https://malegislature.gov/Bills/194/H4361",
+  },
+  s95: {
+    t: "S.3028, Senate engrossed text",
+    d: "The Senate PETS Act, 19 sections. Read in full for this comparison; text bundled in this prototype.",
+    u: "https://malegislature.gov/Bills/194/S3028",
+  },
+  s96: {
+    t: "H.5589, House engrossed text",
+    d: "The House PETS Act, 43 sections plus a section 30A. Read in full for this comparison; text bundled in this prototype.",
+    u: "https://malegislature.gov/Bills/194/H5589",
+  },
+  s97: {
+    t: "S.2993, Senate engrossed text",
+    d: "The Senate BRIGHT Act, 21 sections. Read in full for this comparison; text bundled in this prototype.",
+    u: "https://malegislature.gov/Bills/194/S2993",
+  },
+  s98: {
+    t: "H.4769, House engrossed text",
+    d: "The House BRIGHT Act, 20 sections. Read in full for this comparison. Extracted from the General Court PDF, which publishes no machine-readable text for this number.",
+    u: "https://malegislature.gov/Bills/194/H4769",
+  },
 };
