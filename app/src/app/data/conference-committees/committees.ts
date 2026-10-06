@@ -54,6 +54,46 @@ export interface Tie {
 }
 
 /**
+ * How to write a card. Learned the hard way, October 2026.
+ *
+ * COLLAPSED, A CARD SHOWS ONE SENTENCE. The page runs every position through
+ * `lead()`, which cuts at the first period. So a position beginning "Yes." or
+ * "No." renders as "Yes." and nothing else. Fold it into the sentence with a
+ * comma: not "Yes. Landlords may charge a monthly pet fee" but "Yes, landlords
+ * may charge a monthly pet fee". This was shipped three times before it stuck.
+ *
+ * WRITE FOR THE TOPIC, NOT THE QUESTION. The list a reader scans is topics. A
+ * position written as an answer to the question is a non sequitur where it
+ * actually appears, and one that restates the topic wastes the only sentence
+ * the card shows. Write `s` and `h` to stand under `topic`; write `sAsked` and
+ * `hAsked` as answers to `q`. Both, separately. Do not rewrite `q` to fit a
+ * position you have already written.
+ *
+ * SAY WHAT THE LAW DOES. Not what the document looks like, not what a drafter
+ * chose, not what a section is titled. "Bars a landlord from charging a monthly
+ * fee for a pet", not "takes a different approach to pet fees".
+ *
+ * NOTHING SELF-REFERENTIAL. Never mention the comparison, the list, the bill's
+ * structure, or this page. A reader wants the law, not the method.
+ *
+ * NAME THE PREDICATE. "Which records qualify" says nothing. Say which records.
+ * Every noun phrase a reader cannot picture is a failure.
+ *
+ * NO FLUFF. If a line points at something the reader cannot see, cut it. "On
+ * top of every exemption the public records law already carries" tells a reader
+ * nothing they can act on.
+ *
+ * SILENCE IS SILENCE. Where a chamber's bill does not address something, the
+ * position is `null`, which renders as a bare italic "Not in the bill". Do not
+ * reason about what the silence implies. Do not write "does not rule it out".
+ *
+ * DOUBLE NEGATIVES READ AS ERRORS. "Bars nobody from charging one" is a
+ * sentence a reader has to solve. Say who may do what.
+ *
+ * AMERICAN SPELLING. organization, not organisation. Seven data files had to be
+ * swept for this once already.
+ */
+/**
  * One thing the two bills do not agree on.
  *
  * Write the two positions to stand under `topic`, not under `q`. The list a
@@ -139,7 +179,7 @@ export interface CommitteeDetail {
   since: string;
   /** When the comparison below was last read against the bills. */
   checked: string;
-  /** Whether both texts were read in full, rather than summarised from reporting. */
+  /** Whether both texts were read in full, rather than summarized from reporting. */
   textRead?: boolean;
   /** A clause naming how the two texts differ, read mid sentence. */
   claim?: string;
@@ -230,7 +270,7 @@ const FILED: CommitteeDetail[] = [
           "Not in the Senate bill. The Senate text is about phones in schools and nothing else.",
         h: "Regulates social media companies within the new law under Chapter 93M Online Protections. The House writes this as a new chapter of the consumer protection law, alongside the 93A the Attorney General already enforces under: platforms must bar users under 14; require verifiable parental consent at 14 and 15; give 14\u201315 year olds locked-down default settings, no addictive feed, and no notifications between midnight and 6 a.m.; run an age-assurance system with a three-day appeal; segregate the age data and never share a minor's LGBTQ+ status; publish counts of users processed and denied. Violations are 93A violations with fines of up to $5,000 per non-compliant account, and up to $1 million per day for failing to publish the counts. The Attorney General writes the rules and runs a complaint portal.",
         hc: "s30",
-        why: "This is the negotiation. It is a full regulatory chapter travelling inside a school bill. The conferees can keep it, drop it, or split it. Sen. Comerford reports constituents raising concerns about the age-verification piece specifically.",
+        why: "This is the negotiation. It is a full regulatory chapter traveling inside a school bill. The conferees can keep it, drop it, or split it. Sen. Comerford reports constituents raising concerns about the age-verification piece specifically.",
         regional: {
           t: "No New England state has enacted an age-verification or under-14 parental-consent regime like the House's Chapter 93M, and comparable laws elsewhere have been challenged and partly enjoined in ongoing NetChoice litigation. There is no regional precedent to lean on here: the House provision would be new to the region and legally untested.",
           c: "s78",
@@ -292,7 +332,7 @@ const FILED: CommitteeDetail[] = [
         kind: "calibrate",
         s: "Adds travel off campus to early college, dual enrollment or vocational sites, and case-specific exemptions DESE builds into the model policy on a finding of compelling need.",
         sc: "s29",
-        h: "Adds emergencies, as determined by the district, and language access, meaning translation or interpretation, on the superintendent's written authorisation.",
+        h: "Adds emergencies, as determined by the district, and language access, meaning translation or interpretation, on the superintendent's written authorization.",
         hc: "s30",
         why: "Both lists are additions to a shared core. A final bill could simply take both.",
         ties: [],
@@ -396,7 +436,7 @@ const FILED: CommitteeDetail[] = [
     short: "Health care workplace violence",
     title: "Assaults on health care workers, and what to charge them as",
     subtitle:
-      "The two bills are close to word-for-word on prevention, reporting and paid leave. They part on one thing: whether the answer to an assault is a new felony or a new arrest power.",
+      "The two bills are close to word-for-word on prevention, reporting and paid leave. They part on how the state answers an assault, and on which workers are protected in the first place.",
     senateBill: {
       n: "S.3184",
       u: "https://malegislature.gov/Bills/194/S3184.pdf",
@@ -424,7 +464,7 @@ const FILED: CommitteeDetail[] = [
       },
       {
         p: "A senior manager and a crisis response team for assaulted staff",
-        d: "Both require an assaulted-staff action program with group and individual crisis counselling, support groups, family intervention and peer help.",
+        d: "Both require an assaulted-staff action program with group and individual crisis counseling, support groups, family intervention and peer help.",
         c: "s33",
       },
       {
@@ -434,7 +474,7 @@ const FILED: CommitteeDetail[] = [
       },
       {
         p: "Paid, job-protected leave after an assault",
-        d: "For medical treatment, victim services, a protective order, or court and prosecutor appointments. Does not draw down sick, vacation or personal time; runs concurrently with PFML; confidential; job restored on return.",
+        d: "Does not draw down sick, vacation or personal time; runs concurrently with PFML; confidential; job restored on return. What the leave may be used for is not settled, and is listed on the left.",
         c: "s33",
       },
       {
@@ -451,11 +491,6 @@ const FILED: CommitteeDetail[] = [
         p: "A state report on alternatives to arrest for patients in crisis",
         d: "Both direct Health and Human Services and Public Safety to report within a year on interagency data sharing and on pathways into treatment that do not require an arrest.",
         c: "s32",
-      },
-      {
-        p: "No employer retaliation for reporting",
-        d: "Identical protection in both bills.",
-        c: "s33",
       },
     ],
     open: [
@@ -479,6 +514,49 @@ const FILED: CommitteeDetail[] = [
           },
           { n: "Michael S. Day", w: "Judiciary co-chair" },
         ],
+      },
+      {
+        topic: "Who the law protects",
+        q: "Which hospital workers does this protect?",
+        kind: "calibrate",
+        s: "Anyone a hospital employs, whatever their job, plus contract staff, vendors and volunteers.",
+        sAsked:
+          "Anyone the hospital employs, whatever their job, plus contract staff, vendors and volunteers.",
+        sc: "s33",
+        h: "Only hospital staff who provide health care services, plus contract staff, vendors and volunteers.",
+        hAsked:
+          "Only those providing health care services, plus contract staff, vendors and volunteers.",
+        hc: "s32",
+        why: "The House definition adds the words 'who is providing health care services at'. The Senate's does not. A security guard, a housekeeper or a food service worker assaulted at work is covered by the Senate bill and may fall outside the House one.",
+        ties: [],
+      },
+      {
+        topic: "Reporting a safety problem",
+        q: "Who can a worker tell about a safety problem without being punished?",
+        kind: "calibrate",
+        s: "Protected whether the worker reports to their own employer or to the state.",
+        sAsked: "Their own employer or the state.",
+        sc: "s33",
+        h: "Protected only when the worker reports to the state.",
+        hAsked: "The state only, not their own employer.",
+        hc: "s32",
+        why: "The two bills carry the same subsection, identical but for four words: the Senate adds 'the employee's health care employer or'. Under the House text a worker who raises a concern with their own manager is not protected by this section.",
+        ties: [],
+      },
+      {
+        topic: "What the leave covers",
+        q: "What can a worker use the paid leave for?",
+        kind: "calibrate",
+        s: "Covers mental health treatment for the assault, and getting a harassment prevention order, on top of medical care, victim services, legal help, and court.",
+        sAsked:
+          "Medical care, mental health treatment for the assault, victim services, legal help, a protective or harassment prevention order, and court.",
+        sc: "s33",
+        h: "Covers medical treatment, victim services, legal help, a court protective order, and court appearances.",
+        hAsked:
+          "Medical treatment, victim services, legal help, a court protective order, and court appearances.",
+        hc: "s32",
+        why: "Only the Senate names an acute mental health or behavioral health need arising from the assault, and only the Senate lets the leave be used to get a harassment prevention order. A worker seeking counselling after being attacked is covered by one bill and not named in the other.",
+        ties: [],
       },
       {
         topic: "Enforcement and fines",
@@ -522,8 +600,8 @@ const FILED: CommitteeDetail[] = [
         c: "s10",
       },
       {
-        h: "Effective on signature",
-        p: "The vehicle is H.4767, which carries an emergency preamble. The Senate amendment replaced everything after the enacting clause and left the preamble in place, so either version takes effect when signed.",
+        h: "When it takes effect",
+        p: "Neither bill sets a date for the act as a whole. The Senate delays one section by a year: the extension of the arrest power beyond hospitals to every other covered facility.",
         c: "s34",
       },
       {
@@ -616,7 +694,7 @@ const FILED: CommitteeDetail[] = [
         c: "s36",
       },
       {
-        p: "A universal opt-out signal must be honoured",
+        p: "A universal opt-out signal must be honored",
         d: "Both require controllers to respect a browser or device-level opt-out preference signal.",
         c: "s35",
       },
@@ -909,11 +987,11 @@ const FILED: CommitteeDetail[] = [
     open: [
       {
         topic: "Court review",
-        q: "What can a court actually do when the Legislature says no?",
+        q: "You asked the Legislature for a record and it said no. What can a court do?",
         kind: "tool",
-        s: "A petition in the nature of certiorari to Suffolk Superior Court within 60 days, reviewed on the administrative record alone. There is no discovery, and the court may find only that the determination did or did not contain 'substantial errors of law'. It may not order production, grant injunctive or declaratory relief, or award fees.",
+        s: "A judge cannot order the Legislature to hand over a record. The court can only decide whether the Legislature made a serious legal mistake. You file in Suffolk Superior Court within 60 days of the final refusal, the judge reads only the paperwork the Legislature already produced, and there is no discovery. The judge may look at a withheld record privately, but it stays sealed.",
         sc: "s38",
-        h: "A petition to the Supreme Judicial Court, which has original and exclusive jurisdiction, reviews de novo, and must presume the record is public with the burden on the Legislature to prove otherwise by a preponderance of the evidence.",
+        h: "The state\u2019s highest court decides fresh whether the Legislature was right to withhold a record, starting from the assumption that it is public. The Legislature has to prove it was right. There is no filing deadline, and the court is told to move quickly where it can.",
         hc: "s37",
         why: "This cuts against the easy story. The Senate's court is easier to reach but can do very little; the House's court is the highest in the state, but once there, it reviews everything fresh and the Legislature carries the burden. Neither is simply 'stronger'.",
         ties: [],
@@ -922,10 +1000,10 @@ const FILED: CommitteeDetail[] = [
         topic: "Journalist shield",
         q: "Should journalists be protected from being forced to reveal sources?",
         kind: "include",
-        s: "No court, grand jury or body with subpoena power may compel a journalist or news organisation to identify a confidential source, except on a court finding by clear and convincing evidence that the information is material, critical, unavailable elsewhere, and of overriding public interest. Adopted 40\u20130 as a floor amendment from Sen. Rausch.",
+        s: "No court, grand jury or body with subpoena power may compel a journalist or news organization to identify a confidential source, except on a court finding by clear and convincing evidence that the information is material, critical, unavailable elsewhere, and of overriding public interest. Adopted 40\u20130 as a floor amendment from Sen. Rausch.",
         sc: "s38",
         h: null,
-        why: "Massachusetts is one of nine states without a shield law. The provision was never offered in the House, so the House conferees have not voted on it. The Senate definition covers journalists working for a news organisation; it does not reach independent writers.",
+        why: "Massachusetts is one of nine states without a shield law. The provision was never offered in the House, so the House conferees have not voted on it. The Senate definition covers journalists working for a news organization; it does not reach independent writers.",
         regional: {
           t: "Rhode Island, Maine and Connecticut all have journalist shield statutes; Massachusetts and New Hampshire rely only on a case-by-case common-law privilege. The Senate's shield would bring Massachusetts in line with most of its neighbors.",
           c: "s71",
@@ -933,26 +1011,52 @@ const FILED: CommitteeDetail[] = [
         ties: [],
       },
       {
+        topic: "Additional reasons to refuse",
+        q: "Can they turn you down for a reason that is not written in this bill?",
+        kind: "include",
+        s: "Any exemption in the existing public records law, including personnel files and memos about a policy still being decided.",
+        sAsked:
+          "Yes, because the Senate adds a sentence letting the Legislature withhold or redact anything the existing public records exemptions cover. Personnel files and memos about a policy still being decided are on that list.",
+        sc: "s37",
+        h: "No additional reasons beyond the three the bill already gives.",
+        hAsked:
+          "No, the three reasons in the bill are the only ones. None of the exemptions in the existing public records law are carried over.",
+        hc: "s38",
+        why: "Both bills start from the same three grounds. The Senate then adds a sentence that reaches a much longer list, which decides how often a request can be turned down and on what basis.",
+        ties: [],
+      },
+      {
+        topic: "Written testimony",
+        q: "If you write to a committee on your own, does your letter become public?",
+        kind: "calibrate",
+        s: "Only testimony a committee solicited can be requested as a public record.",
+        sAsked:
+          "Only if the committee asked for it. Testimony you send unprompted is not a legislative record under the Senate bill, and the Legislature can refuse it on that ground alone.",
+        sc: "s37",
+        h: "All written testimony sent to the Legislature can be requested as a public record.",
+        hAsked:
+          "Yes, whether or not anyone asked for it. The House list says \u2018written testimony\u2019 with no condition attached.",
+        hc: "s38",
+        why: "One word decides it. The Senate requires testimony to be solicited; the House does not. Joint committees are where most testimony arrives, so this reaches a large share of what the public actually sends the Legislature.",
+        ties: [],
+      },
+      {
         topic: "The Auditor's power",
         q: "Should the State Auditor's power over the Legislature be written into statute?",
         kind: "include",
         s: null,
-        snote:
-          "Not in the Senate bill. The Senate text has no audit provisions at all.",
-        h: "The Auditor may audit the Legislature's 'administrative functions' (budgets, official audits, expenditures and settlement agreements from FY2021 on) but not its 'constitutional functions' such as deliberation. Records requests get a 60-day response; interviews need the presiding officer's authorisation; disputes go into a 'statement of dispute' in the audit report, and no court may compel production.",
+        h: "The Auditor may audit the Legislature's 'administrative functions' (budgets, official audits, expenditures and settlement agreements from FY2021 on) but not its 'constitutional functions' such as deliberation. Records requests get a 60-day response; interviews need the presiding officer's authorization; disputes go into a 'statement of dispute' in the audit report, and no court may compel production.",
         hc: "s37",
-        why: "This responds to the 2024 ballot question authorising a legislative audit, and to the litigation that followed. The House framework is the only place in either bill where a court is expressly told it has no jurisdiction.",
+        why: "This responds to the 2024 ballot question authorizing a legislative audit, and to the litigation that followed. The House framework is the only place in either bill where a court is expressly told it has no jurisdiction.",
         ties: [],
       },
       {
         topic: "Governor's policy drafts",
         q: "Can the Governor withhold policy-in-development documents?",
         kind: "include",
-        s: "In addition to the existing exemptions, the Governor's office may withhold 'communications, memoranda, drafts or other documents relating to developing policy positions'.",
+        s: "Policy drafts such as \u2018communications, memoranda, drafts or other documents relating to developing policy positions\u2019 are exempt from disclosure.",
         sc: "s38",
         h: null,
-        hnote:
-          "No such exemption. The Governor's office is treated as any other agency under Chapter 66.",
         why: "A deliberative-process exemption that the executive branch has long argued for and that the House bill does not grant.",
         ties: [],
       },
@@ -982,9 +1086,9 @@ const FILED: CommitteeDetail[] = [
         topic: "Fees",
         q: "What can the Legislature charge?",
         kind: "calibrate",
-        s: "Sets no fee schedule. Because the section sits inside Chapter 66, the general public records fee rules would presumably apply, but the text does not say so.",
+        s: null,
         sc: "s38",
-        h: "An explicit schedule: 5 cents a page, up to $25 an hour after the first four hours, no charge for redaction unless required, waivers for public-interest requests and for requesters who cannot pay.",
+        h: "Five cents a page, the first four hours of staff time free, then up to $25 an hour. Answer late and they lose the right to charge anything at all. No fee for redacting unless a rule requires it, and waivers for requests that serve the public and for people who cannot pay.",
         hc: "s37",
         why: "",
         ties: [],
@@ -1019,7 +1123,7 @@ const FILED: CommitteeDetail[] = [
       },
       {
         h: "Disclosure",
-        p: "Partners in Democracy, the organisation that runs MAPLE, joined a public statement criticising the House for passing H.5469 within a day of its release and without a hearing, and supports the ballot question. MAPLE takes no position on this bill; this page describes both chambers' texts on the same terms.",
+        p: "Partners in Democracy, the organization that runs MAPLE, joined a public statement criticising the House for passing H.5469 within a day of its release and without a hearing, and supports the ballot question. MAPLE takes no position on this bill; this page describes both chambers' texts on the same terms.",
         c: "s28",
       },
     ],
@@ -1118,7 +1222,7 @@ const FILED: CommitteeDetail[] = [
         c: "s41",
       },
       {
-        p: "In-kind gifts and new debts itemised monthly",
+        p: "In-kind gifts and new debts itemized monthly",
         d: "Every in-kind contribution over $50, and every new liability, listed by name and purpose.",
         c: "s40",
       },

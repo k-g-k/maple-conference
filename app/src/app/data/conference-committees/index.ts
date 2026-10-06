@@ -693,7 +693,7 @@ export const NOT_LINKED = new Set<string>([]);
  * What kind of bill a conference is reconciling.
  *
  * Read off the texts rather than assumed: a bond bill is one that carries the
- * authorisation formula, "the state treasurer shall ... issue and sell bonds of
+ * authorization formula, "the state treasurer shall ... issue and sell bonds of
  * the commonwealth", together with a schedule of line items keyed by account
  * number. Three of the twelve do, and all three also amend the General Laws in
  * their outside sections, so the label says which kind of bill it is rather

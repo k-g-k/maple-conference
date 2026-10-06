@@ -21,7 +21,7 @@
 // its own middle with it.
 //
 // Two of the forty seeds are not on land: a district on the harbour or at the
-// end of the Cape has its centre where this simplified outline has already cut
+// end of the Cape has its center where this simplified outline has already cut
 // to water. Those fall back to the middle of the part of the cell that is drawn
 // on land, which the cell and the coastline between them decide, so every
 // marker is on land by construction rather than by inspection.

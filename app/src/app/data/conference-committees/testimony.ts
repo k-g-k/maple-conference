@@ -1,7 +1,7 @@
 // Placeholder accounts and submissions for the conference-committee pages'
 // public-input section.
 //
-// Nothing here is real. No account is a person or an organisation that exists,
+// Nothing here is real. No account is a person or an organization that exists,
 // and no submission is anyone's position on anything. The section is a shell we
 // want to see at full size before we know where the real filings come from: a
 // conference takes no testimony of its own, so whatever eventually lands here
@@ -13,7 +13,7 @@
 // who knows the page is a prototype is better served by copy that says so than
 // by invented positions they might take for real ones.
 //
-// Positions follow the one rule we already know will hold: an organisation, a
+// Positions follow the one rule we already know will hold: an organization, a
 // an agency writing on a conference is on the record as having
 // filed, not as having taken a side. None of the four is "no side", so the rule
 // lands on the least loaded of them: all three kinds carry "Please pass
@@ -38,7 +38,7 @@ import fftfLogo from "../../../assets/orgs/fight-for-the-future.jpg";
 import mmsSeal from "../../../assets/orgs/massachusetts-medical-society.png";
 
 /**
- * "organization" for accounts writing under an organisation's name,
+ * "organization" for accounts writing under an organization's name,
  * "government" for public offices, "individual" for a person.
  */
 export type ConferenceAccountType =
@@ -104,7 +104,7 @@ export interface ConferenceSubmission {
    *
    * The position on a co-sign is the signer's own, copied from the letter when
    * they signed, so nothing here is read through to the letter at display
-   * time: a later change by the organisation does not rewrite what somebody
+   * time: a later change by the organization does not rewrite what somebody
    * agreed to.
    */
   cosignOf?: string;
@@ -113,7 +113,7 @@ export interface ConferenceSubmission {
    *
    * On the filing being signed rather than counted from the feed, because a
    * co-sign whose words were kept private never appears there: it goes to the
-   * organisation and into this number, and nowhere else.
+   * organization and into this number, and nowhere else.
    */
   cosignCount?: number;
   /**
@@ -397,9 +397,9 @@ export const DEMO_ACCOUNTS: ConferenceAccount[] = [
 
   // ── Organizations ─────────────────────────────────────────────────────────
   // ── Real, and the only one here that is ──────────────────────────────────
-  // Everything else on this page is filler. This account is an organisation
+  // Everything else on this page is filler. This account is an organization
   // that exists, filing a letter it actually sent, because the co-sign work
-  // needs one true example to be built against: a drafting organisation, a
+  // needs one true example to be built against: a drafting organization, a
   // letter, and thirty other names on it.
   {
     id: "cc-org-mms",
@@ -409,7 +409,7 @@ export const DEMO_ACCOUNTS: ConferenceAccount[] = [
     initials: "MM",
     // The Society's seal, taken from its own letterhead on the letter below.
     avatar: mmsSeal,
-    // The viewer follows the two real organisations and nobody else:
+    // The viewer follows the two real organizations and nobody else:
     // following is what puts their letters in reach, and the co-sign work is
     // read from the position of somebody who already did that.
     followedByViewer: true,
@@ -513,7 +513,7 @@ export const VIEWER: ConferenceAccount = {
  * Where an account filed twice, both filings carry the same position. Nothing
  * stops a person changing their mind, but the map reads a county from the
  * accounts that filed in it, and an account arguing two ways would give a
- * marker no colour to take.
+ * marker no color to take.
  */
 export const DEMO_TESTIMONY: ConferenceSubmission[] = [
   // Filler, so the co-sign work is read in a feed rather than against four
@@ -863,7 +863,7 @@ export const DEMO_TESTIMONY: ConferenceSubmission[] = [
   },
   {
     // The real one. Fight for the Future's updated coalition letter of 27 July
-    // 2026, which the organisation published at
+    // 2026, which the organization published at
     // fightforthefuture.org/news/2026-07-27-updated-letter-massachusetts-lawmakers-must-assure-constituents-and-human-rights-organizations-that-new-social-media-bill-does-not-require-invasive-online-id-checks
     //
     // The body is the July update and the three asks, which is the part of the
@@ -1055,7 +1055,7 @@ export const DEMO_TESTIMONY: ConferenceSubmission[] = [
   // The long ones. A six-line clamp cannot be judged against copy that only
   // just reaches seven, so these run well past it, in three different shapes:
   // one person arguing, one person listing what worries them, and one
-  // organisation filing a drafted document.
+  // organization filing a drafted document.
   {
     id: "cc-t-priya-long",
     userId: "cc-ind-priya",

@@ -29,7 +29,7 @@ export interface ConferencePositionOption {
   /** Two words, for the filter row and for the chip on a submission. */
   short: string;
   /**
-   * Selected-state colours: fill, edge and ink. One string, because the three
+   * Selected-state colors: fill, edge and ink. One string, because the three
    * only ever appear together.
    */
   on: string;
@@ -44,7 +44,7 @@ export interface ConferencePositionOption {
    * Fill and ink for a surface wearing this position: the chip on a card, and
    * the band at the head of a co-signed letter.
    *
-   * No border colour, unlike `on`. Those surfaces take the page's own line, so
+   * No border color, unlike `on`. Those surfaces take the page's own line, so
    * that the edge belongs to the thing it is drawn around rather than to what
    * was asked for. The ink is a step deeper than `on`'s and damped in chroma,
    * because it is read as text rather than seen as a state.
@@ -68,7 +68,7 @@ export const POSITIONS: Record<ConferencePosition, ConferencePositionOption> = {
     k: "house",
     l: "Pass the House version",
     short: "House version",
-    // The chamber's own colour, the one the House wears everywhere else on the
+    // The chamber's own color, the one the House wears everywhere else on the
     // page, softened to a fill.
     on: "bg-user-soft border-user text-user-ink",
     ask: "bill",

@@ -1524,7 +1524,13 @@ function Scan({
           {/* No column label in either view. The section heading above
               already says what this column is, and the questions are the
               content rather than a list under a label. */}
-          <ScanColumn count={open.length} gap="gap-[26px]">
+          <ScanColumn
+            head="Where bill texts differ"
+            count={open.length}
+            gap="gap-[26px]"
+            headGap="mt-[20px]"
+            headHidden
+          >
             {open.map((o, i) => {
               // Two cards, not one card holding two outlines. The chambers are
               // separate answers to the same question, so each takes its own
@@ -1683,17 +1689,17 @@ function Scan({
           )}
         </div>
 
-        {/* Pulled up so the label sits level with the section heading rather
-            than a list-length below it. One offset for both views now that
-            neither column carries padding of its own: the pull is HEAD_GAP
-            plus the 14px that lands the label on the heading's own line.
-
-            This is the one section whose heading does not pin, which is what
-            lets the label sit level with it in normal flow. A pinned heading's
-            band is opaque and runs the full width of the card, so it would
-            paint over the label. */}
-        <div className="hidden @[720px]:block @[720px]:-mt-[44px]">
-          <ScanColumn head="Where bill texts match" count={settled.length}>
+        {/* No pull. This used to sit 44px high so its label could ride level
+            with the section heading, which was right while the column beside
+            it had no label of its own. Both columns are labelled now, so the
+            two labels line up by sitting in the same grid row, and the old
+            offset would put this one a label's height above its pair. */}
+        <div className="hidden @[720px]:block">
+          <ScanColumn
+            head="Where bill texts match"
+            count={settled.length}
+            headGap="mt-[12px]"
+          >
             {settled.map((x) => (
               <Row
                 key={x.p}
@@ -1722,12 +1728,32 @@ function ScanColumn({
   head,
   count,
   gap = "gap-[2px]",
+  headGap = "mt-[20px]",
+  headHidden = false,
   floatHead = false,
   children,
 }: {
   head?: string;
   count: number;
   gap?: string;
+  /**
+   * The air between the label and its first row, on the list rather than on
+   * the label.
+   *
+   * Per column, because one number does not read the same in both: the
+   * questions are set large with tight leading and the agreed items small with
+   * loose leading, so an identical margin looks wider on one side than the
+   * other. The eye is matching the gap, not the number.
+   */
+  headGap?: string;
+  /**
+   * Hide the label and keep the space it held.
+   *
+   * Not the same as passing no head at all: without one the list takes the
+   * space back and starts higher than the column beside it. Hidden, the two
+   * lists still begin on the same line.
+   */
+  headHidden?: boolean;
   /**
    * Take the label out of the column's flow once there are two columns, and
    * hang it level with the section heading instead.
@@ -1747,6 +1773,8 @@ function ScanColumn({
         // small caps, so a column label reads the same wherever it appears.
         <p
           className={`flex items-baseline gap-[8px] font-body font-semibold text-2xs uppercase tracking-[0.08em] text-ink-mid ${
+            headHidden ? "hidden " : ""
+          }${
             floatHead
               ? // Above the grid, not at its top: the grid starts where the
                 // first row starts, so top-0 put the label on top of it. The
@@ -1761,7 +1789,7 @@ function ScanColumn({
       )}
       <ul
         className={`flex flex-col ${gap} ${
-          head ? (floatHead ? "mt-[20px] @[720px]:mt-0" : "mt-[20px]") : ""
+          head ? (floatHead ? `${headGap} @[720px]:mt-0` : headGap) : ""
         }`}
       >
         {children}
@@ -2504,6 +2532,7 @@ function Boxed({
   plain,
   filled,
   tint,
+  band,
   bleed,
   children,
 }: {
@@ -2518,8 +2547,16 @@ function Boxed({
    */
   plain?: boolean;
   /** White rather than the page ground. */
-  /** White rather than the page ground. */
   filled?: boolean;
+  /**
+   * Paint the pinned bands white even where the card itself is not filled.
+   *
+   * A heading or a row of controls that comes to rest reads `--band` so it can
+   * cover what scrolls under it. Unset, that falls back to the page ground,
+   * which is right for a section sitting on the ground and wrong for one whose
+   * own content is white underneath.
+   */
+  band?: boolean;
   /**
    * A point off that white, for a filled section whose content is itself
    * cards. White cards on a white card have only their own edges to be found
@@ -2565,11 +2602,15 @@ function Boxed({
       style={
         {
           marginTop: SECTION_AIR,
-          ...(filled && on
+          // `band` does not wait on `on`: a section draws its pinned bands in
+          // the tabbed view, where it takes no card at all, and that is
+          // exactly where the fallback to the page ground showed through.
+          ...((filled && on) || band
             ? {
-                "--band": tint
-                  ? "var(--color-surface-tinted)"
-                  : "var(--color-surface)",
+                "--band":
+                  tint && filled && on
+                    ? "var(--color-surface-tinted)"
+                    : "var(--color-surface)",
               }
             : null),
         } as CSSProperties
@@ -2786,45 +2827,70 @@ const FEEDBACK = "#feedback";
 const FEEDBACK_LINK =
   "font-semibold underline decoration-dotted underline-offset-[4px] text-link hover:text-brand";
 
-const SPARSE_NOTE: Record<string, ReactNode> = {
-  "economic-development": (
-    <>
-      This list may be incomplete. At 225 pages in the House and 337 in the
-      Senate, these are the longest bills any of the twelve conferences is
-      working from. Below are some of the places where the House and Senate text
-      differ. Notice something missing or wrong?{" "}
-      <a href={FEEDBACK} className={FEEDBACK_LINK}>
-        Send us feedback
-      </a>
-      .
-    </>
-  ),
-  "mass-ready": (
-    <>
-      This list may be incomplete. The two bills run 188 pages in the House and
-      166 in the Senate, and the hundreds of local authorizations they each name
-      are not compared here. Below are some of the places where the House and
-      Senate text differ. Notice something missing or wrong?{" "}
-      <a href={FEEDBACK} className={FEEDBACK_LINK}>
-        Send us feedback
-      </a>
-      .
-    </>
-  ),
-  "bright-act": (
-    <>
-      This bill borrows against the income surtax to pay for deferred
-      maintenance and decarbonization at the Commonwealth&rsquo;s 29 public
-      college and university campuses. This list may be incomplete: below are
-      some of the places where the House and Senate text differ. Notice
-      something missing or wrong?{" "}
-      <a href={FEEDBACK} className={FEEDBACK_LINK}>
-        Send us feedback
-      </a>
-      .
-    </>
-  ),
+/**
+ * What each bill is, in one sentence, above the list of what is unresolved.
+ *
+ * The page was answering "who decides" and "what is contested" and never
+ * answering "what is this". For a committee whose bill is called the BRIGHT
+ * Act or the Mass Ready Act, a reader could get all the way to the bottom
+ * without learning the subject.
+ *
+ * One sentence, present tense, no numbers a reader cannot place. It describes
+ * the bill the two chambers are arguing over, not the argument.
+ */
+const GIST: Record<string, string> = {
+  "phone-free-schools":
+    "This bill regulates how students use technology in schools, with some provisions extending beyond schools.",
+  "workplace-violence":
+    "This bill makes hospitals and state-run care facilities write violence prevention plans, and gives a worker assaulted on the job paid leave to recover.",
+  "data-privacy":
+    "This bill creates a consumer privacy law giving people the right to see, correct and delete the personal data companies hold about them.",
+  "public-records":
+    "This bill opens a defined list of the Legislature\u2019s own records to public request, and brings the Governor\u2019s office under the public records law.",
+  "ballot-question-finance":
+    "This bill tightens the disclosure rules for ballot question campaigns and bans paying signature gatherers by the signature.",
+  "energy-affordability":
+    "This bill aims to lower electricity and gas bills, and lets a city or town bar competitive suppliers from signing residential contracts.",
+  "pets-act":
+    "This bill is an animal welfare package covering pet ownership in public housing, animal testing, neglect enforcement and the adoption of research animals.",
+  "teacher-benefits":
+    "This bill gives teachers who missed the 2001 RetirementPlus enrollment window a second chance to buy into the enhanced pension.",
+  "primary-care":
+    "This bill requires the state to raise the share of health care spending that goes to primary care, in steps, to 15 percent.",
+  "bright-act":
+    "This bill borrows against the income surtax to pay for deferred maintenance and decarbonization at the Commonwealth\u2019s 29 public college and university campuses.",
+  "mass-ready":
+    "This bill borrows billions for climate resilience, water infrastructure and land protection, and carries policy the chambers wrote differently.",
+  "economic-development":
+    "This bill borrows for capital grants and economic development projects, and carries a long tail of unrelated policy in both chambers.",
 };
+
+/**
+ * Where the comparison below is known to be partial, and why.
+ *
+ * Only the committees that have one. Everywhere else the gist stands alone and
+ * the page does not claim a completeness it has not earned either way.
+ */
+const PARTIAL: Record<string, string> = {
+  "economic-development":
+    "At 225 pages in the House and 337 in the Senate, these are the longest bills any of the twelve conferences is working from.",
+  "mass-ready":
+    "The two bills run 188 pages in the House and 166 in the Senate, and the hundreds of local authorizations they each name are not compared here.",
+  "bright-act": "",
+};
+
+const FEEDBACK_NOTE = (slug: string) => (
+  <>
+    {GIST[slug]} {PARTIAL[slug] ? PARTIAL[slug] + " " : null}
+    {slug in PARTIAL ? "This list may be incomplete: below" : "Below"} are some
+    of the places where the House and Senate text differ. Notice something
+    missing or wrong?{" "}
+    <a href={FEEDBACK} className={FEEDBACK_LINK}>
+      Send us feedback
+    </a>
+    .
+  </>
+);
 
 const CONTENTS = [
   { id: "committee", label: "Committee" },
@@ -4269,16 +4335,21 @@ function Detail({ c, style }: { c: CommitteeDetail; style: ReviewStyle }) {
                   id="decided"
                   question="What needs to be resolved?"
                   titleClass={SUB_HEAD}
-                  stickyHeading={oneColumn ? pinnedTop : undefined}
+                  // Pins in both layouts now. It only sat loose in the two
+                  // column view because the settled label used to hang level
+                  // with it, out of the column's flow, and an opaque pinned
+                  // band would have painted over it. Both columns carry their
+                  // labels in normal flow now, so nothing is up there to hit.
+                  stickyHeading={pinnedTop}
                   flush
                 >
-                  {/* Inside the section it is about, above whatever of the
-                      comparison exists. On a committee with nothing in it this
-                      is the section's whole content, and on one with a few
-                      items it says why there are only a few. */}
-                  {sparse && (
-                    <p className="font-body text-sm text-ink-mid leading-[1.65] border-l-2 border-line-strong pl-[16px] mb-[16px]">
-                      {SPARSE_NOTE[c.slug]}
+                  {/* Inside the section it is about, above the comparison.
+                      Every committee gets one: a sentence saying what the bill
+                      is, then the invitation to report what is wrong. Three of
+                      them also say the list is partial, and only those three. */}
+                  {GIST[c.slug] && (
+                    <p className="font-body text-sm text-ink-mid leading-[1.65] border-l-2 border-line-strong pl-[16px] mb-[2px]">
+                      {FEEDBACK_NOTE(c.slug)}
                     </p>
                   )}
                   <Scan
@@ -4413,6 +4484,7 @@ function Detail({ c, style }: { c: CommitteeDetail; style: ReviewStyle }) {
                 on={layout === "stacked"}
                 bleed={inlineTestimony}
                 filled={!inlineTestimony}
+                band
               >
                 <Chapter
                   id="your-input"
@@ -4468,6 +4540,7 @@ function Detail({ c, style }: { c: CommitteeDetail; style: ReviewStyle }) {
                 on={layout === "stacked"}
                 bleed={inlineTestimony}
                 filled={!inlineTestimony}
+                band
               >
                 <Chapter
                   id="input"
@@ -4488,7 +4561,11 @@ function Detail({ c, style }: { c: CommitteeDetail; style: ReviewStyle }) {
                   }
                   //
                   stickyHeading={stickyTop}
-                  bandHeading={mode === "tabbed"}
+                  // Both layouts. The band is what paints behind the title, and
+                  // without it the scrolling view left the header on the page
+                  // ground while the feed under it was white.
+                  bandHeading
+                  bandInset
                   headingRef={inputBand.ref}
                   headingData="input"
                   flush

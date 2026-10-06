@@ -188,6 +188,7 @@ export const HEAD_GAP = "pt-[24px]";
 export function StickyBand({
   top,
   narrowOnly,
+  inset,
   innerRef,
   data,
   children,
@@ -202,6 +203,15 @@ export function StickyBand({
    * nothing, so the section's own heading has to stay and say it.
    */
   narrowOnly?: boolean;
+  /**
+   * Paint only as wide as the content, not out to the card's edges.
+   *
+   * The band bleeds by default so that, pinned, it covers the full width of
+   * whatever scrolls under it. Where the section is read on the page rather
+   * than in a card, that bleed reads as a white stripe running past the text
+   * on both sides.
+   */
+  inset?: boolean;
   /** For a page that has to know how tall the band is, because something
    *  below it comes to rest under it. */
   innerRef?: Ref<HTMLDivElement>;
@@ -238,7 +248,9 @@ export function StickyBand({
       // The top corners are rounded to the card's own radius. The band bleeds
       // to the inside of the card's line and reaches up into its top padding,
       // so square corners painted over the corner the card had just rounded.
-      className={`z-[9] rounded-t-card bg-[var(--band,var(--color-ground))] -mx-[32px] px-[32px] -mt-[12px] pt-[12px] -mb-[12px] pb-[12px] ${
+      className={`z-[9] rounded-t-card bg-[var(--band,var(--color-ground))] -mt-[12px] pt-[12px] -mb-[12px] pb-[12px] ${
+        inset ? "" : "-mx-[32px] px-[32px] "
+      }${
         top
           ? narrowOnly
             ? "sticky top-[var(--pin-top)] sm:relative sm:top-auto"
@@ -271,6 +283,7 @@ export function Chapter({
   stickyHeading,
   narrowPin,
   bandHeading,
+  bandInset,
   headingRef,
   headingData,
   titleClass,
@@ -312,6 +325,8 @@ export function Chapter({
    * order, so chrome letting go passes behind it rather than through it.
    */
   bandHeading?: boolean;
+  /** Keep the band inside the content, for a section with no card. */
+  bandInset?: boolean;
   /** Handed to the pinned band, for a page measuring what rests under it. */
   headingRef?: Ref<HTMLDivElement>;
   /** A name on the heading band, for a measurement taken from outside it. */
@@ -411,6 +426,7 @@ export function Chapter({
             <StickyBand
               top={stickyHeading}
               narrowOnly={narrowPin}
+              inset={bandInset}
               innerRef={headingRef}
               data={headingData}
             >

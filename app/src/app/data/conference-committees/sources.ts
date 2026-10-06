@@ -462,7 +462,7 @@ export const SOURCES: Record<string, Source> = {
   },
   s91: {
     t: "S.3228, Senate engrossed text",
-    d: "The Senate economic development bill, 359 sections. Read directly for this comparison: section inventory in full, plus targeted reads of the frontier AI chapter, the juvenile jurisdiction sections and the bond authorisation. Text bundled in this prototype.",
+    d: "The Senate economic development bill, 359 sections. Read directly for this comparison: section inventory in full, plus targeted reads of the frontier AI chapter, the juvenile jurisdiction sections and the bond authorization. Text bundled in this prototype.",
     u: "https://malegislature.gov/Bills/194/S3228.pdf",
   },
   s92: {

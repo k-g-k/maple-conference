@@ -2544,9 +2544,17 @@ export function SubmissionFeed({
                      pinning, which meant the block was one height in flow and
                      another stuck, and the page it was tightened against had
                      to be tightened by a margin that only applies in flow:
-                     the two disagreed and the row sprang open as it pinned. */
+                     the two disagreed and the row sprang open as it pinned.
+
+                     Tried as a margin so the paint would be the row's own
+                     height; that leaves 10px above and 16px below for cards to
+                     pass through uncovered once it sticks. */
                   "sticky z-[8] bg-[var(--band,var(--color-ground))] pt-[10px] pb-[16px]"
-                : "mb-[16px]"
+                : /* Unpinned the bar paints nothing. The row of controls
+                     inside it carries its own surface instead, so the white
+                     is the height of the controls rather than of the block
+                     that holds them. */
+                  "mb-[16px]"
             }
           >
             {/* The fifth reading had the map as a card of its own above the
@@ -2560,7 +2568,7 @@ export function SubmissionFeed({
               Wrapping, because the row is four controls wide and the feed is
               drawn in a panel and on a phone as well as in the page's own
               column. */}
-            <div className="@container flex flex-wrap items-center gap-x-[12px] gap-y-[8px] mb-[12px]">
+            <div className="@container flex flex-wrap items-center gap-x-[12px] gap-y-[8px] mb-[12px] bg-surface">
               {includeTypeFilter && (
                 <AccountTypePicker value={typeFilter} onChange={pickType} />
               )}
