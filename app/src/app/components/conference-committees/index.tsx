@@ -1228,6 +1228,17 @@ function Rooms() {
       </button>
     );
   };
+  // NOT YET, but soon: "Most committees" and "Highest ranked" are both coming
+  // off this row, leaving "My legislators" on its own. They are the two that
+  // sort the twelve by something about the legislators rather than by anything
+  // the reader asked for, and the page reads as a leaderboard while they are
+  // there. They stay for now because the sort they drive is still being looked
+  // at, so this is a note rather than a change.
+  //
+  // When it is time: add them to `src/app/flags.tsx` and gate each one the way
+  // the Page and Input controls on the committee page are gated, rather than
+  // deleting the calls. `flipMost` and `flipTop` and the state behind them can
+  // stay; it is only the two controls that come off the page.
   const mineButton = () => (
     <span className="flex-1 flex items-center justify-between gap-[18px] pr-[10px] @[1000px]:pl-[10px]">
       {flip("mine", mine, "My legislators", flipMine)}

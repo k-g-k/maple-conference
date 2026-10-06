@@ -1549,67 +1549,24 @@ function MoreFilters({
               </div>
             </div>
           )}
-          {/* Checkboxes rather than a select: a reader narrowing by place
-              usually wants two or three of them, and a second popover inside
-              this one to hold them would be a menu inside a menu. */}
-          <div className="flex flex-col gap-[7px]">
-            <div className="flex items-baseline justify-between gap-[8px]">
-              <span className="font-body font-semibold text-2xs uppercase tracking-[0.08em] text-ink-mid">
-                County
-              </span>
-              {county.length > 0 && (
-                <button
-                  onClick={() => onCounty([])}
-                  className="font-body font-semibold text-2xs text-brand-ink hover:text-brand cursor-pointer"
-                >
-                  Clear
-                </button>
-              )}
-            </div>
-            <div className="max-h-[164px] overflow-y-auto rounded-control border border-line py-[2px]">
-              {counties.map((c) => {
-                const on = county.includes(c);
-                return (
-                  <button
-                    key={c}
-                    role="menuitemcheckbox"
-                    aria-checked={on}
-                    onClick={() =>
-                      onCounty(
-                        on ? county.filter((x) => x !== c) : [...county, c],
-                      )
-                    }
-                    className={`w-full flex items-center gap-[8px] px-[10px] py-[6px] text-left font-body text-sm hover:bg-wash cursor-pointer ${
-                      on ? "font-semibold text-ink" : "text-ink-mid"
-                    }`}
-                  >
-                    {/* A box rather than a tick that appears: the empty
-                        state has to look like something a reader can turn
-                        on, and a blank space does not. */}
-                    <span
-                      aria-hidden
-                      className={`flex items-center justify-center w-[15px] h-[15px] shrink-0 rounded-[4px] border transition-colors ${
-                        on
-                          ? "bg-ink border-ink text-ink-inverse"
-                          : "border-line-strong"
-                      }`}
-                    >
-                      {on && <Check className="w-[11px] h-[11px]" />}
-                    </span>
-                    {/* The size beside the name rather than off at the right
-                        edge: it belongs to the place, and a column of figures
-                        down the side read as a second thing to scan. */}
-                    <span className="min-w-0 truncate">
-                      {c}{" "}
-                      <span className="font-normal text-ink-faint">
-                        ({countyCounts[c] ?? 0})
-                      </span>
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+          {/* The county list was here and is gone.
+
+              Massachusetts is represented by district and always has been. A
+              county is not a unit anybody is represented by, so narrowing
+              public input by one narrowed by nothing the legislature uses, and
+              the counts beside each name made it look official.
+
+              The names misled us into it: Senate districts are named after
+              counties, as in "Second Essex and Middlesex", and `countyOf`
+              below reads the tail of a district name. That is a naming
+              convention, not a place a reader lives in.
+
+              If this comes back it comes back as district, which is the thing
+              that puts one of the six in the room.
+
+              The plumbing above (`county`, `onCounty`, `counties`,
+              `countyCounts`) is still passed in and still unused, left for
+              whoever wires that replacement. */}
           {/* Last, under the two lists that narrow the feed, because this one
               narrows nothing: it says where a kind of entry sits rather than
               which entries are shown.

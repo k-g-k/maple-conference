@@ -11,6 +11,7 @@
 // prints the answer and puts the evidence behind a control.
 
 import { useId, useMemo, useEffect, useRef, useState } from "react";
+import { useFlags } from "../../flags";
 import { createPortal } from "react-dom";
 import type { CSSProperties, ReactNode } from "react";
 import {
@@ -658,6 +659,7 @@ function Summary({
   onHover?: (key: string | null) => void;
   onPin?: (key: string) => void;
 }) {
+  const flags = useFlags();
   return (
     <div>
       <p className={className}>
@@ -665,7 +667,7 @@ function Summary({
             of hearings. The clause is in `claim` on every committee and the
             count is derived, so both come back by flipping SHOW_CLAIM. */}
         The two chambers passed different texts
-        {SHOW_CLAIM && claim ? (
+        {flags.claim && claim ? (
           <>
             {", "}
             <strong className="font-semibold italic text-ink">{claim}</strong>
@@ -674,7 +676,7 @@ function Summary({
         ) : null}{" "}
         so a conference committee was appointed to reconcile each version into
         one text.
-        {SHOW_MEMBERS && who && (
+        {flags.members && who && (
           <> The committee includes {withNames(who, six, onHover, onPin)}.</>
         )}
       </p>
@@ -905,23 +907,11 @@ function PeopleAndMaps({
   );
 }
 
-/** Parked: the "The committee includes ..." sentence in the card. */
-const SHOW_MEMBERS: boolean = false;
-
-/** Parked: the clause naming what the two chambers differ on. */
-const SHOW_CLAIM: boolean = false;
-
-/** The switch between reading public input inline and in the panel. */
-const SHOW_TESTIMONY_SWITCH: boolean = true;
-
-/**
- * Parked: the committee card in the card layout.
- *
- * The same six people now appear there in the stacked layout's arrangement,
- * names beside the two maps, so the header reads the same either way and the
- * card is only a switch away if it is wanted back.
- */
-const SHOW_CARD: boolean = false;
+// The five trial flags that used to sit here now live in src/app/flags.tsx,
+// read through useFlags(). They moved because a const is on or off for the
+// whole prototype, and these need to be off in the build an engineer reads and
+// on in the playground: the conferee sentence, the clause naming what the two
+// chambers differ on, the testimony switch, the chip row, and the card layout.
 
 function Six({
   claim,
@@ -2734,16 +2724,10 @@ const ANCHORS = () => [...CONTENTS.map((x) => x.id), "your-input"];
  * committee whose comparison has not been done yet should show what is known
  * rather than empty headings. Listed and linked either way.
  */
-/**
- * TRIAL: the chip row under the committee title, parked.
- *
- * Flip to true to bring it back. The data behind it stays live either way:
- * `COMMITTEE_TOPICS` in the data barrel still carries a tag list per
- * committee, and economic development's eight are half MAPLE's own vocabulary
- * and half coined here, which is part of why the row is off rather than
- * shipped.
- */
-export const SHOW_BILL_KIND = false;
+// The chip row is `billKind` in src/app/flags.tsx. The data behind it stays
+// live either way: COMMITTEE_TOPICS still carries a tag list per committee,
+// and economic development's eight are half MAPLE's own vocabulary and half
+// coined here, which is why it is off in the build.
 
 const SPARSE = new Set(["economic-development", "mass-ready"]);
 
@@ -2986,6 +2970,7 @@ type TestimonyMode = "sidebar" | "inline";
 type UnresolvedMode = "topics" | "questions";
 
 function Detail({ c, style }: { c: CommitteeDetail; style: ReviewStyle }) {
+  const flags = useFlags();
   const rec = recordForSlug(c.slug);
   const meetings = MEETINGS[c.slug] ?? [];
   const navigate = useNavigate();
@@ -3911,40 +3896,42 @@ function Detail({ c, style }: { c: CommitteeDetail; style: ReviewStyle }) {
               {/* Where public input is read. Inline keeps it in the page's own section
             and opens the panel only to write; sidebar rests the panel on the
             feed down the right edge. */}
-              <Pills
-                head="Page"
-                // Tabbed first, scroll second, which is the order she reads them in.
-                // The default being second is fine: this switch says which of the two
-                // you are in, not which one comes first.
-                options={["card", "stacked"] as const}
-                // Named for what each one does rather than what it looks like, which
-                // is also what the page calls them internally: card is the tabbed
-                // read, stacked is the scrolling one.
-                labels={{ card: "Tabbed", stacked: "Scroll" }}
-                value={layout}
-                // Back to the top and the first tab. The two views put different
-                // things at different heights, so keeping the scroll position drops
-                // you into the middle of a section you did not choose.
-                onChange={(v) => {
-                  setLayout(v);
-                  setTab(
-                    (v === "stacked"
-                      ? CONTENTS
-                      : CONTENTS.filter((x) => x.id !== "committee"))[0].id,
-                  );
-                  window.scrollTo({ top: 0 });
-                  // One shell for both layouts, so a dragged width is one inline
-                  // style on it. The layout being switched to has its own, and the
-                  // shell has to be told which rather than keeping the width the
-                  // layout being left was at.
-                  applyRailWidth(
-                    panelStanding(v, testimony)
-                      ? railWidthRef.current[v]
-                      : null,
-                  );
-                }}
-              />
-              {SHOW_TESTIMONY_SWITCH && (
+              {flags.pageSwitch && (
+                <Pills
+                  head="Page"
+                  // Tabbed first, scroll second, which is the order she reads them in.
+                  // The default being second is fine: this switch says which of the two
+                  // you are in, not which one comes first.
+                  options={["card", "stacked"] as const}
+                  // Named for what each one does rather than what it looks like, which
+                  // is also what the page calls them internally: card is the tabbed
+                  // read, stacked is the scrolling one.
+                  labels={{ card: "Tabbed", stacked: "Scroll" }}
+                  value={layout}
+                  // Back to the top and the first tab. The two views put different
+                  // things at different heights, so keeping the scroll position drops
+                  // you into the middle of a section you did not choose.
+                  onChange={(v) => {
+                    setLayout(v);
+                    setTab(
+                      (v === "stacked"
+                        ? CONTENTS
+                        : CONTENTS.filter((x) => x.id !== "committee"))[0].id,
+                    );
+                    window.scrollTo({ top: 0 });
+                    // One shell for both layouts, so a dragged width is one inline
+                    // style on it. The layout being switched to has its own, and the
+                    // shell has to be told which rather than keeping the width the
+                    // layout being left was at.
+                    applyRailWidth(
+                      panelStanding(v, testimony)
+                        ? railWidthRef.current[v]
+                        : null,
+                    );
+                  }}
+                />
+              )}
+              {flags.testimonySwitch && (
                 <Pills
                   head="Input"
                   options={["inline", "sidebar"] as const}
@@ -4105,7 +4092,7 @@ function Detail({ c, style }: { c: CommitteeDetail; style: ReviewStyle }) {
                   under its own. One line to delete here and one in the
                   explorer's rows, plus `kind.tsx` and the `BOND` set in the
                   data if it goes for good. */}
-              {SHOW_BILL_KIND && (
+              {flags.billKind && (
                 <CommitteeTopics slug={c.slug} className="mt-[14px]" />
               )}
             </div>
@@ -4125,7 +4112,7 @@ function Detail({ c, style }: { c: CommitteeDetail; style: ReviewStyle }) {
                 // a card reads the same whichever view it is in.
                 className={`mt-[8px] border border-line rounded-card ${CARD_PX} ${CARD_PT} ${CARD_PB} scroll-mt-[120px]`}
               >
-                {SHOW_CARD ? (
+                {flags.card ? (
                   <Six
                     claim={c.claim}
                     who={c.who}
