@@ -82,6 +82,11 @@ const COPY = {
     `I have read ${org}’s input and want to cosign it as my own.`,
   /** The one rule the form states, where the posting happens. The link is a
       placeholder: there is no page behind it in the prototype. */
+  /** Only on the co-sign path: an input of your own has no such limit. */
+  cosignRules: [
+    "Cosigning counts as your input on this bill.",
+    "You can only cosign one org\u2019s position.",
+  ],
   conduct: "All posts are governed by our ",
   conductLink: "Code of Conduct",
 
@@ -604,6 +609,7 @@ export function ConferenceCompose({
                 draft={draft}
                 onChange={onChange}
                 six={six}
+                cosign
                 labelled={false}
               />
             </div>
@@ -1249,11 +1255,14 @@ export function ReviewContext({
   draft,
   onChange,
   six,
+  cosign = false,
   labelled = true,
 }: {
   draft: Draft;
   onChange: (patch: Partial<Draft>) => void;
   six: CommitteeMember[];
+  /** On the co-sign card, the one rule that path adds. */
+  cosign?: boolean;
   /**
    * Whether the list announces itself.
    *
@@ -1285,6 +1294,7 @@ export function ReviewContext({
       <div>
         {labelled && <ReviewLabel>{COPY.rulesLabel}</ReviewLabel>}
         <ul className="list-disc list-outside pl-[16px] space-y-[8px] font-body text-xs text-ink-mid leading-[1.5] marker:text-ink-faint">
+          {cosign && COPY.cosignRules.map((r) => <li key={r}>{r}</li>)}
           {COPY.rules.map((r) => (
             <li key={r}>{r}</li>
           ))}
