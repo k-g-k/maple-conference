@@ -55,6 +55,7 @@ import { VoteMap, shortTitle, surname } from "../bill-example/lineage-section";
 import { SiteNav } from "../site-nav";
 import { useDeviceViewport } from "../use-device-viewport";
 import { useNarrow } from "../use-narrow";
+import { useFlags } from "../../flags";
 
 /**
  * The dotted leader, as a background rather than a border.
@@ -1174,6 +1175,7 @@ function Rooms() {
   // because something else was asked for has not been operated, and sliding
   // it shut draws the eye to a control nobody touched.
   const [pressed, setPressed] = useState<string | null>(null);
+  const flags = useFlags();
   // One question at a time: all three fill the same box.
   const only = (id: string, set: (v: boolean) => void, was: boolean) => {
     setPressed(id);
@@ -1242,8 +1244,9 @@ function Rooms() {
   const mineButton = () => (
     <span className="flex-1 flex items-center justify-between gap-[18px] pr-[10px] @[1000px]:pl-[10px]">
       {flip("mine", mine, "My legislators", flipMine)}
-      {flip("most", most, "Most committees", flipMost)}
-      {flip("top", top, "Highest ranked", flipTop)}
+      {flags.legislatorSorts &&
+        flip("most", most, "Most committees", flipMost)}
+      {flags.legislatorSorts && flip("top", top, "Highest ranked", flipTop)}
     </span>
   );
 

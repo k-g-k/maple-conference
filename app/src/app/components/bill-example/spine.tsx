@@ -289,6 +289,7 @@ export function Chapter({
   titleClass,
   rail,
   tightBody = false,
+  headingClass = "",
   children,
 }: {
   id: string;
@@ -346,6 +347,8 @@ export function Chapter({
    * is one card wants the heading on top of it, or the two read as unrelated.
    */
   tightBody?: boolean;
+  /** Added to the row that holds the question and its action. */
+  headingClass?: string;
   children?: ReactNode;
 }) {
   const heading = hideQuestion ? null : (
@@ -354,7 +357,7 @@ export function Chapter({
           heading two or three sizes larger than it, and aligned at the top it
           floated above the words it belongs with. The only chapter that
           carries one is Public Input. */}
-      <div className="flex flex-wrap items-end justify-between gap-x-[20px] gap-y-[10px]">
+      <div className={`flex flex-wrap items-end justify-between gap-x-[20px] gap-y-[10px] ${headingClass}`}>
         <div className="flex items-baseline gap-[14px] flex-wrap min-w-0">
           <h2
             id={`${id}-q`}

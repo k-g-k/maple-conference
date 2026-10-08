@@ -41,6 +41,7 @@ import { ClampedText, Hint, Modal, Pagination } from "../ballot";
 import { DEMO_SEATS } from "../../data/conference-committees/testimony";
 import { AccountAvatar, AccountTypeIcon, PositionChip } from "./accounts";
 import { useNarrow } from "../use-narrow";
+import { useFlags } from "../../flags";
 import type {
   ConferenceAccount,
   ConferenceAccountType,
@@ -60,7 +61,16 @@ import {
  * account and reporting a statement are both rare next to reading one, and a
  * row of controls beside every date would compete with the submission itself.
  */
-function EntryActions({ name, own = false }: { name: string; own?: boolean }) {
+function EntryActions({
+  name,
+  own = false,
+  onView,
+}: {
+  name: string;
+  own?: boolean;
+  /** Opens the submission. Left off where it is already open. */
+  onView?: () => void;
+}) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -94,12 +104,11 @@ function EntryActions({ name, own = false }: { name: string; own?: boolean }) {
           className="absolute right-0 top-[calc(100%+4px)] z-20 min-w-[180px] bg-surface border border-line rounded-control shadow-popover py-[4px]"
         >
           {/* First, because it is the one a reader wants: the others act on
-              the submission, this one opens it. Inert for now, until there is
-              a route for a single filing. */}
+              the submission, this one opens it. */}
           {[
             // The only one that keeps the noun: this is the item that opens
             // the thing, and "View" on its own does not say what it opens.
-            { label: "View submission", Icon: FileText },
+            { label: "View submission", Icon: FileText, act: onView },
             // Only on the reader's own. Offering it on somebody else's entry
             // would be offering something the record cannot allow, and
             // following yourself is the same kind of nonsense.
@@ -107,11 +116,14 @@ function EntryActions({ name, own = false }: { name: string; own?: boolean }) {
             { label: "Share", Icon: Share },
             ...(own ? [] : [{ label: "Follow user", Icon: BellPlus }]),
             { label: "Report", Icon: Flag },
-          ].map(({ label, Icon }) => (
+          ].map(({ label, Icon, act }: { label: string; Icon: typeof Flag; act?: () => void }) => (
             <button
               key={label}
               role="menuitem"
-              onClick={() => setOpen(false)}
+              onClick={() => {
+                setOpen(false);
+                act?.();
+              }}
               className="flex items-center gap-[9px] w-full text-left font-body text-sm text-ink px-[12px] py-[7px] cursor-pointer hover:bg-wash"
             >
               <Icon className="w-[15px] h-[15px] shrink-0 text-ink-mid" />
@@ -385,12 +397,17 @@ export function useDemoMode(): SubmissionMode | null {
 export function OwnSubmission({
   items,
   accounts,
+  subject,
 }: {
   items: ConferenceSubmission[];
   accounts: ConferenceAccount[];
+  /** What it was filed on, for the header of the opened submission. */
+  subject?: string;
 }) {
   const demo = useDemoMode();
+  const [openId, setOpenId] = useState<string | null>(null);
   const own = items.find((t) => t.id === OWN_ID);
+  const opened = items.find((t) => t.id === openId);
   if (!own) return null;
   const of = own.cosignOf
     ? items.find((x) => x.id === own.cosignOf)
@@ -406,7 +423,17 @@ export function OwnSubmission({
         accounts={accounts}
         mode={demo}
         quoted={isCosign(demo) && of && who ? { account: who, of } : undefined}
+        onOpen={setOpenId}
       />
+      {opened && (
+        <SubmissionModal
+          t={opened}
+          accounts={accounts}
+          subject={subject}
+          mode={demo}
+          onClose={() => setOpenId(null)}
+        />
+      )}
     </div>
   );
 }
@@ -992,7 +1019,7 @@ export function SubmissionEntry({
                   // second date it is the only one, and the only date on a
                   // card should not be the quietest thing on it.
                   className={`hidden @[600px]:inline font-body whitespace-nowrap mr-[2px] ${
-                    t.cosignLatest ? "text-ink-faint" : "text-ink-mid"
+                    mode && t.cosignLatest ? "text-ink-faint" : "text-ink-mid"
                   } ${isBanded(mode) ? "text-sm" : "text-xs"}`}
                 >
                   {t.date}
@@ -1034,7 +1061,11 @@ export function SubmissionEntry({
                   </button>
                 )}
               {actions && (
-                <EntryActions name={user.name} own={t.id === OWN_ID} />
+                <EntryActions
+                  name={user.name}
+                  own={t.id === OWN_ID}
+                  onView={onOpen ? () => onOpen(t.id) : undefined}
+                />
               )}
             </div>
           </div>
@@ -1163,7 +1194,7 @@ export function SubmissionEntry({
                 The last signature leads, because it is the newer of the two
                 and the one the reader is here for; the filing's own date
                 follows it, where a reader looks only to place the letter. */}
-            {t.cosignLatest && mode !== "cosign4" && (
+            {mode && t.cosignLatest && mode !== "cosign4" && (
               <span className="hidden max-[450px]:inline whitespace-nowrap">
                 Last cosigned {shortMonth(t.cosignLatest)}
                 <span aria-hidden className="ml-[6px] text-ink-faint">
@@ -1620,6 +1651,7 @@ function PositionPicker({
   value: PositionFilter;
   onChange: (v: PositionFilter) => void;
 }) {
+  const flags = useFlags();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -1685,7 +1717,7 @@ function PositionPicker({
               : "pl-[18px] pr-[16px] sm:pl-[11px] sm:pr-[10px]"
           }`}
         >
-          {current && (
+          {current && flags.positionThumbs && (
             // Centred on the pill rather than sharing a baseline with the word,
             // so the word lines up with the clear button on the other end
             // instead of following wherever the glyph's baseline falls.
@@ -1984,24 +2016,6 @@ function SubmissionModal({
                 The signatures
               </p>
               <ul className="flex flex-col gap-[6px] font-body text-sm text-ink-mid">
-                {t.cosignInDistrict ? (
-                  <li>
-                    <span className="font-bold text-ink">
-                      {t.cosignInDistrict}
-                    </span>{" "}
-                    {t.cosignInDistrict === 1
-                      ? "committee district"
-                      : "committee districts"}
-                  </li>
-                ) : null}
-                {t.cosignWithInput ? (
-                  <li>
-                    <span className="font-bold text-ink">
-                      {t.cosignWithInput}
-                    </span>{" "}
-                    added their own words
-                  </li>
-                ) : null}
                 {t.cosignLatest ? (
                   <li>Last cosigned {t.cosignLatest}</li>
                 ) : null}
@@ -2568,7 +2582,7 @@ export function SubmissionFeed({
               Wrapping, because the row is four controls wide and the feed is
               drawn in a panel and on a phone as well as in the page's own
               column. */}
-            <div className="@container flex flex-wrap items-center gap-x-[12px] gap-y-[8px] mb-[12px] bg-surface">
+            <div className="@container flex flex-wrap items-center gap-x-[12px] gap-y-[8px] mb-[12px] bg-[var(--band,var(--color-ground))]">
               {includeTypeFilter && (
                 <AccountTypePicker value={typeFilter} onChange={pickType} />
               )}

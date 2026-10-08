@@ -45,6 +45,20 @@ export interface Flags {
   pageSwitch: boolean;
   /** The comparison drawn as cards rather than as a column. */
   card: boolean;
+  /**
+   * Inline Public Input: the heading on a white band, padded in from the
+   * sides. Off, the heading sits on the page's ground like the filters.
+   */
+  inlineInputStyle: boolean;
+  /** The thumb on the position filter pill once a position is chosen. */
+  positionThumbs: boolean;
+  /**
+   * "Share your input" beside the Public Input heading as a starred link with
+   * an arrow. Off, it is a primary button.
+   */
+  shareLink: boolean;
+  /** "Most committees" and "Highest ranked" under the committee index maps. */
+  legislatorSorts: boolean;
 }
 
 /**
@@ -58,9 +72,13 @@ export const BUILD: Flags = {
   billKind: false,
   claim: false,
   members: false,
-  testimonySwitch: false,
+  testimonySwitch: true,
   pageSwitch: false,
   card: false,
+  inlineInputStyle: false,
+  positionThumbs: false,
+  shareLink: false,
+  legislatorSorts: false,
 };
 
 /**
@@ -78,9 +96,13 @@ export const VISION: Flags = {
   // flag that is false in both is a thing taken off the page rather than a
   // difference between the two builds, and it lives here so it is one line to
   // bring back rather than a hunt through the component.
-  testimonySwitch: false,
+  testimonySwitch: true,
   pageSwitch: false,
   card: true,
+  inlineInputStyle: true,
+  positionThumbs: true,
+  shareLink: true,
+  legislatorSorts: true,
 };
 
 const FlagsContext = createContext<Flags>(BUILD);

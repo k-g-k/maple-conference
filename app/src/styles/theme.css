@@ -191,7 +191,7 @@
      dot on the map all read as that star. Turned from hue 86 to 48 and taken
      darker and stronger with it: the hue shift alone still read as the same
      gold at the size a legend dot is drawn. */
-  --color-house: #f27626;
+  --color-house: #eda333;
   --color-house-soft: #ffe4cf;
   --color-house-damped: #683d26;
   /* A warm brown wash, which the provenance family had no room for: `user` is

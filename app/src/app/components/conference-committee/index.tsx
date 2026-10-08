@@ -104,6 +104,7 @@ import { MapleFab } from "../tax-rebate-62f/maple-fab";
 import {
   SubmissionFeed,
   OwnSubmission,
+  useDemoMode,
   type PositionFilter,
   type AccountTypeFilter,
 } from "./testimony";
@@ -1085,12 +1086,20 @@ function PublicMap({
   // worse than one that never started.
   const [touched, setTouched] = useState(false);
   const [step, setStep] = useState(0);
+  // The committee page has no co-signing, so a co-sign is nobody's filing
+  // there. Only the co-sign routes put those names on the map.
+  const demo = useDemoMode();
 
   const filers = useMemo(() => {
     // The account's position, taken from what it filed. A position belongs to a
     // submission rather than to an account, and where an account filed twice
     // both filings carry the same one, so there is a single answer per filer.
-    const filed = new Map(DEMO_TESTIMONY.map((t) => [t.userId, t]));
+    const filed = new Map(
+      DEMO_TESTIMONY.filter((t) => demo || !t.cosignOf).map((t) => [
+        t.userId,
+        t,
+      ]),
+    );
     return DEMO_ACCOUNTS.flatMap((u) => {
       const seat = DEMO_SEATS[u.id];
       const mine = filed.get(u.id);
@@ -1108,7 +1117,7 @@ function PublicMap({
         },
       ];
     });
-  }, []);
+  }, [demo]);
 
   const at = (seat: string) => filers.filter((f) => f.seat === seat);
 
@@ -1345,10 +1354,6 @@ function PublicMap({
               <div className="flex items-baseline justify-between gap-[12px] pb-[12px] border-b border-line">
                 <p className="font-display font-medium text-lg text-ink">
                   {shown[0]?.place ?? "This county"}
-                  <span className="font-body font-normal text-sm text-ink-mid">
-                    {" · "}
-                    {shown.length}
-                  </span>
                 </p>
                 <button
                   onClick={() => choose(null)}
@@ -1432,9 +1437,21 @@ function AddInput({
   /** Already on the record, so the invitation has been taken. */
   posted?: boolean;
 }) {
+  const flags = useFlags();
   // Once they have filed, the nudge has nothing to ask for and nothing to say
   // here: what happened is said over the section that holds what they filed.
   if (posted) return null;
+  // The composer's primary colors at the Cosign button's size, so the two
+  // controls a reader meets in this section are one size.
+  if (!flags.shareLink)
+    return (
+      <button
+        onClick={onClick}
+        className="bg-brand text-ink-inverse font-body font-semibold text-sm px-[12px] py-[4px] border border-brand rounded-control cursor-pointer hover:bg-brand-hover hover:border-brand-hover"
+      >
+        Share your input
+      </button>
+    );
   return (
     // The control the column of unresolved questions ends on, so the way in
     // is one thing a reader learns once. Right of the heading while they share
@@ -1528,7 +1545,7 @@ function Scan({
             head="Where bill texts differ"
             count={open.length}
             gap="gap-[26px]"
-            headGap="mt-[20px]"
+            headGap="mt-[12px]"
             headHidden
           >
             {open.map((o, i) => {
@@ -2895,8 +2912,8 @@ const FEEDBACK_NOTE = (slug: string) => (
 const CONTENTS = [
   { id: "committee", label: "Committee" },
   { id: "decided", label: "Unresolved Text" },
-  { id: "lobbying", label: "Lobbying" },
   { id: "input", label: "Public Input" },
+  { id: "lobbying", label: "Lobbying" },
   { id: "text", label: "Bill Text" },
 ];
 
@@ -3138,7 +3155,25 @@ function Detail({ c, style }: { c: CommitteeDetail; style: ReviewStyle }) {
    * in the right one. Anything else, or nothing, is the tabbed read.
    */
   const [params, setParams] = useSearchParams();
-  const layout: Layout = params.get("view") === "tabbed" ? "card" : "stacked";
+  /**
+   * The tabbed read is retired, in every build.
+   *
+   * A link that still asks for it lands on the base read instead, and `view`
+   * is dropped from the URL so the next person it is shared with does not
+   * carry the retired read forward. Both values go, not just `tabbed`:
+   * `scroll` now names the only read there is, so it says nothing.
+   */
+  useEffect(() => {
+    if (!params.has("view")) return;
+    const next = new URLSearchParams(params);
+    next.delete("view");
+    setParams(next, { replace: true });
+  }, [params, setParams]);
+  // Widened on purpose: the card branches below are now unreachable, and a
+  // narrowed literal makes every one of them a type error. Left standing
+  // rather than torn out, so the tabbed read can be switched back on by
+  // restoring the line above this one.
+  const layout = "stacked" as Layout;
   const setLayout = (v: Layout) => {
     const next = new URLSearchParams(params);
     next.set("view", v === "stacked" ? "scroll" : "tabbed");
@@ -3536,11 +3571,8 @@ function Detail({ c, style }: { c: CommitteeDetail; style: ReviewStyle }) {
         ...(t ? { position: t.position } : null),
         ...(draft.posted ? { posted: false } : null),
       });
-      // Open on the whole window. Signing is reading and writing at once, and
-      // the column can only hold the writing half, so the reader would have to
-      // ask for the letter before they could see what they were putting their
-      // name to. Collapsing is still one press away.
-      setPanelFull(true);
+      // At whatever width the last co-sign was left. The first one opens on
+      // the whole window, which is the session's default.
       setReview(false);
       showView("compose");
       openWhen("open");
@@ -3724,6 +3756,8 @@ function Detail({ c, style }: { c: CommitteeDetail; style: ReviewStyle }) {
    * a form at once, which is what the expand control is for.
    */
   const wideCosign = !!cosignLetter && panelFull && !paneReview;
+  /** A letter being co-signed, with the form open on it. */
+  const cosignForm = !!cosignLetter && railView[layout] === "compose";
   /** Back to the form, from the pane or the modal in front of it. */
   const toEditing = () => setReview(false);
   /** Nothing is sent. The flag is as far as a prototype with no backend goes. */
@@ -3750,7 +3784,6 @@ function Detail({ c, style }: { c: CommitteeDetail; style: ReviewStyle }) {
    * away, and the reader standing in front of what they filed.
    */
   const postCosign = () => {
-    setPanelFull(false);
     post();
     // The review goes with the panel. Left standing, reopening the panel for
     // anything else lands on a review of something already on the record.
@@ -3959,14 +3992,14 @@ function Detail({ c, style }: { c: CommitteeDetail; style: ReviewStyle }) {
         {!composing && !draft.posted && (
           <button
             onClick={compose}
-            aria-label="Add public input"
+            aria-label="Share your input"
             className="group inline-flex items-center h-[52px] px-[16px] rounded-pill border border-brand bg-brand text-ink-inverse hover:bg-brand-hover hover:border-brand-hover cursor-pointer transition-colors"
           >
             <Plus className="w-[22px] h-[22px] shrink-0" />
             <span className="grid grid-cols-[0fr] group-hover:grid-cols-[1fr] group-focus-visible:grid-cols-[1fr] transition-[grid-template-columns] duration-300 ease-out motion-reduce:transition-none">
               <span className="overflow-hidden">
                 <span className="block pl-[10px] pr-[10px] font-body font-semibold text-sm whitespace-nowrap">
-                  Add Public Input
+                  Share your input
                 </span>
               </span>
             </span>
@@ -4449,32 +4482,6 @@ function Detail({ c, style }: { c: CommitteeDetail; style: ReviewStyle }) {
                 </Chapter>
               ))}
 
-            {show("lobbying") && (
-              <Boxed on={layout === "stacked"} filled>
-                <LobbyingDisclosures
-                  c={c}
-                  titleClass={SUB_HEAD}
-                  // Scrolling pins it at every width. Tabbed does not pin its
-                  // headings, with one exception: below sm the table becomes a
-                  // stack and loses its column heads, and then the section's
-                  // own heading is the only thing naming what the rows are.
-                  stickyHeading={
-                    hasLobbying ? (stickyTop ?? pinnedTop) : undefined
-                  }
-                  narrowPin={hasLobbying && mode === "tabbed"}
-                  // The column heads still travel back up the window when they
-                  // let go, so the heading needs the band's paint order even
-                  // without the pin.
-                  bandHeading={hasLobbying && mode === "tabbed"}
-                  headingRef={lobbyBand.ref}
-                  // The column heads stay over the rows they name, the way
-                  // the Public Input filters stay over the list.
-                  headerTop={underHeading(lobbyBand.h)}
-                  flush
-                />
-              </Boxed>
-            )}
-
             {/* A section of its own, above the public one. What the reader
                 filed is not one of the things the page is showing them; it is
                 the thing they did, and it answers to none of the controls the
@@ -4484,7 +4491,6 @@ function Detail({ c, style }: { c: CommitteeDetail; style: ReviewStyle }) {
                 on={layout === "stacked"}
                 bleed={inlineTestimony}
                 filled={!inlineTestimony}
-                band
               >
                 <Chapter
                   id="your-input"
@@ -4517,7 +4523,11 @@ function Detail({ c, style }: { c: CommitteeDetail; style: ReviewStyle }) {
                   }
                 >
                   <div>
-                    <OwnSubmission items={feedItems} accounts={feedAccounts} />
+                    <OwnSubmission
+                      items={feedItems}
+                      accounts={feedAccounts}
+                      subject={displayName(c.slug, c.short)}
+                    />
                     {/* Under the card, as a footnote to it: what this
                         section is, and where the same entry can be found in
                         the record everybody else reads. */}
@@ -4540,11 +4550,18 @@ function Detail({ c, style }: { c: CommitteeDetail; style: ReviewStyle }) {
                 on={layout === "stacked"}
                 bleed={inlineTestimony}
                 filled={!inlineTestimony}
-                band
+                // Inline, the build leaves the whole section on the page's
+                // ground; the playground keeps a white band behind the heading.
+                band={!inlineTestimony || flags.inlineInputStyle}
               >
                 <Chapter
                   id="input"
                   question="Public Input"
+                  headingClass={
+                    inlineTestimony && flags.inlineInputStyle
+                      ? "pt-[8px] px-[24px]"
+                      : ""
+                  }
                   hideQuestion={headedFeed}
                   titleClass={SUB_HEAD}
                   // Reading it inline, this is the way in. Reading it in the
@@ -4589,7 +4606,15 @@ function Detail({ c, style }: { c: CommitteeDetail; style: ReviewStyle }) {
                       under a question. The row's own padding is ten now
                       rather than sixteen, so this gives back six less. */}
                   {inlineTestimony ? (
-                    <div className="-mt-[18px]">
+                    // The feed sits on the page rather than in a card, so the
+                    // filters take the page's ground, whatever the heading's
+                    // band is.
+                    <div
+                      className="-mt-[18px]"
+                      style={
+                        { "--band": "var(--color-ground)" } as CSSProperties
+                      }
+                    >
                       <SubmissionFeed
                         items={feedItems}
                         fresh={fresh && !ownEnding}
@@ -4643,6 +4668,32 @@ function Detail({ c, style }: { c: CommitteeDetail; style: ReviewStyle }) {
                     </div>
                   )}
                 </Chapter>
+              </Boxed>
+            )}
+
+            {show("lobbying") && (
+              <Boxed on={layout === "stacked"} filled>
+                <LobbyingDisclosures
+                  c={c}
+                  titleClass={SUB_HEAD}
+                  // Scrolling pins it at every width. Tabbed does not pin its
+                  // headings, with one exception: below sm the table becomes a
+                  // stack and loses its column heads, and then the section's
+                  // own heading is the only thing naming what the rows are.
+                  stickyHeading={
+                    hasLobbying ? (stickyTop ?? pinnedTop) : undefined
+                  }
+                  narrowPin={hasLobbying && mode === "tabbed"}
+                  // The column heads still travel back up the window when they
+                  // let go, so the heading needs the band's paint order even
+                  // without the pin.
+                  bandHeading={hasLobbying && mode === "tabbed"}
+                  headingRef={lobbyBand.ref}
+                  // The column heads stay over the rows they name, the way
+                  // the Public Input filters stay over the list.
+                  headerTop={underHeading(lobbyBand.h)}
+                  flush
+                />
               </Boxed>
             )}
 
@@ -4919,15 +4970,13 @@ function Detail({ c, style }: { c: CommitteeDetail; style: ReviewStyle }) {
         addLabel="Add Public Input"
         onResize={setRailWidth}
         onResizeEnd={endRailResize}
-        expanded={cosignRoute && panelFull}
+        // Only with a letter in the form. Your own input has nothing to put
+        // beside it, so it is always the column and offers no way to widen.
+        expanded={cosignForm && panelFull}
         // Not while the acknowledgment is up: that step is the letter and a
         // question about it, and the control to fold the letter away is not
         // one of the answers. It arrives with the form.
-        onExpandedChange={
-          cosignRoute && (!cosignLetter || cosignAsked)
-            ? setPanelFull
-            : undefined
-        }
+        onExpandedChange={cosignForm && cosignAsked ? setPanelFull : undefined}
       />
 
       {/* Style two. Over the page rather than in it, so the form the reader

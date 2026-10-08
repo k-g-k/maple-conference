@@ -161,7 +161,9 @@ const emptySession = (slug: string, open: boolean, view: string): Session => ({
   draft: emptyDraft(slug),
   rail: { card: open ? "open" : "min", stacked: open ? "open" : "min" },
   railView: { card: view, stacked: view },
-  full: false,
+  // A first co-sign opens on the whole window; after that, wherever the
+  // reader last left it.
+  full: true,
 });
 
 const DraftContext = createContext<{

@@ -72,7 +72,7 @@ export const POSITIONS: Record<ConferencePosition, ConferencePositionOption> = {
     // page, softened to a fill.
     on: "bg-user-soft border-user text-user-ink",
     ask: "bill",
-    tone: "bg-house-soft text-house-damped",
+    tone: "bg-user-soft text-user-ink",
   },
   senate: {
     k: "senate",

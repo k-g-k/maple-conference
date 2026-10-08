@@ -559,6 +559,21 @@ const FILED: CommitteeDetail[] = [
         ties: [],
       },
       {
+        topic: "Who gets the report",
+        q: "Who does the state report its findings to?",
+        kind: "calibrate",
+        s: "Goes to the Legislature: both clerks, the health care financing committee, and the public safety committee.",
+        sAsked:
+          "The Legislature: both clerks, the health care financing committee, and the public safety committee.",
+        sc: "s33",
+        h: "Goes to the health care financing committee, the hospital association, and the two unions that negotiated the bill.",
+        hAsked:
+          "The health care financing committee, the hospital association, and the two unions that negotiated the bill.",
+        hc: "s32",
+        why: "Both bills order the same study. The Senate reports it to the Legislature; the House reports it to the three organizations that wrote the underlying agreement. Only the Senate version puts the findings in front of the public safety committee.",
+        ties: [],
+      },
+      {
         topic: "Enforcement and fines",
         q: "Who enforces the employer duties, and what is the fine?",
         kind: "calibrate",
