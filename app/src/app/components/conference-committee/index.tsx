@@ -1543,9 +1543,11 @@ function Scan({
                     // Tabbed shows the questions and nothing else, so there is
                     // room to answer them where they stand. Scroll keeps them
                     // folded, since they sit among everything else.
-                    // Shut in both views. The column of topics is the thing
-                    // to read first: what is unresolved, at a glance, before
-                    // any one of them is opened.
+                    // The first open and the rest shut, in both views and on
+                    // every committee. The column of topics is still what is
+                    // unresolved at a glance, and one already open shows what
+                    // opening the others will give.
+                    defaultOpen={i === 0}
                     // Card presses on the question; stacked presses on the
                     // topic and prints the question inside.
                     label={asked ? o.q : (o.topic ?? o.q)}
