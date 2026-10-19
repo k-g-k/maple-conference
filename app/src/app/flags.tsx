@@ -59,6 +59,16 @@ export interface Flags {
   shareLink: boolean;
   /** "Most committees" and "Highest ranked" under the committee index maps. */
   legislatorSorts: boolean;
+  /**
+   * Support on an organization's own post: a press for a reader who agrees
+   * but does not want the position filed as their own.
+   *
+   * Deliberately outside every total. It is not a position, anyone may press
+   * it including people who have already cosigned something else, and it
+   * appears only on the post it belongs to. The number is the organization's
+   * to show, not a measure of where the public landed.
+   */
+  support: boolean;
 }
 
 /**
@@ -79,6 +89,7 @@ export const BUILD: Flags = {
   positionThumbs: false,
   shareLink: false,
   legislatorSorts: false,
+  support: false,
 };
 
 /**
@@ -99,10 +110,14 @@ export const VISION: Flags = {
   testimonySwitch: true,
   pageSwitch: false,
   card: true,
-  inlineInputStyle: true,
+  // Off here too. The band sat behind the heading alone and stopped short
+  // of the filter row under it, so the section read as two surfaces
+  // instead of one. One line to turn back on.
+  inlineInputStyle: false,
   positionThumbs: true,
   shareLink: true,
   legislatorSorts: true,
+  support: true,
 };
 
 const FlagsContext = createContext<Flags>(BUILD);

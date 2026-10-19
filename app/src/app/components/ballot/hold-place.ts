@@ -12,6 +12,35 @@
 // not the thing you were looking at.
 
 /**
+ * Scroll snapping, off for as long as any correction is running.
+ *
+ * The conference committee pages snap the window between their hero and the
+ * committee, and a browser re-snaps after every layout change. A correction
+ * that runs across a width transition is a layout change every frame, so the
+ * two pulled the page back and forth between them, and the page flickered
+ * while the panel slid out. Counted rather than flipped, so two corrections
+ * that overlap cannot leave it off: whichever finishes last puts back what the
+ * page had. A page that does not snap gets back the nothing it had.
+ */
+let holding = 0;
+let snapWas = "";
+const pauseSnap = () => {
+  const root = document.documentElement;
+  if (holding++ === 0) {
+    snapWas = root.style.scrollSnapType;
+    root.style.scrollSnapType = "none";
+  }
+};
+const resumeSnap = () => {
+  if (--holding !== 0) return;
+  const root = document.documentElement;
+  // Only if nothing has set it since. Leaving the page mid-correction lets the
+  // committee page take its snapping away, and the page arrived at must not
+  // be handed it back.
+  if (root.style.scrollSnapType === "none") root.style.scrollSnapType = snapWas;
+};
+
+/**
  * Run `change`, then scroll so that `anchor` sits where it did before.
  *
  * `ms` keeps the correction running for a transition's worth of frames, for a
@@ -26,6 +55,7 @@ export function holdPlace(
   const before = anchor?.getBoundingClientRect().top;
   change();
   if (!anchor || before === undefined) return;
+  pauseSnap();
   const started = performance.now();
   const step = () => {
     const now = anchor.getBoundingClientRect().top;
@@ -33,6 +63,7 @@ export function holdPlace(
     if (Math.round(now) !== Math.round(before))
       window.scrollBy(0, now - before);
     if (performance.now() - started < ms) requestAnimationFrame(step);
+    else resumeSnap();
   };
   requestAnimationFrame(step);
 }

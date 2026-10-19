@@ -29,11 +29,15 @@ const HOME = "/conferenceCommittees/phone-free-schools";
  */
 const NAV: { label: string; to: string; at: RegExp; rule?: true }[] = [
   {
-    label: "Conference Explorer",
+    label: "Conference Committees",
     to: "/conferenceCommittees",
     at: /^\/conferenceCommittees\/?$/,
   },
-  { label: "Committees", to: HOME, at: /^\/conferenceCommittees\/[^/]+$/ },
+  {
+    label: "Conference Explorer",
+    to: "/conferenceCommittees/explorer",
+    at: /^\/conferenceCommittees\/explorer\/?$/,
+  },
   // Straight to the feed, which is the part of those two being compared. The
   // rule marks where the bar stops being the site and starts being the two
   // readings of one page.

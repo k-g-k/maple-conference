@@ -116,20 +116,30 @@ function EntryActions({
             { label: "Share", Icon: Share },
             ...(own ? [] : [{ label: "Follow user", Icon: BellPlus }]),
             { label: "Report", Icon: Flag },
-          ].map(({ label, Icon, act }: { label: string; Icon: typeof Flag; act?: () => void }) => (
-            <button
-              key={label}
-              role="menuitem"
-              onClick={() => {
-                setOpen(false);
-                act?.();
-              }}
-              className="flex items-center gap-[9px] w-full text-left font-body text-sm text-ink px-[12px] py-[7px] cursor-pointer hover:bg-wash"
-            >
-              <Icon className="w-[15px] h-[15px] shrink-0 text-ink-mid" />
-              {label}
-            </button>
-          ))}
+          ].map(
+            ({
+              label,
+              Icon,
+              act,
+            }: {
+              label: string;
+              Icon: typeof Flag;
+              act?: () => void;
+            }) => (
+              <button
+                key={label}
+                role="menuitem"
+                onClick={() => {
+                  setOpen(false);
+                  act?.();
+                }}
+                className="flex items-center gap-[9px] w-full text-left font-body text-sm text-ink px-[12px] py-[7px] cursor-pointer hover:bg-wash"
+              >
+                <Icon className="w-[15px] h-[15px] shrink-0 text-ink-mid" />
+                {label}
+              </button>
+            ),
+          )}
         </div>
       )}
     </div>
@@ -170,6 +180,30 @@ function EntryActions({
  * these pages. Same geometry and stroke conventions, so it swaps for the real
  * import whenever the package does move.
  */
+/**
+ * Lucide's `heart`, drawn here to match `CircleStar` above.
+ *
+ * Imported it would be one more name from the package in a file that already
+ * draws its other glyph by hand; the two sitting together is easier to read
+ * than one of each.
+ */
+function Heart({ className }: { className?: string }) {
+  return (
+    <svg
+      aria-hidden
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />
+    </svg>
+  );
+}
+
 function CircleStar({ className }: { className?: string }) {
   return (
     <svg
@@ -659,6 +693,11 @@ export function SubmissionEntry({
 }) {
   const tight = useNarrow(TIGHT);
   const narrow = useNarrow(NARROW);
+  const flags = useFlags();
+  // Local to the card, like a like: the press is the whole act, there is no
+  // review step behind it and nothing to file, so it does not go through the
+  // draft the way a cosign does.
+  const [supported, setSupported] = useState(false);
   const user = accounts.find((u) => u.id === t.userId);
   const cosignedName = quoted?.account.name;
   if (!user) return null;
@@ -1195,7 +1234,7 @@ export function SubmissionEntry({
                 and the one the reader is here for; the filing's own date
                 follows it, where a reader looks only to place the letter. */}
             {mode && t.cosignLatest && mode !== "cosign4" && (
-              <span className="hidden max-[450px]:inline whitespace-nowrap">
+              <span className="hidden max-[900px]:inline whitespace-nowrap">
                 Last cosigned {shortMonth(t.cosignLatest)}
                 <span aria-hidden className="ml-[6px] text-ink-faint">
                   ·
@@ -1260,7 +1299,7 @@ export function SubmissionEntry({
                     <>
                       <span>cosigned</span>
                       {t.cosignInDistrict ? (
-                        <>
+                        <span className="max-[480px]:hidden flex items-center gap-[4px]">
                           {/* Flex items like the rest of the row, so the dot
                             sits in the same four pixels that separate every
                             other word here. */}
@@ -1275,9 +1314,43 @@ export function SubmissionEntry({
                               ? "district"
                               : "districts"}
                           </span>
-                        </>
+                        </span>
                       ) : null}
                     </>
+                  ) : null}
+                </span>
+              ) : null}
+              {/* Beside the cosigned count, in the same row and the same
+                  shape, because the two are read against each other: how many
+                  put their name to it, and how many are behind it without
+                  doing so. Floated like its neighbour so the pair keep the
+                  left edge together.
+
+                  Not coloured. Hue on these pages already carries provenance
+                  and position, and a third use of it weakens both. */}
+              {flags.support && t.supportCount != null ? (
+                <span
+                  className={`flex items-center gap-[4px] font-body text-sm text-ink-mid ${
+                    mode === "cosign4" ? "" : "float-left ml-[26px]"
+                  }`}
+                >
+                  <Heart aria-hidden className="mr-[2px] w-[16px] h-[16px]" />
+                  <span className="font-semibold">
+                    {t.supportCount + (supported ? 1 : 0)}
+                  </span>
+                  <span>support</span>
+                  {t.supportDistricts ? (
+                    <span className="max-[480px]:hidden flex items-center gap-[4px]">
+                      <span aria-hidden className="mx-[2px] text-ink-faint">
+                        ·
+                      </span>
+                      <span className="font-semibold">
+                        {t.supportDistricts}
+                      </span>
+                      <span>
+                        {t.supportDistricts === 1 ? "district" : "districts"}
+                      </span>
+                    </span>
                   ) : null}
                 </span>
               ) : null}
@@ -1296,7 +1369,7 @@ export function SubmissionEntry({
                   </button>
                 ) : null
               ) : t.cosignLatest ? (
-                <span className="max-[450px]:hidden float-right ml-[12px] font-body text-sm text-ink-mid leading-[24px] whitespace-nowrap">
+                <span className="max-[900px]:hidden float-right ml-[12px] font-body text-sm text-ink-mid leading-[24px] whitespace-nowrap">
                   Last cosigned: {t.cosignLatest}
                 </span>
               ) : null}

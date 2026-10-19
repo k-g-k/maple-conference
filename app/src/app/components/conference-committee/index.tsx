@@ -10,7 +10,14 @@
 // the first sentence is a real answer and the rest is evidence. The summary
 // prints the answer and puts the evidence behind a control.
 
-import { useId, useMemo, useEffect, useRef, useState } from "react";
+import {
+  useId,
+  useMemo,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import { useFlags } from "../../flags";
 import { createPortal } from "react-dom";
 import type { CSSProperties, ReactNode } from "react";
@@ -76,7 +83,6 @@ import {
   Pagination,
   holdPlace,
   holdPress,
-  useMatchMedia,
 } from "../ballot";
 import {
   Chapter,
@@ -157,6 +163,7 @@ import type { ReviewStyle } from "./draft";
 // already calls the twelve committees down the left a rail, and two rails
 // would be one word doing two jobs.
 import { Rail as Panel } from "../bill-example/rail";
+import { Hero } from "./hero";
 
 /**
  * What the General Court calls this conference.
@@ -1418,67 +1425,6 @@ function PublicMap({
 }
 
 /**
- * The way in, beside the section's heading.
- *
- * The panel's own plus, exactly: the same glyph at the same size, the same
- * padding, the same gray wash arriving on hover at the control radius. The one
- * difference is that this one says what it does as it lights up, because it
- * stands in the page beside a heading rather than in a panel header where the
- * title above it has already said.
- */
-function AddInput({
-  onClick,
-  mine,
-  posted = false,
-}: {
-  onClick: () => void;
-  /** The six, so the line can say whether one of them is the reader's. */
-  mine: CommitteeMember[];
-  /** Already on the record, so the invitation has been taken. */
-  posted?: boolean;
-}) {
-  const flags = useFlags();
-  // Once they have filed, the nudge has nothing to ask for and nothing to say
-  // here: what happened is said over the section that holds what they filed.
-  if (posted) return null;
-  // The composer's primary colors at the Cosign button's size, so the two
-  // controls a reader meets in this section are one size.
-  if (!flags.shareLink)
-    return (
-      <button
-        onClick={onClick}
-        className="bg-brand text-ink-inverse font-body font-semibold text-sm px-[12px] py-[4px] border border-brand rounded-control cursor-pointer hover:bg-brand-hover hover:border-brand-hover"
-      >
-        Share your input
-      </button>
-    );
-  return (
-    // The control the column of unresolved questions ends on, so the way in
-    // is one thing a reader learns once. Right of the heading while they share
-    // a line, and under the title and centred below 580.
-    <p className="font-body text-sm text-ink leading-[1.5] text-right max-[580px]:text-center">
-      {/* The star alone, where one of the six is the reader's own. The
-          sentence that used to follow it says the same thing the column of
-          unresolved questions already says further up the page, and beside a
-          heading the mark is enough to carry it. */}
-      {mine.length > 0 && (
-        <Star
-          aria-hidden
-          className="inline align-[-2px] mr-[7px] w-[13px] h-[13px] text-caution fill-caution"
-        />
-      )}
-      <button
-        onClick={onClick}
-        className="inline-flex items-baseline gap-[4px] font-body font-semibold text-sm text-brand-ink hover:text-brand cursor-pointer underline decoration-dotted underline-offset-[4px]"
-      >
-        Share your input
-        <ArrowRight className="w-[13px] h-[13px] shrink-0 self-center no-underline" />
-      </button>
-    </p>
-  );
-}
-
-/**
  * The negotiation at a glance, as built: two columns.
  *
  * Two thirds to the argument, one third to what is already agreed. The
@@ -2113,14 +2059,17 @@ function TitlePicker({
         // heading and the list is a column down the left.
         className="md:pointer-events-none flex w-full items-start gap-[8px] text-left cursor-pointer"
       >
-        <h1 className="min-w-0 font-body font-bold text-[28px] @[700px]:text-[40px] leading-[1.2] text-[#0b1a4d] text-balance">
+        {/* The size the hero's heading had before the two were one page, a
+            step under that heading now. Still Nunito: the hero is the site
+            speaking, this is the committee. */}
+        <h1 className="min-w-0 font-body font-bold text-[29.7px] @[800px]:text-[36px] leading-[1.2] text-[#0b1a4d] text-balance">
           {displayName(slug, short)}
         </h1>
 
         <ChevronDown
           aria-hidden
           strokeWidth={2.5}
-          className={`md:hidden shrink-0 mt-[9px] w-[22px] h-[22px] text-[#0b1a4d] transition-transform ${
+          className={`md:hidden shrink-0 mt-[10px] w-[22px] h-[22px] text-[#0b1a4d] transition-transform ${
             open ? "rotate-180" : ""
           }`}
         />
@@ -2495,11 +2444,11 @@ const SECTION_AIR = 24;
 /** The tab bar's own height, its rule included. */
 const BAR_H = 47;
 /**
- * Everything pinned above a section, as a CSS length: the fixed nav and the
- * bar resting under it. `pinned()` is the same sum in numbers, so an offset
- * and a height cannot drift apart.
+ * How far into the committee the window still snaps, in px. Enough that a
+ * flick coming up through the committee is already being snapped when it
+ * reaches the top, rather than being caught a frame late and pulled back.
  */
-const PINNED_H = `calc(var(--nav-h) + ${BAR_H}px)`;
+const SNAP_REACH = 120;
 
 /**
  * The box a section's air is measured from.
@@ -3104,7 +3053,15 @@ type TestimonyMode = "sidebar" | "inline";
 /** Which of the two the unresolved list presses on. */
 type UnresolvedMode = "topics" | "questions";
 
-function Detail({ c, style }: { c: CommitteeDetail; style: ReviewStyle }) {
+function Detail({
+  c,
+  style,
+  openOnHero = false,
+}: {
+  c: CommitteeDetail;
+  style: ReviewStyle;
+  openOnHero?: boolean;
+}) {
   const flags = useFlags();
   const rec = recordForSlug(c.slug);
   const meetings = MEETINGS[c.slug] ?? [];
@@ -3201,14 +3158,10 @@ function Detail({ c, style }: { c: CommitteeDetail; style: ReviewStyle }) {
   // question is one press away either way.
   const [unresolved, setUnresolved] = useState<UnresolvedMode>("topics");
   const [following, setFollowing] = useState(false);
-  // Folded away while the panel is open or the window is narrow, which are the
-  // two cases where the corner is not the page's to spend.
-  // 1440 rather than the lg breakpoint: the twelve committees down the left
-  // are part of a centred block, so the corner stops being free long before
-  // the window is a phone's. Below this the switches sit over that list.
-  const narrowControls = useMatchMedia("(max-width: 1439.98px)");
-  const [controlsOpen, setControlsOpen] = useState(true);
-  const [controlsTouched, setControlsTouched] = useState(false);
+  // Shut until pressed, at every width and every time the page opens. They are
+  // the prototype's switches rather than part of the page, and open by default
+  // they sat over the page being looked at.
+  const [controlsOpen, setControlsOpen] = useState(false);
   const setTestimony = (v: TestimonyMode) => {
     const next = new URLSearchParams(params);
     next.set("input", v);
@@ -3282,14 +3235,8 @@ function Detail({ c, style }: { c: CommitteeDetail; style: ReviewStyle }) {
   // the reader last left the panel at is the width it comes back at.
   const panelFull = full;
   const setPanelFull = setFull;
-  /** When the corner is not the page's to spend on three stacked switches. */
-  const tightControls = narrowControls || panelOpen;
-  // The default follows the room available; a press overrides it for good.
-  const showControls = controlsTouched ? controlsOpen : !tightControls;
-  const openControls = (v: boolean) => {
-    setControlsTouched(true);
-    setControlsOpen(v);
-  };
+  const showControls = controlsOpen;
+  const openControls = setControlsOpen;
   /** The form is open, so the control that opens it has nothing to offer. */
   const composing = panelOpen && railView[layout] === "compose";
   const showView = (id: string) => setRailView({ ...railView, [layout]: id });
@@ -3607,15 +3554,14 @@ function Detail({ c, style }: { c: CommitteeDetail; style: ReviewStyle }) {
   /**
    * How much of the top of the window is spoken for right now.
    *
-   * The nav and the bar, in both layouts. The header used to be a third term
-   * here, measured with an observer because the title wraps to two lines on
-   * about half the twelve. It went when the header stopped pinning: the sum no
-   * longer depends on anything that can change height, so nothing downstream
-   * has to be told when it does.
+   * The nav, the title and the bar, in both layouts. The title is measured
+   * with an observer because it wraps to two lines on about half the twelve,
+   * and further on a phone, so everything resting under it is told when its
+   * height changes.
    */
   // The title's own height, so everything resting under it knows where that
-  // is. Measured rather than assumed: a long name wraps to two lines on a
-  // phone, where the title is the one thing on this page that pins.
+  // is. It pins at every width, so the reader always has the committee's name
+  // and the way to share input in view.
   const titleBand = useBandHeight(mode);
   const onPhone = useNarrow();
   const oneColumn = useNarrow("(max-width: 1117.98px)");
@@ -3624,12 +3570,10 @@ function Detail({ c, style }: { c: CommitteeDetail; style: ReviewStyle }) {
       parseFloat(
         getComputedStyle(document.documentElement).getPropertyValue("--nav-h"),
       ) || 0;
-    return navH + BAR_H + (onPhone ? titleBand.h : 0);
+    return navH + BAR_H + titleBand.h;
   };
   /** The same sum as a CSS length, for the things that rest at it. */
-  const pinnedTop = onPhone
-    ? `calc(var(--nav-h) + ${titleBand.h}px + ${BAR_H}px)`
-    : PINNED_H;
+  const pinnedTop = `calc(var(--nav-h) + ${titleBand.h}px + ${BAR_H}px)`;
   /**
    * Where a section heading comes to rest: under the nav and the bar, which is
    * the same sum `pinned()` uses to land a jump. One value rather than three
@@ -3671,6 +3615,91 @@ function Detail({ c, style }: { c: CommitteeDetail; style: ReviewStyle }) {
         pinned() -
         SECTION_AIR,
     );
+  /**
+   * Where the committee begins: the top of its column, just under the bar,
+   * which is also where the hero's button lands it.
+   */
+  const pageRef = useRef<HTMLDivElement>(null);
+  const committeeTop = () => {
+    const el = pageRef.current;
+    if (!el) return 0;
+    const bar =
+      parseFloat(
+        getComputedStyle(document.documentElement).getPropertyValue("--nav-h"),
+      ) || 0;
+    return Math.max(0, el.getBoundingClientRect().top + window.scrollY - bar);
+  };
+  /**
+   * Two places to come to rest at the top of the page, and nothing between
+   * them: the hero, whole, or the committee from its top, just under the bar.
+   * Never half of one and half of the other.
+   *
+   * The browser's own mandatory snapping, on the window, with those two as the
+   * only snap points (the hero and the column carry `snap-start`). Mandatory
+   * means it will not stop anywhere that is not one of them. Both are allowed
+   * to be taller than the window, the committee always is, and inside one of
+   * those the reader scrolls freely; only the stretch where the hero's foot
+   * and the committee's top would share the screen is a place it will not
+   * rest. The browser's rather than a script's, so it answers a wheel, a
+   * trackpad, the keys and a finger alike, and lets go when the page goes.
+   *
+   * Both also say `snap-always`, which stops a hard flick from carrying past
+   * either top: scrolling down from the hero stops on the committee's top, and
+   * scrolling up through the committee stops there too before the hero.
+   *
+   * On only near the top: while any of the hero is on screen, and for a short
+   * stretch into the committee so a flick coming up is caught at its top. Down
+   * in the committee it is off, because a browser snapping the window applies
+   * its settle to every scroll, even inside a snap area where it may stop
+   * anywhere, and the whole committee read with that lingering ease.
+   *
+   * Left alone while a correction is holding the reader's place, which turns
+   * it off (`hold-place.ts`) and puts it back when it is done.
+   */
+  useEffect(() => {
+    const root = document.documentElement;
+    const sync = () => {
+      if (root.style.scrollSnapType === "none") return;
+      const want =
+        window.scrollY <= committeeTop() + SNAP_REACH ? "y mandatory" : "";
+      if (root.style.scrollSnapType !== want) root.style.scrollSnapType = want;
+    };
+    sync();
+    window.addEventListener("scroll", sync, { passive: true });
+    window.addEventListener("resize", sync);
+    return () => {
+      window.removeEventListener("scroll", sync);
+      window.removeEventListener("resize", sync);
+      root.style.scrollSnapType = "";
+    };
+  }, []);
+  /**
+   * Every committee address opens on the committee, with the hero above it to
+   * scroll back up to, and the landing alone opens on the hero. The app leaves
+   * these pages' scroll to them (`ToTop`), because for them the top is the
+   * wrong place to arrive.
+   *
+   * Before paint, so the reader never sees the hero flash past on the way. On
+   * every change of address, which covers changing committee from the list as
+   * well as arriving. A fragment is the hash effect's to land, not this one.
+   */
+  useLayoutEffect(() => {
+    if (location.hash) return;
+    const top = openOnHero ? 0 : committeeTop();
+    window.scrollTo({ top, behavior: "auto" });
+    if (openOnHero) return;
+    // A font arriving after the jump can change the hero's height and push
+    // the committee down from where the reader was put. Put it back, unless
+    // they have scrolled since.
+    let stale = false;
+    document.fonts?.ready.then(() => {
+      if (stale || Math.abs(window.scrollY - top) > 1) return;
+      window.scrollTo({ top: committeeTop(), behavior: "auto" });
+    });
+    return () => {
+      stale = true;
+    };
+  }, [location.pathname]);
   // Lands a section's own top under the bar, scrolling up or down. A scroll
   // margin cannot do it: the pinned height changes with the nav's own height,
   // and an element's margin is written once.
@@ -3975,36 +4004,19 @@ function Detail({ c, style }: { c: CommitteeDetail; style: ReviewStyle }) {
           page's own gutters holding the wordmark and the account control off
           the edges. */}
       <SiteNav inner={NAV_COLUMN} />
-      {/* The bill page's pair, unchanged: ask MAPLE, and write testimony.
-          Bottom right, where the layout switch is bottom left. The row's
-          --fab-r keeps both clear of the panel instead of under it. */}
+      {/* What a conference committee is, above every committee and every
+          reading of one. On the page's own column, so it starts where the
+          committee list under it starts. */}
+      <div className={PAGE_COLUMN}>
+        <Hero />
+      </div>
+      {/* Ask MAPLE, as on the bill page. Bottom right, where the layout
+          switch is bottom left. --fab-r keeps it clear of the panel instead of
+          under it. The plus that used to sit beside it went when "Share your
+          input" moved up beside the title, which is pinned and so always in
+          reach. */}
       <div className="fixed bottom-[24px] right-[var(--fab-r,24px)] z-50 flex items-center gap-[12px] transition-[right] duration-400 ease-out motion-reduce:transition-none [[data-resizing]_&]:transition-none">
         <MapleFab inline open={askOpen} onOpenChange={setAskOpen} />
-        {/* Hidden while the form it opens is already open, where it would be
-            an invitation to do the thing being done. */}
-        {/* At every width. Below lg the panel it opens is a sheet rather than a
-            rail, so this is the way in on a phone as well as the shortcut on a
-            wide window; --fab-r falls back to the plain 24px there, since
-            nothing is being taken from the page for a panel to stand in. */}
-        {/* And gone once something is on the record: the page already carries
-            their entry, pinned above the list, and a standing invitation to
-            add another is an offer the page cannot keep. */}
-        {!composing && !draft.posted && (
-          <button
-            onClick={compose}
-            aria-label="Share your input"
-            className="group inline-flex items-center h-[52px] px-[16px] rounded-pill border border-brand bg-brand text-ink-inverse hover:bg-brand-hover hover:border-brand-hover cursor-pointer transition-colors"
-          >
-            <Plus className="w-[22px] h-[22px] shrink-0" />
-            <span className="grid grid-cols-[0fr] group-hover:grid-cols-[1fr] group-focus-visible:grid-cols-[1fr] transition-[grid-template-columns] duration-300 ease-out motion-reduce:transition-none">
-              <span className="overflow-hidden">
-                <span className="block pl-[10px] pr-[10px] font-body font-semibold text-sm whitespace-nowrap">
-                  Share your input
-                </span>
-              </span>
-            </span>
-          </button>
-        )}
       </div>
 
       {/* Prototype controls, not part of the page: where public input is read,
@@ -4059,9 +4071,11 @@ function Detail({ c, style }: { c: CommitteeDetail; style: ReviewStyle }) {
                   // read, stacked is the scrolling one.
                   labels={{ card: "Tabbed", stacked: "Scroll" }}
                   value={layout}
-                  // Back to the top and the first tab. The two views put different
-                  // things at different heights, so keeping the scroll position drops
-                  // you into the middle of a section you did not choose.
+                  // Back to the committee's top and the first tab. The two views put
+                  // different things at different heights, so keeping the scroll
+                  // position drops you into the middle of a section you did not
+                  // choose. The committee's top rather than the page's, which is
+                  // the hero.
                   onChange={(v) => {
                     setLayout(v);
                     setTab(
@@ -4069,7 +4083,7 @@ function Detail({ c, style }: { c: CommitteeDetail; style: ReviewStyle }) {
                         ? CONTENTS
                         : CONTENTS.filter((x) => x.id !== "committee"))[0].id,
                     );
-                    window.scrollTo({ top: 0 });
+                    window.scrollTo({ top: committeeTop() });
                     // One shell for both layouts, so a dragged width is one inline
                     // style on it. The layout being switched to has its own, and the
                     // shell has to be told which rather than keeping the width the
@@ -4132,7 +4146,9 @@ function Detail({ c, style }: { c: CommitteeDetail; style: ReviewStyle }) {
           has to be worked out from the width the column would have taken, and
           CSS cannot read a max-width back. They are written in pairs so the
           two cannot be changed apart. */}
-      <div // 1180 + twice the rail and its gap. Centred, that puts the reading
+      <div
+        ref={pageRef}
+        // 1180 + twice the rail and its gap. Centred, that puts the reading
         // column's left edge exactly on the nav's, with every pixel of the
         // extra width going out to the right.
         style={
@@ -4152,7 +4168,7 @@ function Detail({ c, style }: { c: CommitteeDetail; style: ReviewStyle }) {
               "max(0px, min(calc((100% - var(--page-cap, 1180px)) / 2 - var(--taken-w, 0px)), var(--rail-share)))",
           } as CSSProperties
         }
-        className={`${PAGE_COLUMN} [--page-cap:1180px] lg:[--page-cap:1320px] min-[1480px]:[--page-cap:1764px] flex gap-[24px] lg:gap-[56px] lg:mx-0 lg:ml-[var(--page-left)] lg:mr-[var(--taken-w)] lg:[--page-w:calc(100vw-var(--taken-w))] transition-[margin] duration-400 ease-out motion-reduce:transition-none [[data-resizing]_&]:transition-none`}
+        className={`${PAGE_COLUMN} snap-start snap-always scroll-mt-[var(--nav-h)] [--page-cap:1180px] lg:[--page-cap:1320px] min-[1480px]:[--page-cap:1764px] flex gap-[24px] lg:gap-[56px] lg:mx-0 lg:ml-[var(--page-left)] lg:mr-[var(--taken-w)] lg:[--page-w:calc(100vw-var(--taken-w))] transition-[margin] duration-400 ease-out motion-reduce:transition-none [[data-resizing]_&]:transition-none`}
       >
         <Rail
           current={c.slug}
@@ -4164,24 +4180,44 @@ function Detail({ c, style }: { c: CommitteeDetail; style: ReviewStyle }) {
         />
 
         <div className="min-w-0 flex-1">
-          {/* The title and its byline scroll away, in both layouts. Nothing
-              pins here: the tab bar is the only thing that comes to rest under
-              the nav, so the sum every pinned offset on this page is built from
-              never has to know how the title wrapped.
+          {/* The title pins under the nav at every width, as it always had on
+              a phone, and the way to share input pins with it: wherever the
+              reader is on the page, they can see which committee this is and
+              say something to it. The byline under it scrolls away.
 
-              The bleed and the ground are what the band keeps from when it did
-              pin, and they are why the two layouts read the same at the top of
-              the page. The negative margins let the band's own background run
-              to the edge of the reading column; the padding gives that width
-              back, so the column inside is the one it would have had. */}
+              Its height is measured, because the name wraps, and everything
+              that pins under it rests at that height. The ground is so the
+              page scrolls under it rather than through it. The negative
+              margins let that ground run to the edge of the reading column;
+              the padding gives the width back, so the column inside is the one
+              it would have had. */}
           <div
             ref={titleBand.ref}
-            className="@container sticky top-[var(--nav-h)] z-[14] -mx-[32px] px-[32px] pt-[26px] pb-[12px] bg-ground md:static md:z-20 md:pb-0"
+            className="@container sticky top-[var(--nav-h)] z-[14] -mx-[32px] px-[32px] pt-[26px] pb-[12px] bg-ground"
           >
             <div className="flex items-start justify-between gap-[24px]">
               {/* The picker is the row's flexible half, so the heading can
                       run the full width before it wraps. */}
               <TitlePicker slug={c.slug} short={c.short} href={committeeHref} />
+              {/* The page's one way in, moved here from the head of Public
+                  Input. It goes once the reader has posted or co-signed, as
+                  that one did: the invitation has been taken, and the section
+                  holding what they filed says so.
+
+                  Level with the title's first line. The title's line is 35.6px
+                  under 800 of column and 43.2 over it, and the button 37.5, so
+                  it sits at the top of the shorter line and 3px down the
+                  taller one. */}
+              {!draft.posted && (
+                <button
+                  type="button"
+                  onClick={compose}
+                  className="shrink-0 @[800px]:mt-[3px] inline-flex items-center gap-[6px] whitespace-nowrap bg-brand text-ink-inverse font-body font-semibold text-sm pl-[12px] pr-[16px] py-[8px] border border-brand rounded-control cursor-pointer hover:bg-brand-hover hover:border-brand-hover"
+                >
+                  <Plus aria-hidden className="w-[16px] h-[16px] shrink-0" />
+                  Share your input
+                </button>
+              )}
               {/* Follow and Share are parked. Uncomment to restore them.
                   <div className="shrink-0 flex items-center gap-[18px] mt-[6px]">
                     <button
@@ -4222,7 +4258,9 @@ function Detail({ c, style }: { c: CommitteeDetail; style: ReviewStyle }) {
                   */}
             </div>
           </div>
-          <div className="z-20 -mx-[32px] px-[32px] bg-ground/95 backdrop-blur">
+          {/* No blur behind it: it scrolls rather than pins, so there is
+              nothing under it for one to soften. */}
+          <div className="z-20 -mx-[32px] px-[32px] bg-ground/95">
             <div
               className={`@container ${
                 // The bar used to sit under this and carry its own height. With
@@ -4284,15 +4322,13 @@ function Detail({ c, style }: { c: CommitteeDetail; style: ReviewStyle }) {
             </div>
           )}
 
-          {/* Rests under the nav, in both layouts: it is the first thing the
-              page pins, so it has nothing above it but the site bar. The card
-              layout drops the Committee tab, since its card sits above this bar
-              rather than in a section you jump to. */}
+          {/* Rests under the title, in both layouts and at every width: the
+              title is the first thing the page pins, and this the second. The
+              card layout drops the Committee tab, since its card sits above
+              this bar rather than in a section you jump to. */}
           <Contents
             sections={tabs}
-            offset={
-              onPhone ? `calc(var(--nav-h) + ${titleBand.h}px)` : "var(--nav-h)"
-            }
+            offset={`calc(var(--nav-h) + ${titleBand.h}px)`}
             jumpTo={jumpTo}
             picked={mode === "tabbed" ? tab : undefined}
             onPick={mode === "tabbed" ? pickTab : undefined}
@@ -4564,19 +4600,8 @@ function Detail({ c, style }: { c: CommitteeDetail; style: ReviewStyle }) {
                   }
                   hideQuestion={headedFeed}
                   titleClass={SUB_HEAD}
-                  // Reading it inline, this is the way in. Reading it in the
-                  // panel, the panel's header already has one and a second
-                  // here would be two doors to the same room.
-                  action={
-                    inlineTestimony && !headedFeed ? (
-                      <AddInput
-                        onClick={compose}
-                        mine={sixOf(c).filter((m) => MINE[m.key])}
-                        posted={draft.posted}
-                      />
-                    ) : undefined
-                  }
-                  //
+                  // No way in of its own: the one beside the page's title is
+                  // pinned, so it is already in reach here.
                   stickyHeading={stickyTop}
                   // Both layouts. The band is what paints behind the title, and
                   // without it the scrolling view left the header on the page
@@ -4636,18 +4661,7 @@ function Detail({ c, style }: { c: CommitteeDetail; style: ReviewStyle }) {
                         // the view has pinned above them.
                         stickyTop={underHeading(inputBand.h)}
                         heading={
-                          headedFeed
-                            ? {
-                                title: "Public Input",
-                                action: (
-                                  <AddInput
-                                    onClick={compose}
-                                    mine={sixOf(c).filter((m) => MINE[m.key])}
-                                    posted={draft.posted}
-                                  />
-                                ),
-                              }
-                            : undefined
+                          headedFeed ? { title: "Public Input" } : undefined
                         }
                         headingTop={stickyTop}
                         onCosign={startCosign}
@@ -5028,14 +5042,22 @@ function NoCommittee() {
  */
 export function ConferenceCommittee({
   style = "pane",
+  slug: given,
+  openOnHero = false,
 }: {
   style?: ReviewStyle;
+  /** A committee named by the caller rather than by the address, for the
+   *  landing page, which opens on one at an address of its own. */
+  slug?: string;
+  /** Arrive on the hero rather than on the committee. Only the landing. */
+  openOnHero?: boolean;
 }) {
   useDeviceViewport();
-  const { slug } = useParams();
+  const params = useParams();
+  const slug = given ?? params.slug;
   const c = slug ? BY_SLUG[slug] : undefined;
   if (!c) return <NoCommittee />;
-  return <Detail c={c} style={style} />;
+  return <Detail c={c} style={style} openOnHero={openOnHero} />;
 }
 
 /**

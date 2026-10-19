@@ -1,13 +1,13 @@
-// The conference committee index: what a conference is, and the twelve sitting
-// now.
+// The conference explorer: the twelve committees side by side, with everyone
+// on them.
 //
-// A door rather than a briefing. Each committee has a page of its own, so the
-// first jobs here are saying what a conference does and letting a reader pick
-// one. Anything used to compare committees belongs on those pages, where there
-// is room to show the evidence for it.
+// This was the conference index until the feedback that, as a first page, it
+// did too much. The index is now `landing.tsx`, which says what a conference
+// is and links each committee and this page; this one moved under it, at
+// /conferenceCommittees/explorer, as it was.
 //
-// Below that door sits the one thing none of the twelve pages can say, because
-// each of them only knows its own six: the same people keep coming back. That
+// It is for the one thing none of the twelve pages can say, because each of
+// them only knows its own six: the same people keep coming back. That
 // is a fact about the set rather than about any committee in it, so it is
 // answered here. It stays subordinate to the list, and every committee it names
 // is plain text rather than a link, so the twelve rows remain the only door on
@@ -2583,7 +2583,7 @@ function Districts() {
 //   );
 // }
 
-export function ConferenceCommittees() {
+export function ConferenceExplorer() {
   useDeviceViewport();
   return (
     // The page's own ink, a blue-grey where the site's is warm. Set as the
@@ -2602,6 +2602,13 @@ export function ConferenceCommittees() {
     <div className="bg-ground min-h-screen font-body text-ink [--color-ink:#334155] [--color-ink-mid:#6e7278] [--color-ink-muted:#8f9399] [--color-ink-faint:#b4b4b4]">
       <SiteNav inner="w-full px-[20px] sm:px-[32px]" />
       <main className="mx-auto max-w-[1180px] px-[20px] sm:px-[32px] pt-[20px]">
+        <Link
+          to="/conferenceCommittees"
+          className="inline-flex items-center gap-[2px] font-body text-sm text-ink-mid hover:text-ink"
+        >
+          <ChevronLeft aria-hidden className="w-[16px] h-[16px]" />
+          Conference Committees
+        </Link>
         {/* The detail page's hero, at the same face and weight and stepping
             at the same window width, so arriving here and arriving there feel
             like one place.
@@ -2610,20 +2617,18 @@ export function ConferenceCommittees() {
             less the rail and the gap, and goes to 40px when that reaches 700.
             This page has no rail, so the same moment is 910 of its own width:
             min(1180, W - 64) at the window where the other one crosses. */}
-        <div className="@container">
+        <div className="@container mt-[8px]">
           <h1 className="font-display font-bold text-[29.7px] @[800px]:text-[36px] leading-[1.2] text-[#0f2275] text-balance">
-            Conference Committees
+            Conference Explorer
           </h1>
         </div>
 
-        {/* One paragraph. The mechanism, and the half that makes it matter:
-            nobody watches, and neither chamber can amend what comes back. */}
+        {/* The last sentence of the paragraph that opened this page when it
+            was the first one. The rest says what a conference committee is,
+            and moved to the hero above the committee pages. */}
         <p className="font-body text-base sm:text-lg text-ink leading-[1.55] mt-[6px] mb-[16px] pl-[4px] max-sm:pl-0">
-          In Massachusetts, when the House and Senate pass different versions of
-          a bill, six legislators negotiate the final text in a conference
-          committee. It&rsquo;s the last point where a bill can still change,
-          and it&rsquo;s normally an opaque process. This is the group of
-          legislators determining the fate of these future laws.
+          This is the group of legislators determining the fate of these future
+          laws.
         </p>
 
         {/* Everything else on this page is parked while the card below is

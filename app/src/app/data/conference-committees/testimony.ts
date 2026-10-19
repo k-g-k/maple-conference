@@ -133,6 +133,19 @@ export interface ConferenceSubmission {
    */
   cosignLatest?: string;
   /**
+   * How many readers pressed Support on this one.
+   *
+   * Not a position and not part of any total. A reader who agrees with an
+   * organization but does not want its words filed under their own name has
+   * nowhere else to say so, and the organization has no way to count them.
+   * Anyone may press it, including someone who has already cosigned a
+   * different filing, so this number overlaps every other count on the page
+   * and is shown only here.
+   */
+  supportCount?: number;
+  /** How many districts those presses came from. */
+  supportDistricts?: number;
+  /**
    * How many of them wrote something of their own.
    *
    * The rest put their name to it and nothing else, which is the whole act and
@@ -558,6 +571,8 @@ export const DEMO_TESTIMONY: ConferenceSubmission[] = [
     // feed below; the rest kept theirs to the Society and the committee, which
     // is why the number is larger than the list.
     cosignCount: 5,
+    supportCount: 45,
+    supportDistricts: 9,
     // How many of the six conferees' districts the five reach into: one, Elena
     // R.'s Third Essex. That is the half of the number the conferees read.
     cosignInDistrict: 1,
@@ -879,6 +894,8 @@ export const DEMO_TESTIMONY: ConferenceSubmission[] = [
     // districts. The coalition letter draws more than the Society's because it
     // was the one circulated publicly.
     cosignCount: 20,
+    supportCount: 112,
+    supportDistricts: 23,
     // Three of the six: Crighton and Durant among the twenty below, and
     // Rodrigues through Desmond K. The other three conferees are House
     // members, whom this placeholder placement cannot reach.

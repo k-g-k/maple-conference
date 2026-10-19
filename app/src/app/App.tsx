@@ -1,8 +1,11 @@
 // Every page this prototype has, and the URL each one answers to.
 //
-// The conference index lists the twelve committees sitting now; the detail
-// route is one page per committee, chosen by its slug; the bill route is a
-// single bill's own page, which the committee pages link out to.
+// The conference index says what a conference committee is and then opens on
+// the first of the twelve; the explorer under it is the twelve side by side,
+// with everyone on them; the detail route is one page per committee, chosen by
+// its slug; the bill route is a single bill's own page, which the committee
+// pages link out to. The joint committee routes are the same pair, index and
+// detail, for the committees a bill is usually sent to first.
 //
 // The detail page has three addresses rather than one, because the review step
 // between writing a submission and posting it is being compared in three
@@ -20,7 +23,8 @@
 import { useEffect } from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 
-import { ConferenceCommittees } from "./components/conference-committees";
+import { ConferenceExplorer } from "./components/conference-committees";
+import { ConferenceCommittees } from "./components/conference-committees/landing";
 import {
   ConferenceCommittee,
   ConferenceReview,
@@ -29,6 +33,8 @@ import { DraftProvider } from "./components/conference-committee/draft";
 import BillExample from "./components/bill-example";
 import { FlagsProvider, BUILD, VISION } from "./flags";
 import IconSample from "./components/icon-sample";
+import { JointCommittees } from "./components/joint-committees";
+import { JointCommittee } from "./components/joint-committee";
 
 /**
  * A new page starts at the top of itself.
@@ -41,7 +47,15 @@ import IconSample from "./components/icon-sample";
  * On the path only. The same page swapping its layout through `?view=` or
  * jumping to a section through a hash is still the page you are on, and those
  * must not throw the reader back to the top.
+ *
+ * Except a conference committee, in any of its readings, and the landing that
+ * opens on one. Those share a hero above the committee and arrive below it, so
+ * the top is the wrong place for them, and they land themselves. The explorer
+ * and the full-page review are ordinary pages and start at the top.
  */
+const LANDS_ITSELF =
+  /^(?:\/playground)?\/conferenceCommittees(?:\/(?!explorer(?:\/|$))[^/]+(?:\/(?!review$)[^/]+)?)?\/?$/;
+
 function ToTop() {
   const { pathname } = useLocation();
   // The browser puts a reload back where the reader left off, which is right
@@ -53,6 +67,7 @@ function ToTop() {
   }, []);
   useEffect(() => {
     if (window.location.hash.slice(1).includes("#")) return;
+    if (LANDS_ITSELF.test(pathname)) return;
     window.scrollTo(0, 0);
   }, [pathname]);
   return null;
@@ -82,6 +97,11 @@ function Prototype({ base }: { base: string }) {
     <Routes>
       <Route index element={<Navigate to={home} replace />} />
       <Route path="conferenceCommittees" element={<ConferenceCommittees />} />
+      {/* A word the router ranks above :slug, so no committee can take it. */}
+      <Route
+        path="conferenceCommittees/explorer"
+        element={<ConferenceExplorer />}
+      />
       {/* One route for all twelve. :slug is the committee, for example
               "phone-free-schools". This is also style one, and the plain
               address: the review replaces the composer in the flyout the
@@ -183,6 +203,8 @@ function Prototype({ base }: { base: string }) {
         element={<ConferenceReview />}
       />
       <Route path="bills/:billId" element={<BillExample />} />
+      <Route path="jointCommittees" element={<JointCommittees />} />
+      <Route path="jointCommittees/:slug" element={<JointCommittee />} />
       {/* Scratch, for picking a mark. Delete with the component. */}
       <Route path="icons" element={<IconSample />} />
       <Route path="*" element={<Navigate to={home} replace />} />
